@@ -2,7 +2,7 @@
 # Projektöversikt
 
 ## Mål
-Bygga en webapp som förbereder jobbansökningar åt användaren genom att kombinera användarens egen beskrivning och uppladdat CV, samt matcha detta mot en målposition. Och även förbereder ett personligtbrev för tjänsten.
+Bygga en webbapp som förbereder jobbansökningar åt användaren genom att kombinera användarens beskrivning och uppladdade CV med en målposition, samt genererar ett personligt brev för tjänsten.
 
 ## Huvudfunktioner
 - CV‑uppladdning (PDF/DOCX)
@@ -19,30 +19,21 @@ Bygga en webapp som förbereder jobbansökningar åt användaren genom att kombi
 5. Test & driftsätt: CI/CD, säkerhetstestning och GDPR‑efterlevnad.
 
 ## Rekommendation — Snabbt MVP
-- Frontend: Next.js (React) + TypeScript + Tailwind CSS
-- Backend: Next.js API routes eller Node.js + Express (TypeScript)
+- Frontend: Next.js + TypeScript + Tailwind CSS
+- Backend: .NET (C#)
 - AI: Managed LLM‑API (t.ex. OpenAI, Anthropic) för parsing och generering
-- Vector store: Pinecone eller Redis Vector
+- Vektorlager: Pinecone eller Redis Vector
 - Fil‑lagring: AWS S3 eller motsvarande
 - Auth: Clerk, Auth0 eller NextAuth
 
 **Varför:** Snabb utveckling, enkel hosting (Vercel) och förenklad integration.
 
-## Rekommendation — NLP‑tung / Skalbar produktion
-- Frontend: React + TypeScript (kan använda Next.js)
-- Backend: FastAPI (Python) eller NestJS (TypeScript). Välj Python för tunga NLP‑pipelines.
-- NLP/ML: Hugging Face‑modeller eller lokal drift av modeller (t.ex. Llama‑familjen) vid behov av finjustering.
-- Vector DB: Milvus, Weaviate eller managed Pinecone
-- CV‑parsing: LLM‑driven parsing eller verktyg som pyresparser + OCR (Tesseract) för skannade PDF
-- Infrastruktur: Docker + Kubernetes (EKS/GKE/AKS) för skalning
-
-**Varför:** Mer kontroll över kostnad och latency samt möjlighet att finjustera modeller.
 
 ## MVP‑checklista (minimalt värde)
 - Upload: CV (PDF/DOCX) sparas i cloud storage
 - Parsing: Extrahera text med pdfminer/Tika eller via LLM‑prompt
 - Embeddings: Skapa embeddings med managed API eller HF‑embedder
-- Matchning: Semantisk sökning i vector store mot jobbbeskrivningar
+- Matchning: Semantisk sökning i vektorlager mot jobbbeskrivningar
 - Generation: Generera personligt brev och CV‑sammanfattning via LLM
 - UI: Visa och låt användaren redigera förslagen; export som PDF/DOCX
 - Säkerhet: Autentisering och kryptering av lagrade CV
