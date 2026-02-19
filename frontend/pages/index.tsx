@@ -1,44 +1,40 @@
-// Mock data – byt ut mot riktiga API-anrop när backend är kopplad
-const jobs = [
-  {
-    id: 1,
-    tag: 'ny',
-    badge: 'Svarar ofta inom 3 dagar',
-    title: 'Fullstack-utvecklare med AI fokus!',
-    company: 'Academic Work',
-    location: 'Lund',
-    type: 'Heltid',
-    perks: [],
-  },
-  {
-    id: 2,
-    tag: null,
-    badge: 'Svarar ofta inom 3 dagar',
-    title: 'Junior-utvecklare till Axis Communications',
-    company: 'Axis Communications',
-    location: 'Malmö',
-    type: 'Heltid',
-    perks: ['Friskvårdsbidrag'],
-  },
-]
+import type { GetServerSideProps } from 'next'
+import type { Job, Progression, JobsData } from '../types/api'
 
-const progression = {
-  applied: 8,
-  readyToApply: 10,
-  readyToGenerate: 24,
+const BACKEND = process.env.BACKEND_URL ?? 'http://localhost:5000'
+
+interface Props {
+  jobs: Job[]
+  progression: Progression
 }
 
-const grades = [
-  { label: 'A GRADE MATCHES', count: 4 },
-  { label: 'B GRADE MATCHES', count: 14 },
-  { label: 'C GRADE MATCHES', count: 24 },
-]
+export const getServerSideProps: GetServerSideProps<Props> = async () => {
+  try {
+    const res = await fetch(`${BACKEND}/api/jobs`)
+    if (!res.ok) throw new Error('backend error')
+    const data: JobsData = await res.json()
+    return { props: { jobs: data.jobs, progression: data.progression } }
+  } catch {
+    return {
+      props: {
+        jobs: [],
+        progression: { applied: 0, readyToApply: 0, readyToGenerate: 0 },
+      },
+    }
+  }
+}
 
-export default function Home() {
-  const total =
-    progression.applied + progression.readyToApply + progression.readyToGenerate
+export default function Home({ jobs, progression }: Props) {
+  const total = progression.applied + progression.readyToApply + progression.readyToGenerate || 1
   const appliedPct = (progression.applied / total) * 100
   const readyPct = ((progression.applied + progression.readyToApply) / total) * 100
+
+  const gradeCount = (g: 'A' | 'B' | 'C') => jobs.filter((j) => j.grade === g).length
+  const grades = [
+    { label: 'A GRADE MATCHES', count: gradeCount('A') },
+    { label: 'B GRADE MATCHES', count: gradeCount('B') },
+    { label: 'C GRADE MATCHES', count: gradeCount('C') },
+  ]
 
   return (
     <div className="p-6 space-y-6">
@@ -46,42 +42,50 @@ export default function Home() {
       <div className="flex gap-6">
         {/* Job list */}
         <div className="flex-1 space-y-3">
+          {jobs.length === 0 && (
+            <p className="text-white/40 text-sm">Kunde inte hämta jobb – är backend igång?</p>
+          )}
           {jobs.map((job) => (
             <div
               key={job.id}
-              className="bg-white rounded-2xl p-5 text-black shadow-sm border border-gray-100"
+              className="bg-[#1a1a1a] rounded-2xl p-5 border border-white/5 hover:border-white/10 transition-colors"
             >
               {/* badges row */}
               <div className="flex items-center gap-2 mb-2 flex-wrap">
-                {job.tag && (
-                  <span className="text-xs font-semibold bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full">
-                    {job.tag}
+                {job.isNew && (
+                  <span className="text-xs font-semibold bg-white/10 text-white/70 px-2 py-0.5 rounded-full">
+                    ny
                   </span>
                 )}
-                <span className="text-xs font-medium text-blue-600 border border-blue-300 px-2 py-0.5 rounded-full">
-                  {job.badge}
-                </span>
-                {/* bookmark on the right */}
-                <div className="ml-auto flex flex-col gap-1">
-                  <button className="text-gray-400 hover:text-gray-700">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
+                {job.badge && (
+                  <span className="text-xs font-medium text-purple-300 border border-purple-500/40 px-2 py-0.5 rounded-full">
+                    {job.badge}
+                  </span>
+                )}
+                <div className="ml-auto flex items-center gap-2">
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                    job.grade === 'A' ? 'bg-green-500/20 text-green-400' :
+                    job.grade === 'B' ? 'bg-yellow-500/20 text-yellow-400' :
+                    'bg-red-500/20 text-red-400'
+                  }`}>{job.grade}</span>
+                  <button className="text-white/30 hover:text-white/70 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                    </svg>
                   </button>
                 </div>
               </div>
 
-              <h2 className="text-lg font-bold">{job.title}</h2>
-              <p className="text-sm text-gray-500 mt-0.5">{job.company}</p>
-              <p className="text-sm text-gray-500">{job.location}</p>
+              <h2 className="text-base font-semibold text-white">{job.title}</h2>
+              <p className="text-sm text-white/50 mt-0.5">{job.company}</p>
+              <p className="text-sm text-white/40">{job.location}</p>
 
               <div className="flex gap-2 mt-3 flex-wrap">
-                <span className="text-xs border border-gray-300 text-gray-600 rounded-full px-3 py-0.5">
+                <span className="text-xs border border-white/10 text-white/50 rounded-full px-3 py-0.5">
                   {job.type}
                 </span>
                 {job.perks.map((p) => (
-                  <span
-                    key={p}
-                    className="text-xs border border-gray-300 text-gray-600 rounded-full px-3 py-0.5"
-                  >
+                  <span key={p} className="text-xs border border-white/10 text-white/50 rounded-full px-3 py-0.5">
                     {p}
                   </span>
                 ))}
@@ -93,8 +97,6 @@ export default function Home() {
         {/* Progression widget */}
         <div className="w-64 bg-gradient-to-br from-orange-300 via-purple-500 to-purple-700 rounded-2xl p-5 flex flex-col">
           <h3 className="text-white font-semibold text-lg mb-4">Progression</h3>
-
-          {/* ring */}
           <div className="flex justify-center mb-6">
             <div className="relative w-28 h-28">
               <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
@@ -106,8 +108,6 @@ export default function Home() {
               </svg>
             </div>
           </div>
-
-          {/* legend */}
           <div className="space-y-2 mt-auto">
             {[
               { color: 'bg-white', label: 'Applied', val: progression.applied },
@@ -129,10 +129,7 @@ export default function Home() {
       {/* grade cards */}
       <div className="grid grid-cols-3 gap-4">
         {grades.map(({ label, count }) => (
-          <div
-            key={label}
-            className="bg-[#1a1a1a] rounded-2xl p-6 flex flex-col items-center justify-center border border-white/5"
-          >
+          <div key={label} className="bg-[#1a1a1a] rounded-2xl p-6 flex flex-col items-center justify-center border border-white/5">
             <p className="text-xs text-white/50 uppercase tracking-widest mb-3">{label}</p>
             <p className="text-5xl font-bold text-white">{count}</p>
           </div>

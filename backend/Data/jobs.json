@@ -1,0 +1,64 @@
+{
+  "jobs": [
+    {
+      "id": 1,
+      "isNew": true,
+      "badge": "Svarar ofta inom 3 dagar",
+      "title": "Fullstack-utvecklare med AI fokus!",
+      "company": "Academic Work",
+      "location": "Lund",
+      "type": "Heltid",
+      "perks": [],
+      "grade": "A"
+    },
+    {
+      "id": 2,
+      "isNew": false,
+      "badge": "Svarar ofta inom 3 dagar",
+      "title": "Junior-utvecklare till Axis Communications",
+      "company": "Axis Communications",
+      "location": "Malmö",
+      "type": "Heltid",
+      "perks": ["Friskvårdsbidrag"],
+      "grade": "A"
+    },
+    {
+      "id": 3,
+      "isNew": false,
+      "badge": null,
+      "title": "Frontend Developer – React & TypeScript",
+      "company": "Sigma IT",
+      "location": "Malmö",
+      "type": "Heltid",
+      "perks": ["Friskvårdsbidrag", "Pension"],
+      "grade": "B"
+    },
+    {
+      "id": 4,
+      "isNew": true,
+      "badge": "Ny",
+      "title": ".NET Backend Developer",
+      "company": "Consid AB",
+      "location": "Lund",
+      "type": "Heltid",
+      "perks": [],
+      "grade": "B"
+    },
+    {
+      "id": 5,
+      "isNew": false,
+      "badge": null,
+      "title": "Junior C# Developer",
+      "company": "Qbtech",
+      "location": "Remote",
+      "type": "Deltid",
+      "perks": ["Remote"],
+      "grade": "C"
+    }
+  ],
+  "progression": {
+    "applied": 8,
+    "readyToApply": 10,
+    "readyToGenerate": 24
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "id": 1,
+  "name": "Jordan Jeremih",
+  "title": "Jr Software developer",
+  "location": "Malmö",
+  "bio": "Passionerad utvecklare med fokus på fullstack-lösningar och AI-integrationer.",
+  "tags": ["C#", "TypeScript", "React", "Next.js", "Python"],
+  "roles": ["Frontend Developer", "Fullstack Developer"],
+  "avatarInitials": "JJ"
+}
