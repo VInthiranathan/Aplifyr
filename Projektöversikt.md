@@ -43,3 +43,8 @@ Bygga en webbapp som förbereder jobbansökningar åt användaren genom att komb
 - **Prompt‑säkerhet:** Undvik att logga fullständiga CV i klartext; använd anonymisering eller lagra endast embeddings för intern sökning.
 - **Kostnadshantering:** Använd managed LLM för MVP; överväg open‑source eller lokal drift när trafiken ökar.
 - **Juridik:** Informera användare tydligt om hur AI används i ansökningsprocessen.
+
+
+## INFÖR RAPPORT
+- resuktat + analys + metod viktigast för VG
+- Köllor (next.js tailwind osv eller chatgpt (för rekomendationer osv))
