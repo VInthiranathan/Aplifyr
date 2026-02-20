@@ -1,6 +1,8 @@
 import type { GetServerSideProps } from 'next'
 import type { Job, Progression, JobsData } from '../types/api'
 
+
+
 const BACKEND = process.env.BACKEND_URL ?? 'http://localhost:5000'
 
 interface Props {
@@ -25,6 +27,8 @@ export const getServerSideProps: GetServerSideProps<Props> = async () => {
 }
 
 export default function Home({ jobs, progression }: Props) {
+
+
   const total = progression.applied + progression.readyToApply + progression.readyToGenerate || 1
   const appliedPct = (progression.applied / total) * 100
   const readyPct = ((progression.applied + progression.readyToApply) / total) * 100
