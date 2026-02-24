@@ -7,14 +7,14 @@ export default function Layout({ children }: { children: ReactNode }) {
     <>
       <Head>
         <title>Aplifyr</title>
-        <link rel="icon" href="/A_Ikon.png" />
+        <link rel="icon" href="/Aplifyr_Ikon.png" />
       </Head>
-    <div className="flex min-h-screen bg-[#0d0d0d] text-white">
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto">
-        {children}
-      </main>
-    </div>
+      <div className="flex min-h-screen bg-gray-50 text-slate-900 dark:bg-[#0d0d0d] dark:text-white">
+        <Sidebar />
+        <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-[#0d0d0d]">
+          {children}
+        </main>
+      </div>
     </>
   )
 }

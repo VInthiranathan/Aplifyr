@@ -1,0 +1,46 @@
+{
+  "nav": {
+    "userDetails": "User Details",
+    "home": "Home",
+    "allJobs": "All Jobs",
+    "support": "Support"
+  },
+  "sidebar": {
+    "tagline": "The Tastemaker"
+  },
+  "theme": {
+    "dark": "Dark",
+    "light": "Light"
+  },
+  "language": {
+    "en": "EN",
+    "sv": "SV"
+  },
+  "home": {
+    "noJobs": "Could not fetch jobs – is the backend running?",
+    "aGrade": "A GRADE MATCHES",
+    "bGrade": "B GRADE MATCHES",
+    "cGrade": "C GRADE MATCHES",
+    "applied": "Applied",
+    "readyToApply": "Ready to apply",
+    "readyToGenerate": "Ready to generate"
+  },
+  "jobs": {
+    "title": "All Jobs",
+    "search": "Search jobs...",
+    "municipality": "City / Municipality",
+    "remote": "Remote only",
+    "allTypes": "All employment types",
+    "fullTime": "Full time",
+    "partTime": "Part time",
+    "noResults": "No jobs found.",
+    "loadMore": "Load more",
+    "previous": "Previous",
+    "showing": "Showing {{from}}–{{to}} of {{total}} jobs"
+  },
+  "user": {
+    "noData": "Could not fetch user data – is the backend running?",
+    "location": "Location",
+    "bio": "BIO"
+  }
+}

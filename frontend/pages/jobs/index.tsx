@@ -1,6 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
+import type { GetStaticProps } from 'next'
 import type { ExternalJob, AFSearchResult } from '../../types/api'
+import { serverSideTranslations } from 'next-i18next/serverSideTranslations'
 import { Search, MapPin, Wifi, Briefcase, ExternalLink, Loader2 } from 'lucide-react'
+
+export const getStaticProps: GetStaticProps = async ({ locale }) => ({
+  props: { ...(await serverSideTranslations(locale ?? 'en', ['common'])) },
+})
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:5000'
 
@@ -79,9 +85,9 @@ export default function AllJobsPage() {
   return (
     <div className="p-6 space-y-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-white">Alla jobb</h1>
+        <h1 className="text-xl font-bold text-slate-900 dark:text-white">Alla jobb</h1>
         {!loading && total > 0 && (
-          <span className="text-white/40 text-sm">{total.toLocaleString('sv-SE')} annonser</span>
+          <span className="text-slate-400 dark:text-white/40 text-sm">{total.toLocaleString('sv-SE')} annonser</span>
         )}
       </div>
 
@@ -89,38 +95,38 @@ export default function AllJobsPage() {
       <div className="flex flex-wrap gap-3">
         {/* Search */}
         <div className="flex-1 min-w-[200px] relative">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30" />
           <input
             type="text"
             placeholder="Sök titel, kompetens…"
             value={filters.q}
             onChange={(e) => update({ q: e.target.value })}
-            className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-purple-500/50"
+            className="w-full bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/30 focus:outline-none focus:border-purple-400 dark:focus:border-purple-500/50"
           />
         </div>
 
         {/* Municipality */}
         <div className="relative min-w-[180px]">
-          <MapPin size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+          <MapPin size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30" />
           <input
             type="text"
             placeholder="Stad (ex. Stockholm)"
             value={filters.municipality}
             onChange={(e) => update({ municipality: e.target.value })}
-            className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-purple-500/50"
+            className="w-full bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/30 focus:outline-none focus:border-purple-400 dark:focus:border-purple-500/50"
           />
         </div>
 
         {/* Working hours */}
         <div className="relative min-w-[180px]">
-          <Briefcase size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+          <Briefcase size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30" />
           <select
             value={filters.workingHoursType}
             onChange={(e) => update({ workingHoursType: e.target.value as Filters['workingHoursType'] })}
-            className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white/70 focus:outline-none focus:border-purple-500/50 appearance-none"
+            className="w-full bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-slate-600 dark:text-white/70 focus:outline-none focus:border-purple-400 dark:focus:border-purple-500/50 appearance-none"
           >
             {HOUR_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value} className="bg-[#1a1a1a]">{o.label}</option>
+              <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>
         </div>
@@ -130,8 +136,8 @@ export default function AllJobsPage() {
           onClick={() => update({ remote: !filters.remote })}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm transition-colors ${
             filters.remote
-              ? 'bg-purple-500/20 border-purple-500/50 text-purple-300'
-              : 'bg-[#1a1a1a] border-white/10 text-white/50 hover:text-white'
+              ? 'bg-purple-500/20 border-purple-500/50 text-purple-600 dark:text-purple-300'
+              : 'bg-white dark:bg-[#1a1a1a] border-slate-200 dark:border-white/10 text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
           <Wifi size={15} />
@@ -141,7 +147,7 @@ export default function AllJobsPage() {
 
       {/* ── Loading ── */}
       {loading && (
-        <div className="flex items-center justify-center py-16 text-white/40">
+        <div className="flex items-center justify-center py-16 text-slate-400 dark:text-white/40">
           <Loader2 size={24} className="animate-spin mr-3" />
           Hämtar annonser…
         </div>
@@ -149,14 +155,14 @@ export default function AllJobsPage() {
 
       {/* ── Error ── */}
       {error && !loading && (
-        <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 text-red-400 text-sm">
+        <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 text-red-500 dark:text-red-400 text-sm">
           {error}
         </div>
       )}
 
       {/* ── Empty state ── */}
       {!loading && !error && jobs.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-20 text-white/30">
+        <div className="flex flex-col items-center justify-center py-20 text-slate-300 dark:text-white/30">
           <Briefcase size={40} className="mb-3 opacity-30" />
           <p className="text-sm">Inga jobb hittades. Prova andra sökord eller filter.</p>
         </div>
@@ -168,11 +174,11 @@ export default function AllJobsPage() {
           {jobs.map((job) => (
             <div
               key={job.id}
-              className="bg-[#1a1a1a] rounded-2xl p-5 border border-white/5 hover:border-purple-500/20 transition-colors group"
+              className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-5 border border-slate-200 dark:border-white/5 hover:border-purple-300 dark:hover:border-purple-500/20 transition-colors group shadow-sm dark:shadow-none"
             >
               <div className="flex items-start gap-4">
                 {/* Logo placeholder */}
-                <div className="w-10 h-10 rounded-xl bg-white/5 flex-shrink-0 flex items-center justify-center text-white/20 overflow-hidden">
+                <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 flex-shrink-0 flex items-center justify-center text-slate-300 dark:text-white/20 overflow-hidden">
                   {job.logo_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={job.logo_url} alt="" className="w-full h-full object-contain p-1" />
@@ -183,30 +189,30 @@ export default function AllJobsPage() {
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
-                    <h2 className="text-sm font-semibold text-white leading-snug">{job.headline}</h2>
+                    <h2 className="text-sm font-semibold text-slate-900 dark:text-white leading-snug">{job.headline}</h2>
                     {job.webpage_url && (
                       <a
                         href={job.webpage_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex-shrink-0 text-white/20 hover:text-purple-400 transition-colors"
+                        className="flex-shrink-0 text-slate-300 dark:text-white/20 hover:text-purple-500 dark:hover:text-purple-400 transition-colors"
                       >
                         <ExternalLink size={15} />
                       </a>
                     )}
                   </div>
 
-                  <p className="text-xs text-white/50 mt-0.5">{job.employer?.name}</p>
+                  <p className="text-xs text-slate-500 dark:text-white/50 mt-0.5">{job.employer?.name}</p>
 
                   <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
                     {job.workplace_address?.municipality && (
-                      <span className="flex items-center gap-1 text-xs text-white/40">
+                      <span className="flex items-center gap-1 text-xs text-slate-400 dark:text-white/40">
                         <MapPin size={11} />
                         {job.workplace_address.municipality}
                       </span>
                     )}
                     {job.remote && (
-                      <span className="flex items-center gap-1 text-xs text-purple-400">
+                      <span className="flex items-center gap-1 text-xs text-purple-500 dark:text-purple-400">
                         <Wifi size={11} />
                         Remote
                       </span>
@@ -218,17 +224,17 @@ export default function AllJobsPage() {
               {/* Footer */}
               <div className="flex items-center gap-2 mt-3 flex-wrap">
                 {job.working_hours_type?.label && (
-                  <span className="text-xs border border-white/10 text-white/40 rounded-full px-3 py-0.5">
+                  <span className="text-xs border border-slate-200 dark:border-white/10 text-slate-400 dark:text-white/40 rounded-full px-3 py-0.5">
                     {job.working_hours_type.label}
                   </span>
                 )}
                 {job.employment_type?.label && (
-                  <span className="text-xs border border-white/10 text-white/40 rounded-full px-3 py-0.5">
+                  <span className="text-xs border border-slate-200 dark:border-white/10 text-slate-400 dark:text-white/40 rounded-full px-3 py-0.5">
                     {job.employment_type.label}
                   </span>
                 )}
                 {job.application_deadline && (
-                  <span className="ml-auto text-xs text-white/25">
+                  <span className="ml-auto text-xs text-slate-300 dark:text-white/25">
                     Sista ansökningsdag: {new Date(job.application_deadline).toLocaleDateString('sv-SE')}
                   </span>
                 )}
@@ -244,15 +250,15 @@ export default function AllJobsPage() {
           <button
             onClick={() => setOffset(Math.max(0, offset - LIMIT))}
             disabled={offset === 0}
-            className="px-4 py-2 rounded-xl bg-[#1a1a1a] border border-white/10 text-sm text-white/60 hover:text-white disabled:opacity-30 transition-colors"
+            className="px-4 py-2 rounded-xl bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 text-sm text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 transition-colors shadow-sm dark:shadow-none"
           >
             ← Föregående
           </button>
-          <span className="text-sm text-white/40">{currentPage} / {totalPages}</span>
+          <span className="text-sm text-slate-400 dark:text-white/40">{currentPage} / {totalPages}</span>
           <button
             onClick={() => setOffset(offset + LIMIT)}
             disabled={currentPage >= totalPages}
-            className="px-4 py-2 rounded-xl bg-[#1a1a1a] border border-white/10 text-sm text-white/60 hover:text-white disabled:opacity-30 transition-colors"
+            className="px-4 py-2 rounded-xl bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 text-sm text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 transition-colors shadow-sm dark:shadow-none"
           >
             Nästa →
           </button>
