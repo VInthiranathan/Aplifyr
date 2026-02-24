@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/router'
 import {
   Home,
@@ -6,8 +7,6 @@ import {
   Briefcase,
   HelpCircle,
 } from 'lucide-react'
-
-const APP_NAME = 'MyApp' // byt ut när du har ett projektnamn
 
 const navItems = [
   { label: 'User Details', href: '/user', icon: User },
@@ -22,13 +21,17 @@ export default function Sidebar() {
   return (
     <aside className="flex flex-col h-screen w-48 bg-[#111] text-white border-r border-white/10 flex-shrink-0">
       {/* top branding */}
-      <div className="px-4 pt-5 pb-3">
-        <span className="text-xs text-white/40 uppercase tracking-widest">
-          {APP_NAME} /
-        </span>
-        {/* logo placeholder */}
-        <div className="mt-3 w-9 h-9 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500" />
-      </div>
+        {/* logo */}
+        <div className="mt-3">
+          <Image
+            src="/AplifyrLogo.png"
+            alt="Aplifyr logo"
+            width={240}
+            height={72}
+            className="object-contain"
+            priority
+          />
+        </div>
 
       {/* section label */}
       <p className="px-4 pt-4 pb-1 text-[11px] text-white/30 uppercase tracking-widest">
