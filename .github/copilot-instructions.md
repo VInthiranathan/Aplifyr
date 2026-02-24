@@ -41,8 +41,73 @@ Both must run simultaneously. The frontend dev server is fixed to port 3000; the
 
 ## Styling
 
-- Tailwind v3 utility classes only; no CSS modules. Dark-theme palette: page bg `#0d0d0d`, card bg `#1a1a1a`, borders `border-white/5` or `border-white/10`.
-- Cards use `rounded-2xl p-5 border border-white/5 hover:border-white/10 transition-colors`.
+- Tailwind v3 utility classes only; no CSS modules.
+- `darkMode: 'class'` is configured in `tailwind.config.js`. Theme switching is handled by `next-themes` (`ThemeProvider` in `_app.tsx`).
+- **Every new component must support both dark and light mode.** Always pair dark-mode classes with their light-mode equivalents.
+
+### Dark / Light palette
+
+| Role | Dark | Light |
+|---|---|---|
+| Page background | `bg-[#0d0d0d]` | `bg-gray-50` |
+| Card background | `bg-[#1a1a1a]` | `bg-white` |
+| Primary text | `text-white` | `text-gray-900` |
+| Secondary text | `text-white/60` | `text-gray-500` |
+| Border | `border-white/5` | `border-gray-200` |
+| Border hover | `border-white/10` | `border-gray-300` |
+| Input background | `bg-white/5` | `bg-white` |
+| Input border | `border-white/10` | `border-gray-300` |
+
+- Card pattern: `rounded-2xl p-5 bg-[#1a1a1a] dark:bg-[#1a1a1a] border border-white/5 dark:border-white/5 hover:border-white/10 dark:hover:border-white/10 bg-white light:bg-white border-gray-200 transition-colors`.
+- Shorthand: write the light class first, then override with `dark:` variant.
+  ```tsx
+  // Example
+  <div className="bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-white/5 text-gray-900 dark:text-white">
+  ```
+
+## Internationalisation (i18n)
+
+- `next-i18next` is configured in `next-i18next.config.js`. Locales: `en` (default) and `sv`.
+- Translation files: `public/locales/en/common.json` and `public/locales/sv/common.json`. Namespace is `common`.
+- **Every new user-facing string must have a key in both locale files.** Never hardcode display text in JSX.
+- Add new keys under a logical namespace group matching the feature/page (e.g., `"jobs"`, `"user"`, `"home"`).
+
+### i18n patterns
+
+**Client component:**
+```tsx
+import { useTranslation } from 'next-i18next';
+
+export default function MyComponent() {
+  const { t } = useTranslation('common');
+  return <h1>{t('myPage.title')}</h1>;
+}
+```
+
+**Page with `getServerSideProps`:**
+```tsx
+import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
+import type { GetServerSideProps } from 'next';
+
+export const getServerSideProps: GetServerSideProps = async ({ locale, ...ctx }) => {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale ?? 'en', ['common'])),
+      // other props
+    },
+  };
+};
+```
+
+- When adding a new page, always include `serverSideTranslations` in `getServerSideProps`.
+- Keep key names in English, camelCase, nested under a page/feature group.
+  ```json
+  // en/common.json
+  "myFeature": { "title": "My Feature", "description": "Does something" }
+
+  // sv/common.json
+  "myFeature": { "title": "Min funktion", "description": "Gör något" }
+  ```
 
 ## Environment Variables
 
