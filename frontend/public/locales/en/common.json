@@ -42,5 +42,33 @@
     "noData": "Could not fetch user data – is the backend running?",
     "location": "Location",
     "bio": "BIO"
+  },
+  "support": {
+    "title": "Support",
+    "subtitle": "Need help? We're here for you.",
+    "cardFaq": "FAQ",
+    "cardFaqDesc": "Find answers to the most common questions about Aplifyr.",
+    "cardContact": "Contact us",
+    "cardContactDesc": "Send us a message and we'll reply within 24 hours.",
+    "cardEmail": "Email",
+    "cardEmailDesc": "support@aplifyr.se",
+    "faqTitle": "Frequently Asked Questions",
+    "faq1q": "How does job matching work?",
+    "faq1a": "Aplifyr analyses your profile and compares it against job listings to give you a grade (A, B or C) based on how well you match.",
+    "faq2q": "How do I add a new job?",
+    "faq2a": "Go to the All Jobs page and use the upload feature to add a job listing manually or via a link.",
+    "faq3q": "Can I change the app language?",
+    "faq3a": "Yes! Click the language switcher (EN/SV) at the bottom of the sidebar to toggle between English and Swedish.",
+    "faq4q": "How do I remove a job from the list?",
+    "faq4a": "Open the job and select Remove. The job will be deleted from your list immediately.",
+    "formTitle": "Send a message",
+    "formName": "Name",
+    "formNamePlaceholder": "Your name",
+    "formEmail": "Email",
+    "formMessage": "Message",
+    "formMessagePlaceholder": "Describe your issue...",
+    "formSubmit": "Send",
+    "formSuccess": "Message sent!",
+    "formSuccessDesc": "We'll get back to you within 24 hours."
   }
 }

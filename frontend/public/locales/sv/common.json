@@ -42,5 +42,33 @@
     "noData": "Kunde inte hämta användardata – är backend igång?",
     "location": "Plats",
     "bio": "BIO"
+  },
+  "support": {
+    "title": "Support",
+    "subtitle": "Behöver du hjälp? Vi finns här för dig.",
+    "cardFaq": "Vanliga frågor",
+    "cardFaqDesc": "Hitta svar på de vanligaste frågorna om Aplifyr.",
+    "cardContact": "Kontakta oss",
+    "cardContactDesc": "Skicka ett meddelande så svarar vi inom 24 timmar.",
+    "cardEmail": "E-post",
+    "cardEmailDesc": "support@aplifyr.se",
+    "faqTitle": "Vanliga frågor",
+    "faq1q": "Hur fungerar jobbanpassning?",
+    "faq1a": "Aplifyr analyserar din profil och jämför den med jobbannonser för att ge dig ett betyg (A, B eller C) baserat på hur väl du matchar.",
+    "faq2q": "Hur lägger jag till ett nytt jobb?",
+    "faq2a": "Gå till sidan Alla jobb och använd uppladdnings­funktionen för att lägga till en jobbannons manuellt eller via länk.",
+    "faq3q": "Kan jag byta språk i appen?",
+    "faq3a": "Ja! Klicka på språkväljaren (EN/SV) längst ned i sidofältet för att växla mellan engelska och svenska.",
+    "faq4q": "Hur tar jag bort ett jobb från listan?",
+    "faq4a": "Öppna jobbet och välj Ta bort. Jobbet försvinner direkt från din lista.",
+    "formTitle": "Skicka ett meddelande",
+    "formName": "Namn",
+    "formNamePlaceholder": "Ditt namn",
+    "formEmail": "E-post",
+    "formMessage": "Meddelande",
+    "formMessagePlaceholder": "Beskriv ditt ärende...",
+    "formSubmit": "Skicka",
+    "formSuccess": "Meddelandet skickat!",
+    "formSuccessDesc": "Vi återkommer inom 24 timmar."
   }
 }
