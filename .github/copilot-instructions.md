@@ -6,7 +6,7 @@ Full-stack job-tracking application with two independently runnable services:
 
 - **`backend/`** — .NET 10 minimal Web API (`Examensarbete.Api`). Runs on `http://localhost:5000`.
 - **`frontend/`** — Next.js 16 (Pages Router), TypeScript, Tailwind CSS v3. Runs on `http://localhost:3000`.
-- **`supabase/`** — Supabase config. The backend connects directly to Supabase PostgreSQL via a connection string. The frontend Supabase client (`frontend/lib/supabaseClient.ts`) is available for future client-side DB access.
+- **`supabase/`** — Supabase config. The backend connects directly to Supabase PostgreSQL via a connection string. The frontend does not connect to Supabase directly; all data access goes through the backend API.
 
 ## Dev Workflows
 
