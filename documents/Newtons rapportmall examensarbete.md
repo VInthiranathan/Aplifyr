@@ -63,22 +63,43 @@ Målet med examensarbetet är att utveckla en fungerande prototyp av en intellig
 Ett övergripande mål är att undersöka hur automatisering och intelligent matchning kan förbättra effektiviteten och kvaliteten i jobbsökningsprocessen.
 
 # Nulägesbeskrivning
-
+1. Marknaden
 I Sverige söker tusentals människor jobb varje dag. Den svenska arbetsmarknaden förändras ständigt och med det även hur vi söker jobb. Arbetsförmedlingen har länge varit en central aktör, men under senare år har digitala jobbplattformar som LinkedIn, Indeed och Platsbanken tagit över allt mer utrymme. Samtidigt har många arbetssökande upptäckt att bara skicka iväg samma CV till alla tjänster sällan ger bra resultat.
 
-Från arbetsgivarens sida används ofta ATS-system (Applicant Tracking Systems) för att filtrera bort ansökningar som inte matchar vad de söker. Det kan handla om specifika nyckelord, utbildningsnivå eller tidigare erfarenheter. Dessa system gör rekrytering mer effektiv för företagen, men skapar också en utmaning för den som söker jobb – om ansökan inte är anpassad efter tjänsten riskerar den att aldrig nå en mänsklig rekryterare.
+Från arbetsgivarens sida används ofta ATS-system (Applicant Tracking Systems) för att filtrera bort ansökningar som inte matchar vad de söker. Det kan handla om specifika nyckelord, utbildningsnivå eller tidigare erfarenheter. Dessa system gör rekrytering mer effektiv för företagen, men skapar också en utmaning för den som söker jobb om ansökan inte är anpassad efter tjänsten riskerar den att aldrig nå en mänsklig rekryterare.
 
-Det finns verktyg som hjälper arbetssökande att skapa CV:n och personliga brev, till exempel Canva, olika Word-mallar eller tjänster som Kickresume. Men dessa fungerar mest som formatverktyg – de hjälper användaren att få texten att se bra ut, men de genererar inte innehållet automatiskt eller analyserar hur väl man matchar en specifik tjänst.
+Det finns verktyg som hjälper arbetssökande att skapa CV:n och personliga brev, till exempel Canva, olika Word-mallar eller tjänster som Kickresume. Men dessa fungerar mest som formatverktyg de hjälper användaren att få texten att se bra ut, men de genererar inte innehållet automatiskt eller analyserar hur väl man matchar en specifik tjänst.
 
 Det som saknas idag är ett verktyg som aktivt hjälper arbetssökande att:
-
-- Förstå hur väl de faktiskt passar för en viss tjänst innan de skickar in sin ansökan
-- Få hjälp att skriva ett relevant och skräddarsytt personligt brev baserat på den specifika jobbannonsen
-- Spara tid genom att automatisera delar av ansökningsprocessen på samma sätt som arbetsgivarna automatiserar sin del
+    - Förstå hur väl de faktiskt passar för en viss tjänst innan de skickar in sin ansökan
+    - Få hjälp att skriva ett relevant och skräddarsytt personligt brev baserat på den specifika jobbannonsen
+    - Spara tid genom att automatisera delar av ansökningsprocessen på samma sätt som arbetsgivarna automatiserar sin del
 
 Vissa tjänster har börjat experimentera med AI för CV-skrivning, men dessa är ofta generella och tar inte hänsyn till specifika jobbannonser eller matchningsgrad. LinkedIn erbjuder förslag på jobb baserat på profil, men ger ingen tydlig bedömning av hur stark matchningen egentligen är.
 
-Vår applikation fyller detta gap genom att kombinera matchningsanalys med automatisk generering av personliga brev. Tanken är inte att ersätta den mänskliga processen helt, utan att ge arbetssökande bättre verktyg för att förstå sina chanser och spara tid på det repetitiva arbetet – precis som arbetsgivarna redan gjort.
+Vår applikation fyller detta gap genom att kombinera matchningsanalys med automatisk generering av personliga brev. Tanken är inte att ersätta den mänskliga processen helt, utan att ge arbetssökande bättre verktyg för att förstå sina chanser och spara tid på det repetitiva arbetet precis som arbetsgivarna redan gjort.
+
+2. Restriktioner och hänsynstaganden
+
+Vid utvecklingen av applikationen finns flera viktiga aspekter att ta hänsyn till, både juridiska, tekniska och etiska.
+
+2.1 Juridiska aspekter (GDPR)
+
+Eftersom systemet hanterar personuppgifter som namn, e-post och CV-innehåll omfattas det av GDPR. Det innebär att data måste lagras säkert, skyddas mot obehörig åtkomst och endast den information som är nödvändig ska sparas. Användaren bör även ha möjlighet att uppdatera eller radera sina uppgifter. Även om detta är en prototyp är det viktigt att visa medvetenhet kring dataskydd och integritet.
+
+2.2 Tekniska begränsningar
+
+Applikationen använder externa API:er och filuppladdning, vilket medför vissa begränsningar. Arbetsförmedlingens API kan ha anropsbegränsningar och användarvillkor som måste följas. Uppladdning av CV-filer kräver också säker hantering för att undvika risker. Matchningsalgoritmen kommer dessutom vara förenklad, vilket innebär att A/B/C-betyg endast ska ses som en indikation och inte en exakt bedömning.
+
+2.3 Etiska överväganden
+
+AI-genererade personliga brev kan innehålla formuleringar som inte helt speglar verkligheten. Därför bör systemet ses som ett stödverktyg, inte en garanti för att få jobb. Det är också viktigt att tydliggöra att matchningsgraden inte innebär någon säker prognos, utan endast en hjälp för användaren att bedöma sina chanser.
+
+2.4 Avgränsning
+
+Eftersom detta är ett examensarbete är projektet tidsbegränsat. Fokus ligger därför på att utveckla en fungerande prototyp med tydlig struktur, snarare än en helt färdig kommersiell produkt.
+
+
 
 # Metodbeskrivning
 
@@ -87,39 +108,38 @@ Projektet genomförs som ett systemutvecklingsprojekt där fokus ligger på att 
 Systemarkitektur
 Applikationen byggs med en uppdelad arkitektur:
 Frontend (Next.js)
-Används för att skapa ett modernt och responsivt användargränssnitt. Här hanteras användarinteraktioner såsom registrering, profilhantering, visning av matchningar och generering av personligt brev.
+    Används för att skapa ett modernt och responsivt användargränssnitt. Här hanteras användarinteraktioner såsom   registrering, profilhantering, visning av matchningar och generering av personligt brev.
 
-    Backend (.NET)
+Backend (.NET)
     Ansvarar för affärslogik, matchningsalgoritmer och API:er. Här sker bearbetning av CV-data, analys av jobbannonser och klassificering av matchningsgrad.
 
-    Databas (Supabase)
+Databas (Supabase)
     Används för att lagra användarprofiler, CV-information, jobbannonser och matchningsdata.
 
 Arbetsprocess
 Utvecklingen sker iterativt där funktioner implementeras och testas stegvis. Projektet delas upp i följande delar:
-
-Design av databasstruktur
-Implementering av användarhantering och profilfunktioner
-Utveckling av matchningslogik
-Implementering av funktion för generering av personligt brev
-Testning och utvärdering av funktionalitet
+    Design av databasstruktur
+    Implementering av användarhantering och profilfunktioner
+    Utveckling av matchningslogik
+    Implementering av funktion för generering av personligt brev
+    Testning och utvärdering av funktionalitet
 
 Matchningslogiken baseras på en jämförelse mellan:
-Kompetenser och erfarenheter i CV
-Krav och nyckelord i jobbannonsen
-Användarens preferenser (exempelvis ort)
+    Kompetenser och erfarenheter i CV
+    Krav och nyckelord i jobbannonsen
+    Användarens preferenser (exempelvis ort)
 
 Resultatet klassificeras i tre nivåer (A, B eller C), beroende på hur stark överensstämmelsen är.
 
-Resultatredovisning
+# Resultatredovisning
 
-Analys och slutsatser
+# Analys och slutsatser
 
-Rekommendationer
+# Rekommendationer
 
-Källförteckning
+# Källförteckning
 https://nextjs.org/
 https://tailwindcss.com/
 https://chatgpt.com/
 
-Bilagor
+# Bilagor
