@@ -37,18 +37,14 @@ export default function Sidebar() {
     <aside className="flex flex-col h-screen w-48 bg-white dark:bg-[#111] text-slate-800 dark:text-white border-r border-slate-200 dark:border-white/10 flex-shrink-0">
       {/* top branding */}
       <div className="mt-5 px-4">
-        <span
+        <Link
+          href="/"
           className="text-xl font-bold tracking-[0.2em] transition-colors duration-200 cursor-default text-slate-900 dark:text-white hover:text-sky-500 dark:hover:text-[rgba(0,140,255,1)]"
           style={{ fontFamily: "'Roboto', sans-serif" }}
         >
           Aplifyr
-        </span>
+        </Link>
       </div>
-
-      {/* section label */}
-      <p className="px-4 pt-4 pb-1 text-[11px] text-slate-400 dark:text-white/30 uppercase tracking-widest">
-        {t('sidebar.tagline')}
-      </p>
 
       {/* nav links */}
       <nav className="flex flex-col gap-1 px-2">

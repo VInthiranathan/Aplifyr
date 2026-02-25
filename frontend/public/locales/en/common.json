@@ -5,9 +5,6 @@
     "allJobs": "All Jobs",
     "support": "Support"
   },
-  "sidebar": {
-    "tagline": "The Tastemaker"
-  },
   "theme": {
     "dark": "Dark",
     "light": "Light"
