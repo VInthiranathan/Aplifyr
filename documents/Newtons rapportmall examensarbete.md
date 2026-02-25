@@ -87,6 +87,10 @@ Vid utvecklingen av applikationen finns flera viktiga aspekter att ta hänsyn ti
 
 Eftersom systemet hanterar personuppgifter som namn, e-post och CV-innehåll omfattas det av GDPR. Det innebär att data måste lagras säkert, skyddas mot obehörig åtkomst och endast den information som är nödvändig ska sparas. Användaren bör även ha möjlighet att uppdatera eller radera sina uppgifter. Även om detta är en prototyp är det viktigt att visa medvetenhet kring dataskydd och integritet.
 
+För att ytterligare stärka dataskyddet används Row Level Security (RLS) i Supabase. Detta innebär att användare endast kan läsa och modifiera sina egna uppgifter i databasen. Åtkomstkontrollen implementeras direkt på databasskiktsnivå, vilket minskar risken för obehörig åtkomst även om applikationslogiken skulle innehålla brister.
+
+Systemet lagrar inte fullständiga promptloggar från LLM-anrop. Endast det genererade resultatet sparas vid behov. Detta minimerar lagring av känslig persondata och följer principen om dataminimering enligt GDPR.
+
 2.2 Tekniska begränsningar
 
 Applikationen använder externa API:er och filuppladdning, vilket medför vissa begränsningar. Arbetsförmedlingens API kan ha anropsbegränsningar och användarvillkor som måste följas. Uppladdning av CV-filer kräver också säker hantering för att undvika risker. Matchningsalgoritmen kommer dessutom vara förenklad, vilket innebär att A/B/C-betyg endast ska ses som en indikation och inte en exakt bedömning.
@@ -94,6 +98,8 @@ Applikationen använder externa API:er och filuppladdning, vilket medför vissa 
 2.3 Etiska överväganden
 
 AI-genererade personliga brev kan innehålla formuleringar som inte helt speglar verkligheten. Därför bör systemet ses som ett stödverktyg, inte en garanti för att få jobb. Det är också viktigt att tydliggöra att matchningsgraden inte innebär någon säker prognos, utan endast en hjälp för användaren att bedöma sina chanser.
+
+LLM används som ett stödverktyg för textgenerering, men fattar inga autonoma beslut. Användaren har alltid möjlighet att granska och redigera det genererade innehållet innan det används.
 
 2.4 Avgränsning
 
@@ -114,7 +120,8 @@ Backend (.NET)
     Ansvarar för affärslogik, matchningsalgoritmer och API:er. Här sker bearbetning av CV-data, analys av jobbannonser och klassificering av matchningsgrad.
 
 Databas (Supabase)
-    Används för att lagra användarprofiler, CV-information, jobbannonser och matchningsdata.
+    Databasen (Supabase/PostgreSQL) är utformad enligt principer för relationsdatabas-normalisering för att minimera redundans och säkerställa dataintegritet. Användarprofiler, CV-data, jobbannonser, matchningsresultat och AI-genererat innehåll lagras i separata tabeller med tydliga relationer via främmande nycklar.
+Strukturen möjliggör skalbarhet, bättre underhållbarhet samt en tydlig separation mellan rådata och genererat innehåll.
 
 Arbetsprocess
 Utvecklingen sker iterativt där funktioner implementeras och testas stegvis. Projektet delas upp i följande delar:
@@ -124,12 +131,13 @@ Utvecklingen sker iterativt där funktioner implementeras och testas stegvis. Pr
     Implementering av funktion för generering av personligt brev
     Testning och utvärdering av funktionalitet
 
-Matchningslogiken baseras på en jämförelse mellan:
-    Kompetenser och erfarenheter i CV
-    Krav och nyckelord i jobbannonsen
-    Användarens preferenser (exempelvis ort)
+Matchningslogiken baseras på en kombination av strukturerad jämförelse och semantisk analys. Text från CV, profilinformation och jobbannonser omvandlas till numeriska representationer (embeddings) med hjälp av en språkmodell.
 
-Resultatet klassificeras i tre nivåer (A, B eller C), beroende på hur stark överensstämmelsen är.
+Dessa vektorer lagras i databasen och jämförs för att beräkna semantisk likhet mellan användarens kompetens och jobbannonsens krav.
+
+Resultatet klassificeras i tre nivåer (A, B eller C) beroende på hur stark överensstämmelsen är.
+
+Genom att använda embeddings möjliggörs matchning även när olika formuleringar används för liknande kompetenser, vilket ger en mer robust bedömning än enbart nyckelordsbaserad matchning.
 
 # Resultatredovisning
 

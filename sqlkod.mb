@@ -1,0 +1,41 @@
+create table profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  full_name text,
+  created_at timestamp with time zone default now()
+);
+
+create table cvs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references profiles(id) on delete cascade,
+  file_name text,
+  file_path text, -- Supabase storage path
+  extracted_text text,
+  created_at timestamp with time zone default now()
+);
+
+create table job_posts (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references profiles(id) on delete cascade,
+  title text,
+  company text,
+  description text,
+  created_at timestamp with time zone default now()
+);
+
+create table applications (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references profiles(id) on delete cascade,
+  cv_id uuid references cvs(id) on delete cascade,
+  job_post_id uuid references job_posts(id) on delete cascade,
+  match_score float,
+  created_at timestamp with time zone default now()
+);
+
+create table generated_documents (
+  id uuid primary key default gen_random_uuid(),
+  application_id uuid references applications(id) on delete cascade,
+  document_type text, -- "cover_letter" eller "summary"
+  content text,
+  created_at timestamp with time zone default now()
+);
+
