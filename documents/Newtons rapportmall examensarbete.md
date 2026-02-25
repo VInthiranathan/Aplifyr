@@ -1,4 +1,4 @@
-Examensarbete 
+Examensarbete
 
 Titel på arbetet: Aplifyr
 Klass: SYSM8
@@ -6,8 +6,8 @@ Termin och år: 2026 T1
 Författare: Aleksander Lukic, Jetlir Kuci, Vithunan Inthiranathan
 Kursansvarig: Jerry Johansson
 
-
 # Sammanfattning
+
 Detta examensarbete handlar om att utveckla en webbaserad applikation som syftar till att förenkla och effektivisera processen för jobbsökande. Idén bygger på insikten att stora delar av dagens rekryteringsprocess redan är automatiserad – exempelvis genom AI-baserad CV-screening och automatiska urvalssystem. Vår utgångspunkt är därför: om arbetsgivare automatiserar sin del av processen, varför skulle inte arbetssökande kunna göra detsamma?
 
 Applikationen matchar användare med relevanta jobbannonser och ger dem möjlighet att automatiskt generera personligt anpassade personliga brev baserat på jobbannonsens innehåll, användarens CV samt information från användarens profil. Systemet erbjuder även matchningsgrader (A, B eller C) baserat på hur väl användarens kompetens och preferenser stämmer överens med tjänsten.
@@ -15,9 +15,11 @@ Applikationen matchar användare med relevanta jobbannonser och ger dem möjligh
 Frontend byggs med Next.js, backend utvecklas i .NET, och databasen hanteras via Supabase.
 
 # Innehållsförteckning
+
     Detta genreras automatiskt i word, inget vi måste fylla i själva
 
-# Uppdragsbeskrivning/problemformulering  
+# Uppdragsbeskrivning/problemformulering
+
 Att söka jobb är ofta en tidskrävande och repetitiv process. Arbetssökande förväntas anpassa sina CV:n och skriva unika personliga brev för varje enskild tjänst. Samtidigt använder många företag automatiserade system (ATS – Applicant Tracking Systems) för att filtrera och bedöma ansökningar.
 
 Problemet är att:
@@ -32,46 +34,60 @@ Vår applikation adresserar detta genom att:
 - Matcha användare mot jobb baserat på CV, profil och ortspreferenser.
 - Ge en tydlig indikation på matchningsgrad (A, B eller C).
 - Automatisera skapandet av ett personligt brev som är skräddarsytt efter jobbannonsens innehåll.
- 
 
-# Examensarbetets mål 
+# Examensarbetets mål
+
 Målet med examensarbetet är att utveckla en fungerande prototyp av en intelligent jobbmatchningsapplikation som:
 
 1. Tillåter användare att:
-    - Skapa en profil
-    - Ladda upp eller fylla i sitt CV
-    - Ange preferenser, exempelvis önskad ort
-    - Beskriva sig själva, sina intressen och hobbyer
+   - Skapa en profil
+   - Ladda upp eller fylla i sitt CV
+   - Ange preferenser, exempelvis önskad ort
+   - Beskriva sig själva, sina intressen och hobbyer
 
 2. Matchar användare med jobbannonser och klassificerar matchningen i tre nivåer:
-    - A-matchning – stark överensstämmelse
-    - B-matchning – god överensstämmelse
-    - C-matchning – viss överensstämmelse
+   - A-matchning – stark överensstämmelse
+   - B-matchning – god överensstämmelse
+   - C-matchning – viss överensstämmelse
 
 3. Genererar ett personligt brev automatiskt baserat på:
-    - Innehållet i jobbannonsen
-    - Användarens CV
-    - Profilinformation
+   - Innehållet i jobbannonsen
+   - Användarens CV
+   - Profilinformation
 
 4. Byggs med en modern och skalbar teknisk arkitektur:
-    - Next.js för frontend
-    - .NET för backend och API-logik
-    - Supabase som databaslösning
+   - Next.js för frontend
+   - .NET för backend och API-logik
+   - Supabase som databaslösning
 
 Ett övergripande mål är att undersöka hur automatisering och intelligent matchning kan förbättra effektiviteten och kvaliteten i jobbsökningsprocessen.
- 
 
-# Nulägesbeskrivning 
+# Nulägesbeskrivning
 
- 
+I Sverige söker tusentals människor jobb varje dag. Den svenska arbetsmarknaden förändras ständigt och med det även hur vi söker jobb. Arbetsförmedlingen har länge varit en central aktör, men under senare år har digitala jobbplattformar som LinkedIn, Indeed och Platsbanken tagit över allt mer utrymme. Samtidigt har många arbetssökande upptäckt att bara skicka iväg samma CV till alla tjänster sällan ger bra resultat.
 
-# Metodbeskrivning  
+Från arbetsgivarens sida används ofta ATS-system (Applicant Tracking Systems) för att filtrera bort ansökningar som inte matchar vad de söker. Det kan handla om specifika nyckelord, utbildningsnivå eller tidigare erfarenheter. Dessa system gör rekrytering mer effektiv för företagen, men skapar också en utmaning för den som söker jobb – om ansökan inte är anpassad efter tjänsten riskerar den att aldrig nå en mänsklig rekryterare.
+
+Det finns verktyg som hjälper arbetssökande att skapa CV:n och personliga brev, till exempel Canva, olika Word-mallar eller tjänster som Kickresume. Men dessa fungerar mest som formatverktyg – de hjälper användaren att få texten att se bra ut, men de genererar inte innehållet automatiskt eller analyserar hur väl man matchar en specifik tjänst.
+
+Det som saknas idag är ett verktyg som aktivt hjälper arbetssökande att:
+
+- Förstå hur väl de faktiskt passar för en viss tjänst innan de skickar in sin ansökan
+- Få hjälp att skriva ett relevant och skräddarsytt personligt brev baserat på den specifika jobbannonsen
+- Spara tid genom att automatisera delar av ansökningsprocessen på samma sätt som arbetsgivarna automatiserar sin del
+
+Vissa tjänster har börjat experimentera med AI för CV-skrivning, men dessa är ofta generella och tar inte hänsyn till specifika jobbannonser eller matchningsgrad. LinkedIn erbjuder förslag på jobb baserat på profil, men ger ingen tydlig bedömning av hur stark matchningen egentligen är.
+
+Vår applikation fyller detta gap genom att kombinera matchningsanalys med automatisk generering av personliga brev. Tanken är inte att ersätta den mänskliga processen helt, utan att ge arbetssökande bättre verktyg för att förstå sina chanser och spara tid på det repetitiva arbetet – precis som arbetsgivarna redan gjort.
+
+# Metodbeskrivning
+
 Projektet genomförs som ett systemutvecklingsprojekt där fokus ligger på att ta fram en fungerande prototyp.
 
 Systemarkitektur
 Applikationen byggs med en uppdelad arkitektur:
-    Frontend (Next.js)
-    Används för att skapa ett modernt och responsivt användargränssnitt. Här hanteras användarinteraktioner såsom registrering, profilhantering, visning av matchningar och generering av personligt brev.
+Frontend (Next.js)
+Används för att skapa ett modernt och responsivt användargränssnitt. Här hanteras användarinteraktioner såsom registrering, profilhantering, visning av matchningar och generering av personligt brev.
 
     Backend (.NET)
     Ansvarar för affärslogik, matchningsalgoritmer och API:er. Här sker bearbetning av CV-data, analys av jobbannonser och klassificering av matchningsgrad.
@@ -83,40 +99,27 @@ Arbetsprocess
 Utvecklingen sker iterativt där funktioner implementeras och testas stegvis. Projektet delas upp i följande delar:
 
 Design av databasstruktur
-    Implementering av användarhantering och profilfunktioner
-    Utveckling av matchningslogik
-    Implementering av funktion för generering av personligt brev
-    Testning och utvärdering av funktionalitet
-
+Implementering av användarhantering och profilfunktioner
+Utveckling av matchningslogik
+Implementering av funktion för generering av personligt brev
+Testning och utvärdering av funktionalitet
 
 Matchningslogiken baseras på en jämförelse mellan:
-    Kompetenser och erfarenheter i CV
-    Krav och nyckelord i jobbannonsen
-    Användarens preferenser (exempelvis ort)
+Kompetenser och erfarenheter i CV
+Krav och nyckelord i jobbannonsen
+Användarens preferenser (exempelvis ort)
 
 Resultatet klassificeras i tre nivåer (A, B eller C), beroende på hur stark överensstämmelsen är.
- 
 
-Resultatredovisning 
+Resultatredovisning
 
- 
+Analys och slutsatser
 
-Analys och slutsatser 
+Rekommendationer
 
- 
-
-Rekommendationer 
-
- 
-
-Källförteckning 
+Källförteckning
 https://nextjs.org/
 https://tailwindcss.com/
 https://chatgpt.com/
- 
 
-Bilagor 
-
- 
-
- 
+Bilagor
