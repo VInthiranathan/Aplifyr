@@ -149,5 +149,7 @@ Genom att använda embeddings möjliggörs matchning även när olika formulerin
 https://nextjs.org/
 https://tailwindcss.com/
 https://chatgpt.com/
+https://supabase.com/
+https://www.typescriptlang.org/
 
 # Bilagor
