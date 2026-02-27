@@ -147,17 +147,14 @@ export default function Home({ jobs, progression }: Props) {
           <div className="lg:col-span-3 grid grid-cols-3 gap-6">
             {/* A Grade */}
             <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-8 border border-gray-200 dark:border-white/5 shadow-sm hover:shadow-md dark:shadow-none transition-all hover:scale-[1.02] group">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-sm font-semibold text-gray-500 dark:text-white/60 uppercase tracking-wider">
-                  A Grade
-                </span>
-                <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <span className="text-lg font-bold text-green-600 dark:text-green-400">
-                    A
+              <div className="flex items-center justify-center mb-6">
+                <div className="px-4 py-2 rounded-full bg-green-100 dark:bg-green-500/20 group-hover:scale-110 transition-transform">
+                  <span className="text-sm font-bold text-green-600 dark:text-green-400 uppercase tracking-wider">
+                    A GRADE
                   </span>
                 </div>
               </div>
-              <div className="mt-6">
+              <div>
                 <p className="text-5xl font-bold text-gray-900 dark:text-white mb-2">
                   {gradeA}
                 </p>
@@ -169,17 +166,14 @@ export default function Home({ jobs, progression }: Props) {
 
             {/* B Grade */}
             <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-8 border border-gray-200 dark:border-white/5 shadow-sm hover:shadow-md dark:shadow-none transition-all hover:scale-[1.02] group">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-sm font-semibold text-gray-500 dark:text-white/60 uppercase tracking-wider">
-                  B Grade
-                </span>
-                <div className="w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <span className="text-lg font-bold text-yellow-600 dark:text-yellow-400">
-                    B
+              <div className="flex items-center justify-center mb-6">
+                <div className="px-4 py-2 rounded-full bg-yellow-100 dark:bg-yellow-500/20 group-hover:scale-110 transition-transform">
+                  <span className="text-sm font-bold text-yellow-600 dark:text-yellow-400 uppercase tracking-wider">
+                    B GRADE
                   </span>
                 </div>
               </div>
-              <div className="mt-6">
+              <div>
                 <p className="text-5xl font-bold text-gray-900 dark:text-white mb-2">
                   {gradeB}
                 </p>
@@ -191,17 +185,14 @@ export default function Home({ jobs, progression }: Props) {
 
             {/* C Grade */}
             <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-8 border border-gray-200 dark:border-white/5 shadow-sm hover:shadow-md dark:shadow-none transition-all hover:scale-[1.02] group">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-sm font-semibold text-gray-500 dark:text-white/60 uppercase tracking-wider">
-                  C Grade
-                </span>
-                <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <span className="text-lg font-bold text-red-600 dark:text-red-400">
-                    C
+              <div className="flex items-center justify-center mb-6">
+                <div className="px-4 py-2 rounded-full bg-red-100 dark:bg-red-500/20 group-hover:scale-110 transition-transform">
+                  <span className="text-sm font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">
+                    C GRADE
                   </span>
                 </div>
               </div>
-              <div className="mt-6">
+              <div>
                 <p className="text-5xl font-bold text-gray-900 dark:text-white mb-2">
                   {gradeC}
                 </p>
