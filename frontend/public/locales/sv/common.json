@@ -68,4 +68,29 @@
     "formSuccess": "Meddelandet skickat!",
     "formSuccessDesc": "Vi återkommer inom 24 timmar."
   }
+  ,
+  "auth": {
+    "welcomeBack": "Välkommen tillbaka",
+    "createAccount": "Skapa konto",
+    "enterCredentials": "Ange dina uppgifter för att fortsätta",
+    "fillDetails": "Fyll i dina uppgifter för att komma igång",
+    "fullName": "Namn",
+    "email": "E-post",
+    "password": "Lösenord",
+    "confirmPassword": "Bekräfta lösenord",
+    "forgotPassword": "Glömt lösenord?",
+    "signIn": "Logga in",
+    "signUp": "Registrera",
+    "noAccount": "Har du inget konto? ",
+    "haveAccount": "Har du redan ett konto? ",
+    "createAccountButton": "Skapa konto",
+    "working": "Arbetar...",
+    "signOut": "Logga ut",
+    "checkEmail": "Kolla din e-post för att bekräfta kontot och logga sedan in.",
+    "errors": {
+      "missingSupabaseEnv": "Supabase är inte konfigurerat. Ange NEXT_PUBLIC_SUPABASE_URL och NEXT_PUBLIC_SUPABASE_ANON_KEY i frontend/.env.local.",
+      "missingEmailOrPassword": "E-post och lösenord krävs.",
+      "passwordsDoNotMatch": "Lösenorden matchar inte."
+    }
+  }
 }

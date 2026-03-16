@@ -1,6 +1,8 @@
 import type { GetServerSideProps } from "next";
 import type { Job, Progression, JobsData } from "../types/api";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import { createServerClient, parseCookieHeader, serializeCookieHeader } from "@supabase/auth-helpers-nextjs";
+import { isSupabaseConfigured } from "../lib/supabaseClient";
 
 const BACKEND = process.env.BACKEND_URL ?? "http://localhost:5000";
 
@@ -11,7 +13,54 @@ interface Props {
 
 export const getServerSideProps: GetServerSideProps<Props> = async ({
   locale,
+  req,
+  res,
 }) => {
+  if (isSupabaseConfigured) {
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
+      {
+        cookies: {
+          getAll() {
+            return parseCookieHeader(req.headers.cookie ?? "").map((c) => ({
+              name: c.name,
+              value: c.value ?? "",
+            }));
+          },
+          setAll(cookies) {
+            const setCookie = cookies.map(({ name, value, options }) =>
+              serializeCookieHeader(name, value, options),
+            );
+
+            const existing = res.getHeader("Set-Cookie");
+            const existingArray =
+              typeof existing === "string"
+                ? [existing]
+                : Array.isArray(existing)
+                  ? existing
+                  : [];
+
+            res.setHeader("Set-Cookie", [...existingArray, ...setCookie]);
+          },
+        },
+      },
+    );
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
+      return {
+        redirect: {
+          destination: "/auth",
+          permanent: false,
+        },
+      };
+    }
+  }
+
   try {
     const res = await fetch(`${BACKEND}/api/jobs`);
     if (!res.ok) throw new Error("backend error");

@@ -24,7 +24,7 @@ Bygga en webbapp som förbereder jobbansökningar åt användaren genom att komb
 - AI: Managed LLM‑API (t.ex. OpenAI, Anthropic) för parsing och generering
 - Vektorlager: Pinecone eller Redis Vector
 - Fil‑lagring: AWS S3 eller motsvarande
-- Auth: Clerk, Auth0 eller NextAuth
+- Auth: SSR using Supabase
 
 **Varför:** Snabb utveckling, enkel hosting (Vercel) och förenklad integration.
 

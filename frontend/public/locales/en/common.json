@@ -68,4 +68,29 @@
     "formSuccess": "Message sent!",
     "formSuccessDesc": "We'll get back to you within 24 hours."
   }
+  ,
+  "auth": {
+    "welcomeBack": "Welcome back",
+    "createAccount": "Create account",
+    "enterCredentials": "Enter your credentials to continue",
+    "fillDetails": "Fill in your details to get started",
+    "fullName": "Full Name",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "forgotPassword": "Forgot password?",
+    "signIn": "Sign in",
+    "signUp": "Sign up",
+    "noAccount": "Don't have an account? ",
+    "haveAccount": "Already have an account? ",
+    "createAccountButton": "Create Account",
+    "working": "Working...",
+    "signOut": "Sign out",
+    "checkEmail": "Check your email to confirm your account, then sign in.",
+    "errors": {
+      "missingSupabaseEnv": "Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in frontend/.env.local.",
+      "missingEmailOrPassword": "Email and password are required.",
+      "passwordsDoNotMatch": "Passwords do not match."
+    }
+  }
 }
