@@ -2,6 +2,12 @@ import type { GetServerSideProps } from "next";
 import type { User } from "../../types/api";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import {
+  createServerClient,
+  parseCookieHeader,
+  serializeCookieHeader,
+} from '@supabase/auth-helpers-nextjs'
+import { isSupabaseConfigured, getSupabaseBrowserClient } from '../../lib/supabaseClient'
+import {
   MapPin,
   Briefcase,
   Edit,
@@ -11,7 +17,7 @@ import {
   X,
   Save,
 } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 const BACKEND = process.env.BACKEND_URL ?? "http://localhost:5000";
 
@@ -21,26 +27,92 @@ interface Props {
 
 export const getServerSideProps: GetServerSideProps<Props> = async ({
   locale,
+  req,
+  res,
 }) => {
   try {
-    const res = await fetch(`${BACKEND}/api/user`);
-    if (!res.ok) throw new Error("backend error");
-    const user: User = await res.json();
-    return {
-      props: {
-        user,
-        ...(await serverSideTranslations(locale ?? "en", ["common"])),
-      },
-    };
-  } catch {
+    if (isSupabaseConfigured) {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
+
+      const parsed = parseCookieHeader(req.headers.cookie ?? '')
+
+      const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+        cookies: {
+          getAll() {
+            return parsed.map((c) => ({ name: c.name, value: c.value ?? '' }))
+          },
+          setAll(cookies) {
+            const setCookie = cookies.map(({ name, value, options }) =>
+              serializeCookieHeader(name, value, options),
+            )
+            setCookie.forEach((c) => res.setHeader('Set-Cookie', c))
+          },
+        },
+      })
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        return {
+          props: {
+            user: null,
+            ...(await serverSideTranslations(locale ?? 'en', ['common'])),
+          },
+        }
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      const frontendUser: User | null = profile
+        ? {
+            id: profile.id,
+            name: profile.full_name ?? '',
+            title: profile.title ?? '',
+            location: profile.location ?? '',
+            bio: profile.bio ?? '',
+            tags: profile.tech_stack ?? [],
+            roles: profile.roles ?? [],
+            avatarInitials: profile.full_name
+              ? profile.full_name
+                  .split(/\s+/)
+                  .map((p: string) => p[0])
+                  .slice(0, 2)
+                  .join('')
+                  .toUpperCase()
+              : '',
+          }
+        : null
+
+      return {
+        props: {
+          user: frontendUser,
+          ...(await serverSideTranslations(locale ?? 'en', ['common'])),
+        },
+      }
+    }
+
     return {
       props: {
         user: null,
-        ...(await serverSideTranslations(locale ?? "en", ["common"])),
+        ...(await serverSideTranslations(locale ?? 'en', ['common'])),
       },
-    };
+    }
+  } catch (e) {
+    return {
+      props: {
+        user: null,
+        ...(await serverSideTranslations(locale ?? 'en', ['common'])),
+      },
+    }
   }
-};
+}
 
 const locationFilters = [
   "Only my location",
@@ -53,19 +125,74 @@ const locationFilters = [
 export default function UserPage({ user }: Props) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editedUser, setEditedUser] = useState<User | null>(user);
+  const [editSection, setEditSection] = useState<'profile' | 'bio' | 'skills' | 'roles' | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const profileImageInputRef = useRef<HTMLInputElement>(null);
 
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center h-64 text-slate-400 dark:text-white/40 text-sm">
-        Kunde inte hämta användardata – är backend igång?
-      </div>
-    );
-  }
+  // client-side profile state: undefined = loading, null = no profile, User = loaded
+  const [clientProfile, setClientProfile] = useState<User | null | undefined>(user);
+
+  useEffect(() => {
+    // if SSR didn't provide a user/profile, try fetching client-side from Supabase
+    if (user === null) {
+      setClientProfile(undefined); // loading
+      (async () => {
+        try {
+          const res = await fetch('/api/profile', { credentials: 'same-origin' });
+          if (!res.ok) throw new Error('fetch failed');
+          const data = await res.json();
+          if (data.profile) {
+            const p = data.profile;
+            const mapped: User = {
+              id: p.id,
+              name: p.full_name ?? '',
+              title: p.title ?? '',
+              location: p.location ?? '',
+              bio: p.bio ?? '',
+              tags: p.tech_stack ?? [],
+              roles: p.roles ?? [],
+              avatarInitials: p.full_name
+                ? p.full_name.split(/\s+/).map((s: string) => s[0]).slice(0,2).join('').toUpperCase()
+                : '',
+            };
+            setClientProfile(mapped);
+            setEditedUser(mapped);
+          } else {
+            // no profile yet — allow user to create one via UI
+            setClientProfile(null);
+            setEditedUser({
+              id: '',
+              name: '',
+              title: '',
+              location: '',
+              bio: '',
+              tags: [],
+              roles: [],
+              avatarInitials: '',
+            });
+          }
+        } catch (e) {
+          setClientProfile(null);
+          setEditedUser({
+            id: '',
+            name: '',
+            title: '',
+            location: '',
+            bio: '',
+            tags: [],
+            roles: [],
+            avatarInitials: '',
+          });
+        }
+      })();
+    } else {
+      setClientProfile(user);
+      setEditedUser(user);
+    }
+  }, [user]);
 
   const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -123,25 +250,25 @@ export default function UserPage({ user }: Props) {
 
   const handleSaveProfile = async () => {
     if (!editedUser) return;
-
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/user`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(editedUser),
-        },
-      );
+      const res = await fetch('/api/profile', {
+        method: 'PUT',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editedUser),
+      });
 
       if (res.ok) {
         setIsEditModalOpen(false);
-        window.location.reload(); // Refresh to show updated data
+        window.location.reload();
       } else {
-        alert("Failed to save profile");
+        const err = await res.json().catch(() => ({}));
+        console.error('save profile failed', err);
+        alert('Failed to save profile');
       }
     } catch (error) {
-      alert("Error saving profile");
+      console.error(error);
+      alert('Error saving profile');
     }
   };
 
@@ -160,12 +287,12 @@ export default function UserPage({ user }: Props) {
               {profileImage ? (
                 <img
                   src={profileImage}
-                  alt={user.name}
+                  alt={(clientProfile && clientProfile.name) || 'Profile'}
                   className="w-24 h-24 rounded-2xl object-cover"
                 />
               ) : (
                 <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white text-3xl font-bold">
-                  {user.avatarInitials}
+                  {(clientProfile && clientProfile.avatarInitials) || ''}
                 </div>
               )}
             </div>
@@ -173,25 +300,28 @@ export default function UserPage({ user }: Props) {
             {/* User Info */}
             <div className="flex-1">
               <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3">
-                {user.name}
+                {clientProfile?.name ?? ''}
               </h1>
               <div className="flex items-center gap-4 text-gray-600 dark:text-white/60">
                 <div className="flex items-center gap-2">
                   <Briefcase className="w-4 h-4" />
-                  <span>{user.title}</span>
+                  <span>{(clientProfile && clientProfile.title) || ''}</span>
                 </div>
                 <span className="text-gray-400 dark:text-white/30">•</span>
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4" />
-                  <span>{user.location}</span>
+                  <span>{(clientProfile && clientProfile.location) || ''}</span>
                 </div>
               </div>
             </div>
 
-            {/* Edit Profile Button */}
+            {/* Edit Profile Button - edits name/title/location only */}
             <button
               onClick={() => {
-                setEditedUser(user);
+                setEditedUser(clientProfile ?? editedUser ?? {
+                  id: '', name: '', title: '', location: '', bio: '', tags: [], roles: [], avatarInitials: ''
+                });
+                setEditSection('profile');
                 setIsEditModalOpen(true);
               }}
               className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors font-semibold shadow-lg"
@@ -212,12 +342,24 @@ export default function UserPage({ user }: Props) {
                 <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-500/10 flex items-center justify-center">
                   <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 </div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                  About Me
-                </h2>
+                  <div className="flex items-center justify-between w-full">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">About me</h2>
+                    <button
+                      onClick={() => {
+                        setEditedUser(clientProfile ?? editedUser ?? {
+                          id: '', name: '', title: '', location: '', bio: '', tags: [], roles: [], avatarInitials: ''
+                        });
+                        setEditSection('bio');
+                        setIsEditModalOpen(true);
+                      }}
+                      className="text-sm font-semibold px-3 py-1 rounded-lg bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10"
+                    >
+                      Edit
+                    </button>
+                  </div>
               </div>
               <p className="text-gray-700 dark:text-white/70 leading-relaxed">
-                {user.bio || "No bio available"}
+                {(clientProfile && clientProfile.bio) || "No bio available"}
               </p>
             </div>
 
@@ -228,7 +370,7 @@ export default function UserPage({ user }: Props) {
                   <MapPin className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                 </div>
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                  Location Preferences
+                  Location preferences
                 </h2>
               </div>
               <div className="flex gap-3 flex-wrap">
@@ -243,18 +385,30 @@ export default function UserPage({ user }: Props) {
               </div>
             </div>
 
-            {/* Skills */}
+            {/* Tech stack */}
             <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-6 border border-gray-200 dark:border-white/5 shadow-sm">
               <div className="flex items-center gap-3 mb-5">
                 <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-500/10 flex items-center justify-center">
                   <Tag className="w-5 h-5 text-green-600 dark:text-green-400" />
                 </div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                  Skills
-                </h2>
+                <div className="flex items-center justify-between w-full">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Tech stack</h2>
+                  <button
+                    onClick={() => {
+                      setEditedUser(clientProfile ?? editedUser ?? {
+                        id: '', name: '', title: '', location: '', bio: '', tags: [], roles: [], avatarInitials: ''
+                      });
+                      setEditSection('skills');
+                      setIsEditModalOpen(true);
+                    }}
+                    className="text-sm font-semibold px-3 py-1 rounded-lg bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10"
+                  >
+                    Edit
+                  </button>
+                </div>
               </div>
               <div className="flex gap-3 flex-wrap">
-                {user.tags.map((tag) => (
+                {(clientProfile ? clientProfile.tags : []).map((tag) => (
                   <span
                     key={tag}
                     className="px-4 py-2 bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 font-medium rounded-xl border border-green-200 dark:border-green-500/20"
@@ -271,12 +425,24 @@ export default function UserPage({ user }: Props) {
                 <div className="w-10 h-10 rounded-xl bg-orange-100 dark:bg-orange-500/10 flex items-center justify-center">
                   <Briefcase className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                 </div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                  Desired Roles
-                </h2>
+                <div className="flex items-center justify-between w-full">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Desired roles</h2>
+                  <button
+                    onClick={() => {
+                      setEditedUser(clientProfile ?? editedUser ?? {
+                        id: '', name: '', title: '', location: '', bio: '', tags: [], roles: [], avatarInitials: ''
+                      });
+                      setEditSection('roles');
+                      setIsEditModalOpen(true);
+                    }}
+                    className="text-sm font-semibold px-3 py-1 rounded-lg bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10"
+                  >
+                    Edit
+                  </button>
+                </div>
               </div>
               <div className="flex gap-3 flex-wrap">
-                {user.roles.map((role) => (
+                {(clientProfile ? clientProfile.roles : []).map((role) => (
                   <span
                     key={role}
                     className="px-4 py-2 bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 font-medium rounded-xl border border-orange-200 dark:border-orange-500/20"
@@ -386,151 +552,158 @@ export default function UserPage({ user }: Props) {
 
             {/* Modal Body */}
             <div className="p-6 space-y-6">
-              {/* Profile Picture */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-3">
-                  Profile Picture
-                </label>
-                <div className="flex items-center gap-6">
-                  {/* Avatar Preview */}
-                  <div className="relative flex-shrink-0">
-                    {profileImage ? (
-                      <img
-                        src={profileImage}
-                        alt="Profile"
-                        className="w-24 h-24 rounded-2xl object-cover"
-                      />
-                    ) : (
-                      <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white text-3xl font-bold">
-                        {user.avatarInitials}
+              {editSection === 'profile' && (
+                <>
+                  {/* Profile Picture */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                      Profile Picture
+                    </label>
+                    <div className="flex items-center gap-6">
+                      {/* Avatar Preview */}
+                      <div className="relative flex-shrink-0">
+                        {profileImage ? (
+                          <img
+                            src={profileImage}
+                            alt="Profile"
+                            className="w-24 h-24 rounded-2xl object-cover"
+                          />
+                        ) : (
+                          <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white text-3xl font-bold">
+                            {(editedUser && editedUser.avatarInitials) || (clientProfile && clientProfile.avatarInitials) || ''}
+                          </div>
+                        )}
                       </div>
-                    )}
+
+                      {/* Upload buttons */}
+                      <div className="flex flex-col gap-2">
+                        <input
+                          ref={profileImageInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleProfileImageChange}
+                          className="hidden"
+                        />
+                        <button
+                          onClick={() => profileImageInputRef.current?.click()}
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors text-sm"
+                        >
+                          Upload Image
+                        </button>
+                        {profileImage && (
+                          <button
+                            onClick={() => setProfileImage(null)}
+                            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-white/10 dark:hover:bg-white/20 text-gray-700 dark:text-white rounded-lg font-medium transition-colors text-sm"
+                          >
+                            Use Initials
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Upload buttons */}
-                  <div className="flex flex-col gap-2">
+                  {/* Name */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                      Name
+                    </label>
                     <input
-                      ref={profileImageInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleProfileImageChange}
-                      className="hidden"
+                      type="text"
+                      value={editedUser.name}
+                      onChange={(e) =>
+                        setEditedUser({ ...editedUser, name: e.target.value })
+                      }
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-                    <button
-                      onClick={() => profileImageInputRef.current?.click()}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors text-sm"
-                    >
-                      Upload Image
-                    </button>
-                    {profileImage && (
-                      <button
-                        onClick={() => setProfileImage(null)}
-                        className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-white/10 dark:hover:bg-white/20 text-gray-700 dark:text-white rounded-lg font-medium transition-colors text-sm"
-                      >
-                        Use Initials
-                      </button>
-                    )}
                   </div>
+
+                  {/* Title */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                      Title
+                    </label>
+                    <input
+                      type="text"
+                      value={editedUser.title}
+                      onChange={(e) =>
+                        setEditedUser({ ...editedUser, title: e.target.value })
+                      }
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  {/* Location */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                      Location
+                    </label>
+                    <input
+                      type="text"
+                      value={editedUser.location}
+                      onChange={(e) =>
+                        setEditedUser({ ...editedUser, location: e.target.value })
+                      }
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </>
+              )}
+
+              {editSection === 'bio' && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                    About Me
+                  </label>
+                  <textarea
+                    value={editedUser.bio}
+                    onChange={(e) =>
+                      setEditedUser({ ...editedUser, bio: e.target.value })
+                    }
+                    rows={4}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  />
                 </div>
-              </div>
+              )}
 
-              {/* Name */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                  Name
-                </label>
-                <input
-                  type="text"
-                  value={editedUser.name}
-                  onChange={(e) =>
-                    setEditedUser({ ...editedUser, name: e.target.value })
-                  }
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+              {editSection === 'skills' && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                    Skills (comma-separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={editedUser.tags.join(", ")}
+                    onChange={(e) =>
+                      setEditedUser({
+                        ...editedUser,
+                        tags: e.target.value.split(",").map((s) => s.trim()),
+                      })
+                    }
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="C#, TypeScript, React, Next.js"
+                  />
+                </div>
+              )}
 
-              {/* Title */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                  Title
-                </label>
-                <input
-                  type="text"
-                  value={editedUser.title}
-                  onChange={(e) =>
-                    setEditedUser({ ...editedUser, title: e.target.value })
-                  }
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              {/* Location */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                  Location
-                </label>
-                <input
-                  type="text"
-                  value={editedUser.location}
-                  onChange={(e) =>
-                    setEditedUser({ ...editedUser, location: e.target.value })
-                  }
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              {/* Bio */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                  About Me
-                </label>
-                <textarea
-                  value={editedUser.bio}
-                  onChange={(e) =>
-                    setEditedUser({ ...editedUser, bio: e.target.value })
-                  }
-                  rows={4}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                />
-              </div>
-
-              {/* Skills */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                  Skills (comma-separated)
-                </label>
-                <input
-                  type="text"
-                  value={editedUser.tags.join(", ")}
-                  onChange={(e) =>
-                    setEditedUser({
-                      ...editedUser,
-                      tags: e.target.value.split(",").map((s) => s.trim()),
-                    })
-                  }
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="C#, TypeScript, React, Next.js"
-                />
-              </div>
-
-              {/* Desired Roles */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                  Desired Roles (comma-separated)
-                </label>
-                <input
-                  type="text"
-                  value={editedUser.roles.join(", ")}
-                  onChange={(e) =>
-                    setEditedUser({
-                      ...editedUser,
-                      roles: e.target.value.split(",").map((s) => s.trim()),
-                    })
-                  }
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Frontend Developer, Fullstack Developer"
-                />
-              </div>
+              {editSection === 'roles' && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                    Desired Roles (comma-separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={editedUser.roles.join(", ")}
+                    onChange={(e) =>
+                      setEditedUser({
+                        ...editedUser,
+                        roles: e.target.value.split(",").map((s) => s.trim()),
+                      })
+                    }
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Frontend Developer, Fullstack Developer"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Modal Footer */}

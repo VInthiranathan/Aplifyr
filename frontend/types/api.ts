@@ -22,7 +22,7 @@ export interface JobsData {
 }
 
 export interface User {
-  id: number
+  id: string
   name: string
   title: string
   location: string

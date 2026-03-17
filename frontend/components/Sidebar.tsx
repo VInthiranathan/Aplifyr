@@ -31,16 +31,25 @@ export default function Sidebar() {
   const [initials, setInitials] = useState<string>('')
   useEffect(() => {
     if (!mounted) return
-    const supabase = getSupabaseBrowserClient()
     ;(async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
+        // Use server-side API route which reads profiles using server credentials
+        const res = await fetch('/api/profile', { credentials: 'same-origin' })
+        if (!res.ok) return
+        const data = await res.json()
+        let name = data?.profile?.full_name ?? null
 
-        const name =
-          (user.user_metadata && (user.user_metadata.full_name || user.user_metadata.name)) ||
-          user.email ||
-          null
+        // If profile exists but full_name is null/empty, try browser auth metadata as fallback
+        if (!name) {
+          try {
+            const supabase = getSupabaseBrowserClient()
+            const { data: { user: authUser } } = await supabase.auth.getUser()
+            const metaName = (authUser as any)?.user_metadata?.full_name || (authUser as any)?.raw_user_meta_data?.full_name || authUser?.email
+            if (metaName) name = metaName
+          } catch (e) {
+            // ignore fallback errors
+          }
+        }
 
         setDisplayName(name)
 
@@ -133,7 +142,7 @@ export default function Sidebar() {
               {initials || 'U'}
             </div>
             <div className="leading-tight">
-              <p className="text-sm text-slate-800 dark:text-white font-medium">{displayName || 'User'}</p>
+              <p className="text-sm text-slate-800 dark:text-white font-medium">{displayName ?? 'User'}</p>
               <p className="text-xs text-slate-400 dark:text-white/40">{t('nav.userDetails')}</p>
             </div>
         </Link>
