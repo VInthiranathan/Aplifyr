@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import { useTranslation } from 'next-i18next'
 import { useTheme } from 'next-themes'
 import { useEffect, useState } from 'react'
+import { getSupabaseBrowserClient } from '../lib/supabaseClient'
 import {
   Home,
   User,
@@ -25,6 +26,37 @@ export default function Sidebar() {
   const { theme, setTheme, resolvedTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
+
+  const [displayName, setDisplayName] = useState<string | null>(null)
+  const [initials, setInitials] = useState<string>('')
+  useEffect(() => {
+    if (!mounted) return
+    const supabase = getSupabaseBrowserClient()
+    ;(async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        const name =
+          (user.user_metadata && (user.user_metadata.full_name || user.user_metadata.name)) ||
+          user.email ||
+          null
+
+        setDisplayName(name)
+
+        const computeInitials = (s: string | null) => {
+          if (!s) return ''
+          const parts = s.trim().split(/\s+/)
+          if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+          return (parts[0][0] + parts[1][0]).toUpperCase()
+        }
+
+        setInitials(computeInitials(name))
+      } catch (err) {
+        // ignore
+      }
+    })()
+  }, [mounted])
 
   const isDark = resolvedTheme === 'dark'
 
@@ -97,13 +129,13 @@ export default function Sidebar() {
           href="/user"
           className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
         >
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-purple-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
-            JJ
-          </div>
-          <div className="leading-tight">
-            <p className="text-sm text-slate-800 dark:text-white font-medium">Jordan Jeremih</p>
-            <p className="text-xs text-slate-400 dark:text-white/40">{t('nav.userDetails')}</p>
-          </div>
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-purple-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+              {initials || 'U'}
+            </div>
+            <div className="leading-tight">
+              <p className="text-sm text-slate-800 dark:text-white font-medium">{displayName || 'User'}</p>
+              <p className="text-xs text-slate-400 dark:text-white/40">{t('nav.userDetails')}</p>
+            </div>
         </Link>
       </div>
     </aside>
