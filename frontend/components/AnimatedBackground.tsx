@@ -65,7 +65,7 @@ const AnimatedBackground = ({ isFocused }: AnimatedBackgroundProps) => {
 
       {/* Logo */}
       <motion.div
-        className="absolute left-1/2 -translate-x-1/2"
+        className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center text-center"
         style={{ top: "10%" }}
         animate={{
           filter: isFocused ? "blur(8px)" : "blur(0px)",
@@ -73,8 +73,9 @@ const AnimatedBackground = ({ isFocused }: AnimatedBackgroundProps) => {
         }}
         transition={{ duration: 0.6, ease: "easeInOut" }}
       >
+        <img src="/Aplifyr_Ikon.png" alt="Aplifyr logo" className="w-20 h-20 mb-4" />
         <h1 className="text-7xl md:text-8xl font-bold tracking-wider text-gray-900 dark:text-white select-none">
-          Aplifyr
+          A p l i f y r
         </h1>
       </motion.div>
     </div>

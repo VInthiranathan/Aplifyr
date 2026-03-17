@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import AnimatedBackground from "../../components/AnimatedBackground";
 import { Button } from "../../components/ui/button";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Sun, Moon } from "lucide-react";
+import { useTheme } from "next-themes";
 import { useTranslation } from "next-i18next";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "../../lib/supabaseClient";
 import { useRouter } from "next/router";
@@ -20,6 +21,11 @@ export const getServerSideProps: GetServerSideProps = async ({ locale }) => {
 export default function AuthPage() {
   const router = useRouter();
   const { t } = useTranslation("common");
+  const { locale, push, asPath } = router;
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const [mountedTheme, setMountedTheme] = useState(false);
+  useEffect(() => setMountedTheme(true), []);
+  const isDark = resolvedTheme === 'dark'
 
   const [isLogin, setIsLogin] = useState(true);
   const [isFocused, setIsFocused] = useState(false);
@@ -260,13 +266,34 @@ export default function AuthPage() {
             {isLogin ? t("auth.signUp") : t("auth.signIn")}
           </button>
         </div>
+        <div className="mt-6 flex items-center gap-2 px-1 justify-center">
+          <button
+            onClick={() => {
+              const next = locale === 'en' ? 'sv' : 'en'
+              push(asPath, asPath, { locale: next })
+            }}
+            className="text-xs font-semibold py-2 px-3 rounded-lg bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white transition-colors"
+          >
+            {locale === 'en' ? 'SV' : 'EN'}
+          </button>
+
+          {mountedTheme && (
+            <button
+              onClick={() => setTheme(isDark ? 'light' : 'dark')}
+              className="flex items-center gap-2 py-2 px-3 rounded-lg bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white transition-colors"
+              title={isDark ? t('theme.light') : t('theme.dark')}
+            >
+              {isDark ? <Sun size={14} /> : <Moon size={14} />}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Right Side - 70% */}
       <div className="flex-1 h-full">
         <AnimatedBackground isFocused={isFocused} />
       </div>
-    </div>
+      </div>
   );
-};
+}
 

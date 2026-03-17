@@ -3,6 +3,7 @@ import type { GetStaticProps } from 'next'
 import type { ExternalJob, AFSearchResult } from '../../types/api'
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations'
 import { Search, MapPin, Wifi, Briefcase, ExternalLink, Loader2 } from 'lucide-react'
+import Link from 'next/link'
 
 export const getStaticProps: GetStaticProps = async ({ locale }) => ({
   props: { ...(await serverSideTranslations(locale ?? 'en', ['common'])) },
@@ -33,6 +34,8 @@ export default function AllJobsPage() {
   const [debouncedQ, setDebouncedQ]     = useState('')
   const [jobs, setJobs]                 = useState<ExternalJob[]>([])
   const [total, setTotal]               = useState(0)
+  const [generatedLetters, setGeneratedLetters] = useState<Array<{ title: string; coverLetter?: string; error?: string }>>([])
+  const [generating, setGenerating] = useState(false)
   const [loading, setLoading]           = useState(false)
   const [error, setError]               = useState<string | null>(null)
   const [offset, setOffset]             = useState(0)
@@ -82,13 +85,45 @@ export default function AllJobsPage() {
   const totalPages = Math.ceil(total / LIMIT)
   const currentPage = Math.floor(offset / LIMIT) + 1
 
+  const generateAll = async () => {
+    if (jobs.length === 0) return
+    setGenerating(true)
+    setGeneratedLetters([])
+    try {
+      const res = await fetch(`${BACKEND}/api/coverletters/generate-all`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(jobs),
+      })
+      if (!res.ok) {
+        const t = await res.json().catch(() => null)
+        throw new Error(t?.error ?? `Status ${res.status}`)
+      }
+      const data = await res.json()
+      setGeneratedLetters(data ?? [])
+    } catch (e) {
+      setGeneratedLetters([{ title: 'Fel', error: (e as Error).message }])
+    } finally {
+      setGenerating(false)
+    }
+  }
+
   return (
     <div className="p-6 space-y-5">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-slate-900 dark:text-white">Alla jobb</h1>
-        {!loading && total > 0 && (
-          <span className="text-slate-400 dark:text-white/40 text-sm">{total.toLocaleString('sv-SE')} annonser</span>
-        )}
+        <div className="flex items-center gap-3">
+          {!loading && total > 0 && (
+            <span className="text-slate-400 dark:text-white/40 text-sm">{total.toLocaleString('sv-SE')} annonser</span>
+          )}
+          <button
+            onClick={generateAll}
+            disabled={generating || jobs.length === 0}
+            className="ml-2 inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-600 text-white text-sm hover:bg-purple-500 disabled:opacity-50"
+          >
+            {generating ? <Loader2 size={16} className="animate-spin" /> : 'Generera personliga brev för alla jobb'}
+          </button>
+        </div>
       </div>
 
       {/* ── Filter bar ── */}
@@ -189,7 +224,11 @@ export default function AllJobsPage() {
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
-                    <h2 className="text-sm font-semibold text-slate-900 dark:text-white leading-snug">{job.headline}</h2>
+                    <h2 className="text-sm font-semibold text-slate-900 dark:text-white leading-snug">
+                      <Link href={`/jobs/${job.id}`} className="hover:underline">
+                        {job.headline}
+                      </Link>
+                    </h2>
                     {job.webpage_url && (
                       <a
                         href={job.webpage_url}
@@ -239,6 +278,23 @@ export default function AllJobsPage() {
                   </span>
                 )}
               </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Generated letters ── */}
+      {generatedLetters.length > 0 && (
+        <div className="mt-6 space-y-4">
+          <h3 className="text-sm font-semibold">Genererade personliga brev</h3>
+          {generatedLetters.map((g, i) => (
+            <div key={i} className="bg-white dark:bg-[#111] border border-slate-200 dark:border-white/5 rounded-xl p-4">
+              <div className="text-xs text-slate-500 dark:text-white/50 mb-2">{g.title}</div>
+              {g.error ? (
+                <div className="text-red-500 text-sm">Fel: {g.error}</div>
+              ) : (
+                <pre className="whitespace-pre-wrap text-sm text-slate-700 dark:text-white">{g.coverLetter}</pre>
+              )}
             </div>
           ))}
         </div>

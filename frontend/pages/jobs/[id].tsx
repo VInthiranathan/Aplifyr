@@ -1,0 +1,274 @@
+import { useRouter } from 'next/router'
+import type { GetServerSideProps } from 'next'
+import { serverSideTranslations } from 'next-i18next/serverSideTranslations'
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { Briefcase, MapPin, Wifi, Loader2 } from 'lucide-react'
+
+const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:5000'
+
+function decodeJob(encoded?: string) {
+  if (!encoded) return null
+  try {
+    const json = decodeURIComponent(atob(decodeURIComponent(encoded)))
+    return JSON.parse(json)
+  } catch {
+    try {
+      const json2 = decodeURIComponent(encoded)
+      return JSON.parse(json2)
+    } catch {
+      return null
+    }
+  }
+}
+
+export default function JobDetailPage() {
+  const router = useRouter()
+  const { id, data } = router.query
+  const [job, setJob] = useState<any | null>(null)
+  const [fetching, setFetching] = useState(false)
+  const [fetchError, setFetchError] = useState<string | null>(null)
+  const [rawResponse, setRawResponse] = useState<any | null>(null)
+  const [jobHtml, setJobHtml] = useState<string | null>(null)
+  const [generating, setGenerating] = useState(false)
+  const [letter, setLetter] = useState<string | null>(null)
+
+  useEffect(() => {
+    // If `data` param exists (old behavior) prefer it, else fetch by id from backend
+    if (data) {
+      const decoded = Array.isArray(data) ? data[0] : data
+      const j = decodeJob(decoded as string)
+      if (j) {
+        setJob(j)
+        return
+      }
+    }
+
+    if (!id) return
+    const fetchJob = async () => {
+      setFetching(true)
+      setFetchError(null)
+      setRawResponse(null)
+      try {
+        const res = await fetch(`${BACKEND}/api/externaljobs/${id}`)
+        const text = await res.text()
+        setRawResponse(text)
+        if (!res.ok) {
+          setFetchError(`Status ${res.status}: ${text}`)
+          console.error('Job fetch failed', res.status, text)
+          return
+        }
+        let data: any = null
+        try { data = JSON.parse(text) } catch (err) { data = text }
+        // If backend returned a structured error (e.g. Arbetsförmedlingen API provided
+        // { cause: { code: '404', ... } }) treat as not-found and surface a message
+        if (data && typeof data === 'object' && data.cause && data.cause.code === '404') {
+          setFetchError(`Annons hittades inte (id=${id})`)
+          setJob(null)
+          setJobHtml(null)
+          return
+        }
+
+        // If backend returned a non-API error shape, surface it
+        if (data && typeof data === 'object' && (data.error || data.tracking_id)) {
+          setFetchError(JSON.stringify(data))
+          setJob(null)
+          setJobHtml(null)
+          return
+        }
+
+        // If backend returned a html fallback: { html: '...' }
+        if (data && typeof data === 'object' && typeof data.html === 'string') {
+          setJobHtml(data.html)
+          setJob(null)
+        }
+        // API might return object with 'hits' or the job directly
+        else if (data && data.hits && Array.isArray(data.hits) && data.hits.length > 0) setJob(data.hits[0])
+        else if (data && data.result != null) setJob(data.result)
+        else setJob(data)
+      } catch (e) {
+        console.error('Could not fetch job', e)
+        setFetchError((e as Error).message)
+      } finally {
+        setFetching(false)
+      }
+    }
+
+    fetchJob()
+  }, [data, id])
+
+  const generate = async () => {
+    if (!job) return
+    setGenerating(true)
+    setLetter(null)
+    try {
+      const res = await fetch(`${BACKEND}/api/coverletters/generate-all`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify([job]),
+      })
+      const data = await res.json()
+      if (Array.isArray(data) && data[0]?.coverLetter) setLetter(data[0].coverLetter)
+      else if (Array.isArray(data) && data[0]?.error) setLetter(`Fel: ${data[0].error}`)
+      else setLetter('Ingen data mottagen')
+    } catch (e) {
+      setLetter((e as Error).message)
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  if (!job && !jobHtml) {
+    return (
+      <div className="p-6">
+        {fetching ? (
+          <p className="text-sm text-slate-400">Hämtar annons…</p>
+        ) : (
+          <p className="text-sm text-slate-400">Ingen job-data hittad. Gå tillbaka till listan.</p>
+        )}
+        {fetchError && <div className="mt-2 text-red-500 text-sm">Error: {fetchError}</div>}
+        <div className="mt-4">
+          <Link href="/jobs" className="text-purple-600">← Tillbaka till jobb</Link>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="p-6">
+      {jobHtml ? (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-lg font-bold">Annons</h1>
+            <div className="flex gap-2">
+              <a href={`https://arbetsformedlingen.se/platsbanken/annonser/${id}`} target="_blank" rel="noopener noreferrer" className="px-3 py-2 rounded-xl bg-white dark:bg-[#111] border text-sm">Öppna original</a>
+              <Link href="/jobs" className="px-3 py-2 rounded-xl bg-white dark:bg-[#111] border text-sm">Tillbaka</Link>
+            </div>
+          </div>
+
+          <div className="prose max-w-none text-sm text-slate-700 dark:text-white bg-white dark:bg-[#111] p-4 rounded-lg" dangerouslySetInnerHTML={{ __html: jobHtml }} />
+        </div>
+      ) : (
+        <>
+          <div className="max-w-6xl mx-auto">
+            <div className="flex items-start gap-4">
+              <div className="w-16 h-16 rounded-lg bg-slate-100 dark:bg-white/5 flex items-center justify-center">
+                {job.logo_url ? <img src={job.logo_url} alt="" className="w-full h-full object-contain p-1" /> : <Briefcase />}
+              </div>
+              <div className="flex-1">
+                <h1 className="text-3xl font-semibold leading-tight">{job.headline ?? job.title ?? 'Jobb'}</h1>
+                <div className="text-sm text-slate-500 mt-1">{job.employer?.name}</div>
+                <div className="mt-3 text-sm text-slate-500 flex items-center gap-4">
+                  {job.workplace_address?.municipality && (
+                    <span className="flex items-center gap-1"><MapPin size={14} />{job.workplace_address.municipality}</span>
+                  )}
+                  {job.remote && (
+                    <span className="flex items-center gap-1 text-purple-500"><Wifi size={14} />Remote</span>
+                  )}
+                </div>
+                <div className="mt-3 text-sm text-slate-500">
+                  {job.employment_type?.label && <span className="mr-4">{job.employment_type.label}</span>}
+                  {job.working_hours_type?.label && <span className="mr-4">{job.working_hours_type.label}</span>}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="col-span-2 space-y-6">
+                <section className="bg-white dark:bg-[#111] p-6 rounded-lg">
+                  <h2 className="text-2xl font-semibold mb-4">Om jobbet</h2>
+                  <div className="prose max-w-none text-sm text-slate-700 dark:text-white">{renderAFDescription(job)}</div>
+                </section>
+
+                {letter && (
+                  <div className="bg-white dark:bg-[#111] border rounded-xl p-4">
+                    <h3 className="text-sm font-semibold mb-2">Genererat brev</h3>
+                    <pre className="whitespace-pre-wrap text-sm text-slate-700 dark:text-white">{letter}</pre>
+                  </div>
+                )}
+              </div>
+
+              <aside className="col-span-1">
+                <div className="bg-gray-50 dark:bg-[#0b0b0b] border border-gray-200 dark:border-white/5 rounded-lg p-6">
+                  <h3 className="font-semibold mb-2">Sök jobbet</h3>
+                  <p className="text-sm text-slate-500 mb-3">{renderApplicationDeadline(job)}</p>
+                  <div className="flex flex-col gap-2">
+                    <a href={getApplyUrl(job)} target="_blank" rel="noopener noreferrer" className="px-4 py-2 rounded-md bg-[#082c5b] hover:bg-[#063053] text-white text-sm text-center">Ansök via extern webbplats</a>
+                    <a href={job.webpage_url ?? '#'} target="_blank" rel="noopener noreferrer" className="px-4 py-2 rounded-md border text-sm text-center">Gå till annons</a>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <button onClick={generate} disabled={generating} className="w-full px-3 py-2 rounded-xl bg-purple-600 text-white text-sm">
+                    {generating ? <Loader2 size={14} className="animate-spin" /> : 'Generera personligt brev'}
+                  </button>
+                  <Link href="/jobs" className="block text-center mt-2 px-3 py-2 rounded-xl bg-white dark:bg-[#111] border text-sm">Tillbaka</Link>
+                </div>
+              </aside>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+function unescapeHtml(input: string) {
+  if (!input) return input
+  return input
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+}
+
+function getApplyUrl(job: any) {
+  return job.application_details?.application_url || job.application_details?.external_url || job.webpage_url || job.application_url || '#'
+}
+
+function renderApplicationDeadline(job: any) {
+  const deadline = job.application_deadline || job.application_details?.last_application_date || job.last_application_date
+  if (!deadline) return 'Sista ansökningsdag: Okänt'
+  try {
+    const d = new Date(deadline)
+    return `Sista ansökningsdag: ${d.toLocaleDateString('sv-SE')}`
+  } catch {
+    return `Sista ansökningsdag: ${deadline}`
+  }
+}
+
+function renderAFDescription(job: any) {
+  const html = job.text_formatted || job.description?.text_formatted || job.description_html || job.description?.html
+  const text = job.text || job.description?.text || job.summary
+  if (typeof html === 'string' && html.trim().length > 0) {
+    const un = unescapeHtml(html)
+    return <div dangerouslySetInnerHTML={{ __html: un }} />
+  }
+  if (typeof text === 'string' && text.trim().length > 0) {
+    const paragraphs = text.split(/\n{2,}/).map((p: string, i: number) => (
+      <p key={i} dangerouslySetInnerHTML={{ __html: unescapeHtml(p).replace(/\n/g, '<br/>') }} />
+    ))
+    return <div>{paragraphs}</div>
+  }
+
+  if (typeof job.description === 'object') {
+    try {
+      const pretty = JSON.stringify(job.description, null, 2)
+      const escaped = pretty.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      return <pre className="whitespace-pre-wrap text-sm text-slate-700 dark:text-white">{escaped}</pre>
+    } catch {
+      return <div>Ingen beskrivning tillgänglig</div>
+    }
+  }
+
+  return <div>Ingen beskrivning tillgänglig</div>
+}
+
+export const getServerSideProps: GetServerSideProps = async ({ locale }) => {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale ?? 'en', ['common'])),
+    },
+  }
+}
