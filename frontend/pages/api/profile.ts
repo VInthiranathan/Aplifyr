@@ -64,32 +64,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (error) return res.status(500).json({ error: error.message })
 
-    // If no profile row exists yet, create an initial one so the UI can edit it.
-    if (!profile) {
-      try {
-        const initial = {
-          id: user.id,
-          full_name: (user.user_metadata as any)?.full_name ?? user.email ?? null,
-        }
-
-        const { data: created, error: createError } = await supabase
-          .from('profiles')
-          .insert(initial)
-          .select()
-          .single()
-
-        if (createError) {
-          // Return error to make debugging easier in dev
-          const msg = (createError && (createError as any).message) || JSON.stringify(createError)
-          return res.status(500).json({ error: 'failed to create profile', detail: msg })
-        }
-
-        return res.status(200).json({ profile: created })
-      } catch (e) {
-        return res.status(500).json({ error: e instanceof Error ? e.message : String(e) })
-      }
-    }
-
     return res.status(200).json({ profile: profile ?? null })
   }
 
