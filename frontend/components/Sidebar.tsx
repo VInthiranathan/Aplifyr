@@ -11,6 +11,7 @@ import {
   HelpCircle,
   Sun,
   Moon,
+  LogOut,
 } from 'lucide-react'
 
 const navItemDefs = [
@@ -86,9 +87,30 @@ export default function Sidebar() {
           Aplifyr
         </Link>
       </div>
+        {/* language + theme toggles */}
+        <div className="flex items-center gap-2 px-1 mt-2">
+          {/* language toggle */}
+          <button
+            onClick={toggleLanguage}
+            className="flex-1 text-xs font-semibold py-1.5 rounded-lg bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white transition-colors"
+          >
+            {locale === 'en' ? 'SV' : 'EN'}
+          </button>
+
+          {/* theme toggle */}
+          {mounted && (
+            <button
+              onClick={() => setTheme(isDark ? 'light' : 'dark')}
+              className="flex-1 flex items-center justify-center py-1.5 rounded-lg bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white transition-colors"
+              title={isDark ? t('theme.light') : t('theme.dark')}
+            >
+              {isDark ? <Sun size={14} /> : <Moon size={14} />}
+            </button>
+          )}
+        </div>
 
       {/* nav links */}
-      <nav className="flex flex-col gap-1 px-2">
+      <nav className="flex flex-col gap-1 px-2 mt-4">
         {navItemDefs.map(({ key, href, icon: Icon }) => {
           const active = pathname === href
           return (
@@ -111,28 +133,6 @@ export default function Sidebar() {
       {/* bottom controls */}
       <div className="mt-auto px-3 pb-5 flex flex-col gap-2">
 
-        {/* language + theme toggles */}
-        <div className="flex items-center gap-2 px-1">
-          {/* language toggle */}
-          <button
-            onClick={toggleLanguage}
-            className="flex-1 text-xs font-semibold py-1.5 rounded-lg bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white transition-colors"
-          >
-            {locale === 'en' ? 'SV' : 'EN'}
-          </button>
-
-          {/* theme toggle */}
-          {mounted && (
-            <button
-              onClick={() => setTheme(isDark ? 'light' : 'dark')}
-              className="flex-1 flex items-center justify-center py-1.5 rounded-lg bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white transition-colors"
-              title={isDark ? t('theme.light') : t('theme.dark')}
-            >
-              {isDark ? <Sun size={14} /> : <Moon size={14} />}
-            </button>
-          )}
-        </div>
-
         {/* user badge */}
         <Link
           href="/user"
@@ -146,6 +146,15 @@ export default function Sidebar() {
               <p className="text-xs text-slate-400 dark:text-white/40">{t('nav.userDetails')}</p>
             </div>
         </Link>
+
+        {/* sign out button */}
+        <button
+          onClick={() => (window.location.href = '/api/auth/signout')}
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+        >
+          <LogOut size={16} />
+          {t('signOut')}
+        </button>
       </div>
     </aside>
   )
