@@ -32,6 +32,7 @@ export default function JobDetailPage() {
   const [jobHtml, setJobHtml] = useState<string | null>(null)
   const [generating, setGenerating] = useState(false)
   const [letter, setLetter] = useState<string | null>(null)
+  const [showDebug, setShowDebug] = useState(false)
 
   useEffect(() => {
     // If `data` param exists (old behavior) prefer it, else fetch by id from backend
@@ -97,6 +98,8 @@ export default function JobDetailPage() {
     fetchJob()
   }, [data, id])
 
+  
+
   const generate = async () => {
     if (!job) return
     setGenerating(true)
@@ -136,6 +139,32 @@ export default function JobDetailPage() {
 
   return (
     <div className="p-6">
+      <div className="flex items-center gap-2 mb-4">
+        <button onClick={() => setShowDebug(s => !s)} className="px-3 py-1 rounded-md bg-gray-200 dark:bg-white/5 text-sm">{showDebug ? 'Dölj API-logg' : 'Visa API-logg'}</button>
+        <div className="text-sm text-slate-500">(Visar rått svar från backend och parsed JSON för felsökning)</div>
+      </div>
+      {showDebug && (
+        <div className="mb-4">
+          {rawResponse && (
+            <div className="mb-2">
+              <div className="text-xs font-medium mb-1">Rått API-svar (text/html eller json):</div>
+              <pre className="max-h-72 overflow-auto text-xs bg-slate-100 dark:bg-[#0b0b0b] p-3 rounded">{rawResponse}</pre>
+            </div>
+          )}
+          {job && (
+            <div>
+              <div className="text-xs font-medium mb-1">Parsed jobb (JSON):</div>
+              <pre className="max-h-72 overflow-auto text-xs bg-slate-100 dark:bg-[#0b0b0b] p-3 rounded">{JSON.stringify(job, null, 2)}</pre>
+            </div>
+          )}
+          {jobHtml && (
+            <div className="mt-2">
+              <div className="text-xs font-medium mb-1">Jobb HTML (om backend returnerade html):</div>
+              <pre className="max-h-72 overflow-auto text-xs bg-slate-100 dark:bg-[#0b0b0b] p-3 rounded">{jobHtml}</pre>
+            </div>
+          )}
+        </div>
+      )}
       {jobHtml ? (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -146,7 +175,9 @@ export default function JobDetailPage() {
             </div>
           </div>
 
-          <div className="prose max-w-none text-sm text-slate-700 dark:text-white bg-white dark:bg-[#111] p-4 rounded-lg" dangerouslySetInnerHTML={{ __html: jobHtml }} />
+          <div className="prose max-w-none text-sm text-slate-700 dark:text-white bg-white dark:bg-[#111] p-4 rounded-lg">
+            <div dangerouslySetInnerHTML={{ __html: jobHtml ?? '' }} />
+          </div>
         </div>
       ) : (
         <>
@@ -177,7 +208,9 @@ export default function JobDetailPage() {
               <div className="col-span-2 space-y-6">
                 <section className="bg-white dark:bg-[#111] p-6 rounded-lg">
                   <h2 className="text-2xl font-semibold mb-4">Om jobbet</h2>
-                  <div className="prose max-w-none text-sm text-slate-700 dark:text-white">{renderAFDescription(job)}</div>
+                  <div className="prose max-w-none text-sm text-slate-700 dark:text-white">
+                    {renderAFDescription(job)}
+                  </div>
                 </section>
 
                 {letter && (
@@ -192,9 +225,35 @@ export default function JobDetailPage() {
                 <div className="bg-gray-50 dark:bg-[#0b0b0b] border border-gray-200 dark:border-white/5 rounded-lg p-6">
                   <h3 className="font-semibold mb-2">Sök jobbet</h3>
                   <p className="text-sm text-slate-500 mb-3">{renderApplicationDeadline(job)}</p>
-                  <div className="flex flex-col gap-2">
-                    <a href={getApplyUrl(job)} target="_blank" rel="noopener noreferrer" className="px-4 py-2 rounded-md bg-[#082c5b] hover:bg-[#063053] text-white text-sm text-center">Ansök via extern webbplats</a>
-                    <a href={job.webpage_url ?? '#'} target="_blank" rel="noopener noreferrer" className="px-4 py-2 rounded-md border text-sm text-center">Gå till annons</a>
+                  <div className="flex flex-col gap-2 text-sm text-slate-700 dark:text-white">
+                    {(() => {
+                      const app = job.application_details || {}
+                      const hasEmail = !!app.email
+                      const externalUrl = app.url || app.application_url || job.application_url || job.application_details?.application_url || job.application_details?.external_url
+
+                      if (hasEmail) {
+                        return (
+                          <div className="space-y-1">
+                            <div>Ansök via mail: <a href={`mailto:${app.email}`} className="text-purple-600">{app.email}</a></div>
+                            {app.reference && <div>Ange referens: <strong>{app.reference}</strong></div>}
+                          </div>
+                        )
+                      }
+
+                      if (externalUrl) {
+                        return (
+                          <a href={externalUrl} target="_blank" rel="noopener noreferrer" className="px-4 py-2 rounded-md bg-[#082c5b] hover:bg-[#063053] text-white text-sm text-center">Ansök via extern webbplats</a>
+                        )
+                      }
+
+                      // Fallback: show generic instructions and AF page link
+                      return (
+                        <>
+                          {renderApplicationInstructions(job)}
+                          <a href={getAfUrl(job)} target="_blank" rel="noopener noreferrer" className="px-4 py-2 rounded-md bg-[#082c5b] hover:bg-[#063053] text-white text-sm text-center">Öppna annons på Arbetsförmedlingen</a>
+                        </>
+                      )
+                    })()}
                   </div>
                 </div>
 
@@ -223,8 +282,80 @@ function unescapeHtml(input: string) {
     .replace(/&#39;/g, "'")
 }
 
+function escapeHtml(str: string) {
+  if (str == null) return ''
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function convertDescriptionText(input: string) {
+  if (!input) return ''
+  // Input is expected to have normalized newlines ("\n").
+  const lines = input.split('\n')
+  let out = ''
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i]
+    const line = raw.trim()
+    if (line === '') {
+      // preserve blank lines as an extra <br/>
+      out += '<br/>'
+      continue
+    }
+
+    const idx = line.indexOf(':')
+    if (idx !== -1) {
+      const head = line.slice(0, idx).trim()
+      const rest = line.slice(idx + 1).trim()
+      out += `<h2 class="text-xl font-semibold mt-4 mb-2">${escapeHtml(head)}</h2>`
+      if (rest) out += `${escapeHtml(rest)}`
+    } else {
+      out += escapeHtml(line)
+    }
+
+    // ensure a newline after each original line
+    out += '<br/>'
+  }
+  return out
+}
+
 function getApplyUrl(job: any) {
   return job.application_details?.application_url || job.application_details?.external_url || job.webpage_url || job.application_url || '#'
+}
+
+function getAfUrl(job: any) {
+  // Prefer Arbetsförmedlingen public ad page so users land on the AF announcement
+  return job.webpage_url || job.application_details?.url || job.application_details?.application_url || job.application_url || '#'
+}
+
+function renderApplicationInstructions(job: any) {
+  // If there is an email specified, show mail instruction + reference if present
+  const app = job.application_details || {}
+  if (app.email) {
+    return (
+      <div className="space-y-1">
+        <div>Ansök via mail: <a href={`mailto:${app.email}`} className="text-purple-600">{app.email}</a></div>
+        {app.reference && <div>Ange referens: <strong>{app.reference}</strong></div>}
+      </div>
+    )
+  }
+
+  // If there are application contacts, list first email/contact
+  if (Array.isArray(job.application_contacts) && job.application_contacts.length > 0) {
+    const c = job.application_contacts[0]
+    if (c.email) return (<div>Kontakt: <a href={`mailto:${c.email}`} className="text-purple-600">{c.email}</a></div>)
+  }
+
+  // Fallback: if external url exists let user know they should go to AF-annons (button)
+  if (app.url) {
+    return (<div>Ansök via extern webbplats enligt annons (öppna annonsen på Arbetsförmedlingen nedan).</div>)
+  }
+
+  // Generic fallback
+  return (<div>Ansökningsinstruktioner finns i annonsen. Öppna annonsen nedan.</div>)
 }
 
 function renderApplicationDeadline(job: any) {
@@ -239,27 +370,37 @@ function renderApplicationDeadline(job: any) {
 }
 
 function renderAFDescription(job: any) {
+  // Prefer server-provided formatted HTML/text, but if the API returns
+  // plain text with newlines (\n) we should convert those to paragraphs
+  // and <br/> so they are visible in the browser.
   const html = job.text_formatted || job.description?.text_formatted || job.description_html || job.description?.html
   const text = job.text || job.description?.text || job.summary
+
+  const containsHtml = (s: string) => /<\/?[a-z][\s\S]*>/i.test(s)
+
   if (typeof html === 'string' && html.trim().length > 0) {
-    const un = unescapeHtml(html)
-    return <div dangerouslySetInnerHTML={{ __html: un }} />
-  }
-  if (typeof text === 'string' && text.trim().length > 0) {
-    const paragraphs = text.split(/\n{2,}/).map((p: string, i: number) => (
-      <p key={i} dangerouslySetInnerHTML={{ __html: unescapeHtml(p).replace(/\n/g, '<br/>') }} />
-    ))
-    return <div>{paragraphs}</div>
+    // Unescape any HTML entities and normalize literal "\\n" sequences
+    const normalized = unescapeHtml(html).replace(/\\n/g, '\n').replace(/\r\n/g, '\n')
+    // If server already provided HTML markup, render it verbatim.
+    if (containsHtml(normalized)) return <div dangerouslySetInnerHTML={{ __html: normalized }} />
+
+    // Preserve newlines exactly: convert each newline to a <br/>,
+    // so double newlines become two <br/> (visual blank line) instead
+    // of being collapsed into a single paragraph.
+    const converted = convertDescriptionText(normalized)
+    return <div dangerouslySetInnerHTML={{ __html: converted }} />
   }
 
-  if (typeof job.description === 'object') {
-    try {
-      const pretty = JSON.stringify(job.description, null, 2)
-      const escaped = pretty.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      return <pre className="whitespace-pre-wrap text-sm text-slate-700 dark:text-white">{escaped}</pre>
-    } catch {
-      return <div>Ingen beskrivning tillgänglig</div>
-    }
+  if (typeof text === 'string' && text.trim().length > 0) {
+    const normalized = unescapeHtml(text).replace(/\\n/g, '\n').replace(/\r\n/g, '\n')
+    const converted = convertDescriptionText(normalized)
+    return <div dangerouslySetInnerHTML={{ __html: converted }} />
+  }
+
+  if (typeof job.description === 'object' && typeof job.description.text === 'string') {
+    const normalized = unescapeHtml(job.description.text).replace(/\\n/g, '\n').replace(/\r\n/g, '\n')
+    const converted = convertDescriptionText(normalized)
+    return <div dangerouslySetInnerHTML={{ __html: converted }} />
   }
 
   return <div>Ingen beskrivning tillgänglig</div>

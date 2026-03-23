@@ -35,7 +35,7 @@ export default function AllJobsPage() {
   const [jobs, setJobs]                 = useState<ExternalJob[]>([])
   const [total, setTotal]               = useState(0)
   const [generatedLetters, setGeneratedLetters] = useState<Array<{ title: string; coverLetter?: string; error?: string }>>([])
-  const [generating, setGenerating] = useState(false)
+  const [generatingId, setGeneratingId] = useState<string | null>(null)
   const [loading, setLoading]           = useState(false)
   const [error, setError]               = useState<string | null>(null)
   const [offset, setOffset]             = useState(0)
@@ -85,26 +85,25 @@ export default function AllJobsPage() {
   const totalPages = Math.ceil(total / LIMIT)
   const currentPage = Math.floor(offset / LIMIT) + 1
 
-  const generateAll = async () => {
-    if (jobs.length === 0) return
-    setGenerating(true)
-    setGeneratedLetters([])
+  const generateJob = async (job: ExternalJob) => {
+    if (!job) return
+    setGeneratingId(job.id)
     try {
       const res = await fetch(`${BACKEND}/api/coverletters/generate-all`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(jobs),
+        body: JSON.stringify([job]),
       })
       if (!res.ok) {
         const t = await res.json().catch(() => null)
         throw new Error(t?.error ?? `Status ${res.status}`)
       }
       const data = await res.json()
-      setGeneratedLetters(data ?? [])
+      setGeneratedLetters((prev) => [...prev, ...(data ?? [])])
     } catch (e) {
-      setGeneratedLetters([{ title: 'Fel', error: (e as Error).message }])
+      setGeneratedLetters((prev) => [...prev, { title: job.headline ?? job.title ?? 'Fel', error: (e as Error).message }])
     } finally {
-      setGenerating(false)
+      setGeneratingId(null)
     }
   }
 
@@ -116,13 +115,6 @@ export default function AllJobsPage() {
           {!loading && total > 0 && (
             <span className="text-slate-400 dark:text-white/40 text-sm">{total.toLocaleString('sv-SE')} annonser</span>
           )}
-          <button
-            onClick={generateAll}
-            disabled={generating || jobs.length === 0}
-            className="ml-2 inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-600 text-white text-sm hover:bg-purple-500 disabled:opacity-50"
-          >
-            {generating ? <Loader2 size={16} className="animate-spin" /> : 'Generera personliga brev för alla jobb'}
-          </button>
         </div>
       </div>
 
@@ -277,6 +269,7 @@ export default function AllJobsPage() {
                     Sista ansökningsdag: {new Date(job.application_deadline).toLocaleDateString('sv-SE')}
                   </span>
                 )}
+                {/* Generera brev tas bort från listvyn; finns endast på jobbsidan */}
               </div>
             </div>
           ))}
