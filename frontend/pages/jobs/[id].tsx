@@ -220,6 +220,11 @@ export default function JobDetailPage() {
                     <pre className="whitespace-pre-wrap text-sm text-slate-700 dark:text-white">{letter}</pre>
                   </div>
                 )}
+
+                {/* Qualifications & Other information sections (Arbetsförmedlingen often provides these fields) */}
+
+                {renderQualifications(job)}
+                {renderOtherInformation(job)}
               </div>
 
               <aside className="col-span-1">
@@ -405,6 +410,104 @@ function renderAFDescription(job: any) {
   }
 
   return <div>Ingen beskrivning tillgänglig</div>
+}
+
+function renderQualifications(job: any) {
+  // Arbetsförmedlingen may provide qualifications under several keys.
+  const html = job.qualifications_html || job.qualifications?.html || job.qualifications?.text_formatted || job.qualifications_formatted || job.requirements_html || job.requirements?.html
+  const text = (typeof job.qualifications === 'string' && job.qualifications) || job.qualifications?.text || job.requirements || job.requirements?.text || job.skills || job.qualification
+
+  const containsHtml = (s: string) => /<\/?[a-z][\s\S]*>/i.test(s)
+
+  if (typeof html === 'string' && html.trim().length > 0) {
+    const normalized = unescapeHtml(html).replace(/\\n/g, '\n').replace(/\r\n/g, '\n')
+    if (containsHtml(normalized)) return (
+      <section className="bg-white dark:bg-[#111] p-6 rounded-lg">
+        <h2 className="text-2xl font-semibold mb-4">Kvalifikationer</h2>
+        <div className="prose max-w-none text-sm text-slate-700 dark:text-white" dangerouslySetInnerHTML={{ __html: normalized }} />
+      </section>
+    )
+    const converted = convertDescriptionText(normalized)
+    return (
+      <section className="bg-white dark:bg-[#111] p-6 rounded-lg">
+        <h2 className="text-2xl font-semibold mb-4">Kvalifikationer</h2>
+        <div className="prose max-w-none text-sm text-slate-700 dark:text-white" dangerouslySetInnerHTML={{ __html: converted }} />
+      </section>
+    )
+  }
+
+  if (typeof text === 'string' && text.trim().length > 0) {
+    const normalized = unescapeHtml(text).replace(/\\n/g, '\n').replace(/\r\n/g, '\n')
+    const converted = convertDescriptionText(normalized)
+    return (
+      <section className="bg-white dark:bg-[#111] p-6 rounded-lg">
+        <h2 className="text-2xl font-semibold mb-4">Kvalifikationer</h2>
+        <div className="prose max-w-none text-sm text-slate-700 dark:text-white" dangerouslySetInnerHTML={{ __html: converted }} />
+      </section>
+    )
+  }
+
+  if (typeof job.qualifications === 'object' && typeof job.qualifications.text === 'string') {
+    const normalized = unescapeHtml(job.qualifications.text).replace(/\\n/g, '\n').replace(/\r\n/g, '\n')
+    const converted = convertDescriptionText(normalized)
+    return (
+      <section className="bg-white dark:bg-[#111] p-6 rounded-lg">
+        <h2 className="text-2xl font-semibold mb-4">Kvalifikationer</h2>
+        <div className="prose max-w-none text-sm text-slate-700 dark:text-white" dangerouslySetInnerHTML={{ __html: converted }} />
+      </section>
+    )
+  }
+
+  return null
+}
+
+function renderOtherInformation(job: any) {
+  // Arbetsförmedlingen sometimes exposes additional info under different keys
+  const html = job.other_information_html || job.otherInformation?.html || job.additional_information_html || job.additionalInformation?.html
+  const text = job.other_information || job.otherInformation || job.additional_information || job.additionalInformation || job.otherInfo
+
+  const containsHtml = (s: string) => /<\/?[a-z][\s\S]*>/i.test(s)
+
+  if (typeof html === 'string' && html.trim().length > 0) {
+    const normalized = unescapeHtml(html).replace(/\\n/g, '\n').replace(/\r\n/g, '\n')
+    if (containsHtml(normalized)) return (
+      <section className="bg-white dark:bg-[#111] p-6 rounded-lg">
+        <h2 className="text-2xl font-semibold mb-4">Övrig information</h2>
+        <div className="prose max-w-none text-sm text-slate-700 dark:text-white" dangerouslySetInnerHTML={{ __html: normalized }} />
+      </section>
+    )
+    const converted = convertDescriptionText(normalized)
+    return (
+      <section className="bg-white dark:bg-[#111] p-6 rounded-lg">
+        <h2 className="text-2xl font-semibold mb-4">Övrig information</h2>
+        <div className="prose max-w-none text-sm text-slate-700 dark:text-white" dangerouslySetInnerHTML={{ __html: converted }} />
+      </section>
+    )
+  }
+
+  if (typeof text === 'string' && text.trim().length > 0) {
+    const normalized = unescapeHtml(text).replace(/\\n/g, '\n').replace(/\r\n/g, '\n')
+    const converted = convertDescriptionText(normalized)
+    return (
+      <section className="bg-white dark:bg-[#111] p-6 rounded-lg">
+        <h2 className="text-2xl font-semibold mb-4">Övrig information</h2>
+        <div className="prose max-w-none text-sm text-slate-700 dark:text-white" dangerouslySetInnerHTML={{ __html: converted }} />
+      </section>
+    )
+  }
+
+  if (typeof job.additionalInformation === 'object' && typeof job.additionalInformation.text === 'string') {
+    const normalized = unescapeHtml(job.additionalInformation.text).replace(/\\n/g, '\n').replace(/\r\n/g, '\n')
+    const converted = convertDescriptionText(normalized)
+    return (
+      <section className="bg-white dark:bg-[#111] p-6 rounded-lg">
+        <h2 className="text-2xl font-semibold mb-4">Övrig information</h2>
+        <div className="prose max-w-none text-sm text-slate-700 dark:text-white" dangerouslySetInnerHTML={{ __html: converted }} />
+      </section>
+    )
+  }
+
+  return null
 }
 
 export const getServerSideProps: GetServerSideProps = async ({ locale }) => {
