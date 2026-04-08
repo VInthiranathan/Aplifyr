@@ -4,6 +4,7 @@ import { serverSideTranslations } from 'next-i18next/serverSideTranslations'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Briefcase, MapPin, Wifi, Loader2 } from 'lucide-react'
+import { formatLocation } from '../../lib/utils'
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:5000'
 
@@ -190,8 +191,8 @@ export default function JobDetailPage() {
                 <h1 className="text-3xl font-semibold leading-tight">{job.headline ?? job.title ?? 'Jobb'}</h1>
                 <div className="text-sm text-slate-500 mt-1">{job.employer?.name}</div>
                 <div className="mt-3 text-sm text-slate-500 flex items-center gap-4">
-                  {job.workplace_address?.municipality && (
-                    <span className="flex items-center gap-1"><MapPin size={14} />{job.workplace_address.municipality}</span>
+                  {(job.workplace_address?.municipality || job.workplace_address?.region) && (
+                    <span className="flex items-center gap-1"><MapPin size={14} />{formatLocation(job.workplace_address)}</span>
                   )}
                   {job.remote && (
                     <span className="flex items-center gap-1 text-purple-500"><Wifi size={14} />Remote</span>

@@ -3,6 +3,7 @@ import type { GetStaticProps } from 'next'
 import type { ExternalJob, AFSearchResult } from '../../types/api'
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations'
 import { Search, MapPin, Wifi, Briefcase, ExternalLink, Loader2 } from 'lucide-react'
+import { formatLocation } from '../../lib/utils'
 import Link from 'next/link'
 
 export const getStaticProps: GetStaticProps = async ({ locale }) => ({
@@ -236,10 +237,10 @@ export default function AllJobsPage() {
                   <p className="text-xs text-slate-500 dark:text-white/50 mt-0.5">{job.employer?.name}</p>
 
                   <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
-                    {job.workplace_address?.municipality && (
+                    {(job.workplace_address?.municipality || job.workplace_address?.region) && (
                       <span className="flex items-center gap-1 text-xs text-slate-400 dark:text-white/40">
                         <MapPin size={11} />
-                        {job.workplace_address.municipality}
+                        {formatLocation(job.workplace_address)}
                       </span>
                     )}
                     {job.remote && (
