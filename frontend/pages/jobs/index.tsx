@@ -15,8 +15,10 @@ const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:5000'
 interface Filters {
   q: string
   municipality: string
+  region?: string
   remote: boolean
   workingHoursType: '' | 'FULL_TIME' | 'PART_TIME'
+  employmentType?: string
 }
 
 const HOUR_OPTIONS = [
@@ -29,8 +31,10 @@ export default function AllJobsPage() {
   const [filters, setFilters] = useState<Filters>({
     q: '',
     municipality: '',
+    region: '',
     remote: false,
     workingHoursType: '',
+    employmentType: '',
   })
   const [debouncedQ, setDebouncedQ]     = useState('')
   const [jobs, setJobs]                 = useState<ExternalJob[]>([])
@@ -58,8 +62,14 @@ export default function AllJobsPage() {
       const params = new URLSearchParams()
       if (debouncedQ)                    params.set('q', debouncedQ)
       if (filters.municipality.trim())   params.set('municipality', filters.municipality.trim())
+      if (filters.region && filters.region.trim()) params.set('region', filters.region.trim())
       if (filters.remote)                params.set('remote', 'true')
-      if (filters.workingHoursType)      params.set('workingHoursType', filters.workingHoursType)
+      if (filters.workingHoursType) {
+        params.set('workingHoursType', filters.workingHoursType)
+      }
+      if (filters.employmentType && filters.employmentType.trim()) {
+        params.set('employmentType', filters.employmentType.trim())
+      }
       params.set('limit',  String(LIMIT))
       params.set('offset', String(offset))
 
@@ -74,7 +84,7 @@ export default function AllJobsPage() {
     } finally {
       setLoading(false)
     }
-  }, [debouncedQ, filters.municipality, filters.remote, filters.workingHoursType, offset])
+  }, [debouncedQ, filters.municipality, filters.region, filters.remote, filters.workingHoursType, filters.employmentType, offset])
 
   useEffect(() => { fetchJobs() }, [fetchJobs])
 
@@ -145,6 +155,18 @@ export default function AllJobsPage() {
           />
         </div>
 
+        {/* Region (län) */}
+        <div className="relative min-w-[180px]">
+          <MapPin size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30" />
+          <input
+            type="text"
+            placeholder="Region / Län (ex. Skåne)"
+            value={filters.region}
+            onChange={(e) => update({ region: e.target.value })}
+            className="w-full bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/30 focus:outline-none focus:border-purple-400 dark:focus:border-purple-500/50"
+          />
+        </div>
+
         {/* Working hours */}
         <div className="relative min-w-[180px]">
           <Briefcase size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30" />
@@ -157,6 +179,18 @@ export default function AllJobsPage() {
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>
+        </div>
+
+        {/* Employment type (free text) */}
+        <div className="relative min-w-[180px]">
+          <Briefcase size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30" />
+          <input
+            type="text"
+            placeholder="Anställningstyp (ex. Tillsvidare)"
+            value={filters.employmentType}
+            onChange={(e) => update({ employmentType: e.target.value })}
+            className="w-full bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/30 focus:outline-none focus:border-purple-400 dark:focus:border-purple-500/50"
+          />
         </div>
 
         {/* Remote toggle */}
