@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import type { GetStaticProps } from 'next'
 import type { ExternalJob, AFSearchResult } from '../../types/api'
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations'
@@ -14,30 +14,137 @@ const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:5000'
 
 interface Filters {
   q: string
-  municipality: string
-  region?: string
+  cities: string[]
+  regions: string[]
   remote: boolean
-  workingHoursType: '' | 'FULL_TIME' | 'PART_TIME'
-  employmentType?: string
+  employmentType: string
 }
 
-const HOUR_OPTIONS = [
-  { value: '',          label: 'Alla anställningsformer' },
-  { value: 'FULL_TIME', label: 'Heltid' },
-  { value: 'PART_TIME', label: 'Deltid' },
+const EMPLOYMENT_OPTIONS = [
+  { value: '', label: 'Alla anställningstyper' },
+  { value: 'Tillsvidare', label: 'Tillsvidare' },
+  { value: 'Vikariat', label: 'Vikariat' },
+  { value: 'Projektanställning', label: 'Projektanställning' },
+  { value: 'Provanställning', label: 'Provanställning' },
+  { value: 'Timanställning', label: 'Timanställning' },
 ]
+
+const STATIC_REGIONS = [
+  'Stockholm',
+  'Västra Götaland',
+  'Skåne',
+  'Uppsala',
+  'Västmanland',
+  'Östergötland',
+  'Värmland',
+  'Jönköping',
+  'Kronoberg',
+  'Kalmar',
+  'Blekinge',
+  'Gotland',
+  'Halland',
+  'Norrbotten',
+  'Västerbotten',
+  'Västernorrland',
+  'Södermanland',
+  'Dalarna',
+  'Gävleborg',
+]
+
+const STATIC_CITY_TO_REGION: Record<string, string> = {
+  'Malmö': 'Skåne',
+  'Lund': 'Skåne',
+  'Helsingborg': 'Skåne',
+  'Göteborg': 'Västra Götaland',
+  'Gothenburg': 'Västra Götaland',
+  'Stockholm': 'Stockholm',
+  'Uppsala': 'Uppsala',
+  'Västerås': 'Västmanland',
+  'Linköping': 'Östergötland',
+  'Norrköping': 'Östergötland',
+}
+
+type TagInputProps = {
+  values: string[]
+  onChange: (v: string[]) => void
+  placeholder?: string
+  suggestions?: string[]
+  id?: string
+}
+
+function TagInput({ values, onChange, placeholder, suggestions = [], id }: TagInputProps) {
+  const [input, setInput] = useState('')
+  const inputRef = useRef<HTMLInputElement | null>(null)
+
+  const add = (val: string) => {
+    const v = val.trim()
+    if (!v) return
+    if (values.includes(v)) return
+    onChange([...values, v])
+    setInput('')
+  }
+
+  const remove = (idx: number) => {
+    const next = [...values]
+    next.splice(idx, 1)
+    onChange(next)
+  }
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      add(input)
+    } else if (e.key === 'Backspace' && input === '' && values.length > 0) {
+      remove(values.length - 1)
+    }
+  }
+
+  return (
+    <div className="min-w-[220px]">
+      <div className="w-full bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 rounded-xl pl-9 pr-3 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 flex items-center gap-2 flex-wrap">
+        {values.map((v, i) => (
+          <span key={v + i} className="bg-slate-100 dark:bg-white/5 text-xs text-slate-700 dark:text-white/70 px-2 py-0.5 rounded-full flex items-center gap-2">
+            <span className="max-w-[140px] truncate">{v}</span>
+            <button onClick={() => remove(i)} className="text-slate-400 hover:text-red-500 ml-1">✕</button>
+          </span>
+        ))}
+        <input
+          id={id}
+          ref={inputRef}
+          list={suggestions.length ? `${id}-list` : undefined}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={onKeyDown}
+          onBlur={() => add(input)}
+          placeholder={placeholder}
+          className="flex-1 bg-transparent outline-none p-1 text-sm text-slate-900 dark:text-white"
+        />
+        {suggestions.length > 0 && (
+          <datalist id={`${id}-list`}>
+            {suggestions.map((s) => (
+              <option key={s} value={s} />
+            ))}
+          </datalist>
+        )}
+      </div>
+    </div>
+  )
+}
 
 export default function AllJobsPage() {
   const [filters, setFilters] = useState<Filters>({
     q: '',
-    municipality: '',
-    region: '',
+    cities: [],
+    regions: [],
     remote: false,
-    workingHoursType: '',
     employmentType: '',
   })
   const [debouncedQ, setDebouncedQ]     = useState('')
   const [jobs, setJobs]                 = useState<ExternalJob[]>([])
+  const [regionSuggestions, setRegionSuggestions] = useState<string[]>([])
+  const [citySuggestions, setCitySuggestions] = useState<string[]>([])
+  const [regionCityMap, setRegionCityMap] = useState<Record<string, string[]>>({})
+  const [displayedCitySuggestions, setDisplayedCitySuggestions] = useState<string[]>([])
   const [total, setTotal]               = useState(0)
   const [generatedLetters, setGeneratedLetters] = useState<Array<{ title: string; coverLetter?: string; error?: string }>>([])
   const [generatingId, setGeneratingId] = useState<string | null>(null)
@@ -61,14 +168,16 @@ export default function AllJobsPage() {
     try {
       const params = new URLSearchParams()
       if (debouncedQ)                    params.set('q', debouncedQ)
-      if (filters.municipality.trim())   params.set('municipality', filters.municipality.trim())
-      if (filters.region && filters.region.trim()) params.set('region', filters.region.trim())
-      if (filters.remote)                params.set('remote', 'true')
-      if (filters.workingHoursType) {
-        params.set('workingHoursType', filters.workingHoursType)
+      // Support multiple cities and regions
+      if (filters.cities?.length) {
+        filters.cities.forEach((c) => params.append('cities', c))
       }
-      if (filters.employmentType && filters.employmentType.trim()) {
-        params.set('employmentType', filters.employmentType.trim())
+      if (filters.regions?.length) {
+        filters.regions.forEach((r) => params.append('regions', r))
+      }
+      if (filters.remote)                params.set('remote', 'true')
+      if (filters.employmentType) {
+        params.set('employmentType', filters.employmentType)
       }
       params.set('limit',  String(LIMIT))
       params.set('offset', String(offset))
@@ -84,9 +193,103 @@ export default function AllJobsPage() {
     } finally {
       setLoading(false)
     }
-  }, [debouncedQ, filters.municipality, filters.region, filters.remote, filters.workingHoursType, filters.employmentType, offset])
+  }, [debouncedQ, filters.cities, filters.regions, filters.remote, filters.employmentType, offset])
 
   useEffect(() => { fetchJobs() }, [fetchJobs])
+
+  // Fetch available regions/cities for suggestions from backend jobs endpoint
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/jobs`)
+        if (!res.ok) return
+        const data = await res.json()
+        const items: any[] = data?.jobs ?? data?.hits ?? []
+        const regions = new Set<string>()
+        const cities = new Set<string>()
+        const rcMap = new Map<string, Set<string>>()
+        for (const it of items) {
+          const wa = it.workplace_address
+          if (wa) {
+            if (wa.region) regions.add(wa.region)
+            if (wa.municipality) {
+              cities.add(wa.municipality)
+              if (wa.region) {
+                const s = rcMap.get(wa.region) ?? new Set<string>()
+                s.add(wa.municipality)
+                rcMap.set(wa.region, s)
+              } else {
+                const inferred = STATIC_CITY_TO_REGION[wa.municipality]
+                if (inferred) {
+                  regions.add(inferred)
+                  const s = rcMap.get(inferred) ?? new Set<string>()
+                  s.add(wa.municipality)
+                  rcMap.set(inferred, s)
+                }
+              }
+            }
+          }
+          if (it.region) regions.add(it.region)
+          if (it.municipality) {
+            cities.add(it.municipality)
+            if (it.region) {
+              const s = rcMap.get(it.region) ?? new Set<string>()
+              s.add(it.municipality)
+              rcMap.set(it.region, s)
+            } else {
+              const inferred = STATIC_CITY_TO_REGION[it.municipality]
+              if (inferred) {
+                regions.add(inferred)
+                const s = rcMap.get(inferred) ?? new Set<string>()
+                s.add(it.municipality)
+                rcMap.set(inferred, s)
+              }
+            }
+          }
+          if (it.location) {
+            cities.add(it.location)
+            const inferred = STATIC_CITY_TO_REGION[it.location]
+            if (inferred) {
+              regions.add(inferred)
+              const s = rcMap.get(inferred) ?? new Set<string>()
+              s.add(it.location)
+              rcMap.set(inferred, s)
+            }
+          }
+        }
+        if (!mounted) return
+        const derivedRegions = Array.from(regions).filter(Boolean)
+        const mergedRegions = Array.from(new Set([...STATIC_REGIONS, ...derivedRegions]))
+        setRegionSuggestions(mergedRegions)
+        const allCities = Array.from(cities).filter(Boolean)
+        setCitySuggestions(allCities)
+        // convert rcMap to plain object
+        const rcObj: Record<string, string[]> = {}
+        for (const [k, s] of rcMap.entries()) rcObj[k] = Array.from(s).filter(Boolean)
+        setRegionCityMap(rcObj)
+      } catch (e) {
+        // ignore
+      }
+    })()
+    return () => { mounted = false }
+  }, [])
+
+  // Update displayed city suggestions based on selected regions
+  useEffect(() => {
+    if (!filters.regions || filters.regions.length === 0) {
+      setDisplayedCitySuggestions(citySuggestions)
+      return
+    }
+    const sel = new Set<string>()
+    for (const r of filters.regions) {
+      const list = regionCityMap[r]
+      if (list) for (const c of list) sel.add(c)
+    }
+    // if selection produced nothing, fallback to all cities
+    const out = sel.size ? Array.from(sel) : citySuggestions
+    setDisplayedCitySuggestions(out)
+  }, [filters.regions, regionCityMap, citySuggestions])
 
   const update = (patch: Partial<Filters>) => {
     setFilters((f) => ({ ...f, ...patch }))
@@ -143,54 +346,18 @@ export default function AllJobsPage() {
           />
         </div>
 
-        {/* Municipality */}
-        <div className="relative min-w-[180px]">
-          <MapPin size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30" />
-          <input
-            type="text"
-            placeholder="Stad (ex. Stockholm)"
-            value={filters.municipality}
-            onChange={(e) => update({ municipality: e.target.value })}
-            className="w-full bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/30 focus:outline-none focus:border-purple-400 dark:focus:border-purple-500/50"
-          />
-        </div>
-
-        {/* Region (län) */}
-        <div className="relative min-w-[180px]">
-          <MapPin size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30" />
-          <input
-            type="text"
-            placeholder="Region / Län (ex. Skåne)"
-            value={filters.region}
-            onChange={(e) => update({ region: e.target.value })}
-            className="w-full bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/30 focus:outline-none focus:border-purple-400 dark:focus:border-purple-500/50"
-          />
-        </div>
-
-        {/* Working hours */}
+        {/* Employment type (select) */}
         <div className="relative min-w-[180px]">
           <Briefcase size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30" />
           <select
-            value={filters.workingHoursType}
-            onChange={(e) => update({ workingHoursType: e.target.value as Filters['workingHoursType'] })}
+            value={filters.employmentType}
+            onChange={(e) => update({ employmentType: e.target.value })}
             className="w-full bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-slate-600 dark:text-white/70 focus:outline-none focus:border-purple-400 dark:focus:border-purple-500/50 appearance-none"
           >
-            {HOUR_OPTIONS.map((o) => (
+            {EMPLOYMENT_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>
-        </div>
-
-        {/* Employment type (free text) */}
-        <div className="relative min-w-[180px]">
-          <Briefcase size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30" />
-          <input
-            type="text"
-            placeholder="Anställningstyp (ex. Tillsvidare)"
-            value={filters.employmentType}
-            onChange={(e) => update({ employmentType: e.target.value })}
-            className="w-full bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/30 focus:outline-none focus:border-purple-400 dark:focus:border-purple-500/50"
-          />
         </div>
 
         {/* Remote toggle */}
@@ -205,6 +372,31 @@ export default function AllJobsPage() {
           <Wifi size={15} />
           Remote
         </button>
+      </div>
+
+      {/* Region & City row (multi-select / tags) */}
+      <div className="flex flex-wrap gap-3 mt-3">
+        <div className="relative min-w-[220px]">
+          <MapPin size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30" />
+          <TagInput
+            id="regions"
+            values={filters.regions}
+            onChange={(v) => update({ regions: v })}
+            placeholder="Region / Län (välj eller skriv...)"
+            suggestions={regionSuggestions}
+          />
+        </div>
+
+        <div className="relative min-w-[220px]">
+          <MapPin size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30" />
+          <TagInput
+            id="cities"
+            values={filters.cities}
+            onChange={(v) => update({ cities: v })}
+            placeholder="Stad / Kommun (välj eller skriv...)"
+            suggestions={displayedCitySuggestions}
+          />
+        </div>
       </div>
 
       {/* ── Loading ── */}
