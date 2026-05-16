@@ -79,6 +79,8 @@
     "password": "Lösenord",
     "confirmPassword": "Bekräfta lösenord",
     "forgotPassword": "Glömt lösenord?",
+    "forgotPasswordTitle": "Återställ ditt lösenord",
+    "forgotPasswordSubtitle": "Ange din e-post för att få en länk för lösenordsåterställning",
     "signIn": "Logga in",
     "signUp": "Registrera",
     "noAccount": "Har du inget konto? ",
@@ -86,10 +88,22 @@
     "createAccountButton": "Skapa konto",
     "working": "Arbetar...",
     "signOut": "Logga ut",
+    "sendResetLink": "Skicka återställningslänk",
+    "backToSignIn": "Tillbaka till inloggning",
+    "resetPasswordEmailSent": "Vi har skickat ett e-postmeddelande med en länk för att återställa ditt lösenord.",
+    "resetPasswordTitle": "Välj ett nytt lösenord",
+    "resetPasswordSubtitle": "Ange ditt nya lösenord nedan för att slutföra återställningen",
+    "newPassword": "Nytt lösenord",
+    "confirmNewPassword": "Bekräfta nytt lösenord",
+    "updatePassword": "Uppdatera lösenord",
+    "resetPasswordSuccess": "Ditt lösenord har uppdaterats.",
+    "resetPasswordOpenFromEmail": "Öppna den här sidan från länken i e-postmeddelandet för lösenordsåterställning.",
     "checkEmail": "Kolla din e-post för att bekräfta kontot och logga sedan in.",
     "errors": {
       "missingSupabaseEnv": "Supabase är inte konfigurerat. Ange NEXT_PUBLIC_SUPABASE_URL och NEXT_PUBLIC_SUPABASE_ANON_KEY i frontend/.env.local.",
+      "missingEmail": "E-post krävs.",
       "missingEmailOrPassword": "E-post och lösenord krävs.",
+      "missingNewPassword": "Ange och bekräfta ditt nya lösenord.",
       "passwordsDoNotMatch": "Lösenorden matchar inte."
     }
   }
