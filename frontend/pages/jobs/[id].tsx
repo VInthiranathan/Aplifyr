@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Briefcase, MapPin, Wifi, Loader2 } from "lucide-react";
 import { formatLocation } from "../../lib/utils";
 import CoverLetterModal from "../../components/CoverLetterModal";
+import { getSupabaseBrowserClient } from "../../lib/supabaseClient";
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:5000";
 
@@ -119,15 +120,52 @@ export default function JobDetailPage() {
 
     fetchJob();
   }, [data, id]);
+
   const generate = async () => {
     if (!job) return;
     setGenerating(true);
     setLetter(null);
     try {
+      // Get user profile for personalized letter
+      const supabase = getSupabaseBrowserClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      let userProfile = null;
+      if (session) {
+        try {
+          const profileRes = await fetch("/api/profile", {
+            credentials: "same-origin",
+          });
+          if (profileRes.ok) {
+            const profileData = await profileRes.json();
+            if (profileData.profile) {
+              userProfile = {
+                name: profileData.profile.full_name,
+                title: profileData.profile.title,
+                location: profileData.profile.location,
+                bio: profileData.profile.bio,
+                tech_stack: profileData.profile.tech_stack,
+                roles: profileData.profile.roles,
+                cv_url: profileData.profile.cv_url,
+              };
+            }
+          }
+        } catch (e) {
+          console.error("Failed to fetch user profile:", e);
+        }
+      }
+
       const res = await fetch(`${BACKEND}/api/coverletters/generate-all`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify([job]),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          jobs: [job],
+          user: userProfile,
+        }),
       });
       const data = await res.json();
       if (Array.isArray(data) && data[0]?.coverLetter) {

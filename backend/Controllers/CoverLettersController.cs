@@ -16,7 +16,7 @@ public class CoverLettersController : ControllerBase
     }
 
     [HttpPost("generate-all")]
-    public async Task<IActionResult> GenerateAll([FromBody] JsonElement jobs)
+    public async Task<IActionResult> GenerateAll([FromBody] JsonElement request)
     {
         var geminiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY");
         var groqKey = Environment.GetEnvironmentVariable("GROQ_API_KEY");
@@ -24,16 +24,29 @@ public class CoverLettersController : ControllerBase
         if (string.IsNullOrEmpty(geminiKey) && string.IsNullOrEmpty(groqKey))
             return BadRequest(new { error = "Neither GEMINI_API_KEY nor GROQ_API_KEY is set" });
 
-        var userPath = Path.Combine(_env.ContentRootPath, "Data", "user.json");
-        if (!System.IO.File.Exists(userPath))
-            return NotFound(new { error = "user.json not found" });
+        // Extract jobs and user profile from request
+        if (!request.TryGetProperty("jobs", out var jobs) || jobs.ValueKind != JsonValueKind.Array)
+            return BadRequest(new { error = "Expected 'jobs' array in request body" });
 
-        var userJson = System.IO.File.ReadAllText(userPath);
+        string userJson = "{}";
+        string cvText = "";
+
+        if (request.TryGetProperty("user", out var userProfile))
+        {
+            userJson = JsonSerializer.Serialize(userProfile, new JsonSerializerOptions { WriteIndented = true });
+            
+            // Extract CV URL if present
+            if (userProfile.TryGetProperty("cv_url", out var cvUrlProp))
+            {
+                var cvUrl = cvUrlProp.GetString();
+                if (!string.IsNullOrEmpty(cvUrl))
+                {
+                    cvText = $"[CV file available at: {cvUrl}]";
+                }
+            }
+        }
 
         var results = new List<object>();
-
-        if (jobs.ValueKind != JsonValueKind.Array)
-            return BadRequest(new { error = "Expected an array of jobs in request body" });
 
         foreach (var jobEl in jobs.EnumerateArray())
         {
@@ -74,8 +87,8 @@ public class CoverLettersController : ControllerBase
             string language = DetectLanguage(description);
             
             var prompt = language == "sv" 
-                ? $"Skriv ett professionellt och personligt personligt brev (på svenska) för följande jobbannons:\n\nJobbtitel: {title}\nFöretag: {employer}\nPlats: {location}\n\nJobbbeskrivning:\n{description}\n\nAnvändarprofil:\n{userJson}\n\nInstruktioner:\n- Skriv ett kortfattat men övertygande personligt brev (150-250 ord)\n- Koppla användarens erfarenheter och kompetenser till jobbets krav\n- Var specifik och undvik generiska fraser\n- Visa entusiasm och motivation\n- Avsluta professionellt med hälsning"
-                : $"Write a professional and personal cover letter (in English) for the following job posting:\n\nJob Title: {title}\nCompany: {employer}\nLocation: {location}\n\nJob Description:\n{description}\n\nUser Profile:\n{userJson}\n\nInstructions:\n- Write a concise but compelling cover letter (150-250 words)\n- Connect the user's experience and skills to the job requirements\n- Be specific and avoid generic phrases\n- Show enthusiasm and motivation\n- End professionally with a greeting";
+                ? $"Skriv ett professionellt och personligt personligt brev (på svenska) för följande jobbannons:\n\nJobbtitel: {title}\nFöretag: {employer}\nPlats: {location}\n\nJobbbeskrivning:\n{description}\n\nAnvändarprofil:\n{userJson}\n\n{(!string.IsNullOrEmpty(cvText) ? $"CV Information:\n{cvText}\n\n" : "")}Instruktioner:\n- Skriv ett kortfattat men övertygande personligt brev (150-250 ord)\n- Koppla användarens erfarenheter och kompetenser till jobbets krav\n- Var specifik och undvik generiska fraser\n- Visa entusiasm och motivation\n- Avsluta professionellt med hälsning"
+                : $"Write a professional and personal cover letter (in English) for the following job posting:\n\nJob Title: {title}\nCompany: {employer}\nLocation: {location}\n\nJob Description:\n{description}\n\nUser Profile:\n{userJson}\n\n{(!string.IsNullOrEmpty(cvText) ? $"CV Information:\n{cvText}\n\n" : "")}Instructions:\n- Write a concise but compelling cover letter (150-250 words)\n- Connect the user's experience and skills to the job requirements\n- Be specific and avoid generic phrases\n- Show enthusiasm and motivation\n- End professionally with a greeting";
 
             string coverLetter = "";
             string errorMsg = "";

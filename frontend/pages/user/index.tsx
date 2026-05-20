@@ -5,8 +5,11 @@ import {
   createServerClient,
   parseCookieHeader,
   serializeCookieHeader,
-} from '@supabase/auth-helpers-nextjs'
-import { isSupabaseConfigured, getSupabaseBrowserClient } from '../../lib/supabaseClient'
+} from "@supabase/auth-helpers-nextjs";
+import {
+  isSupabaseConfigured,
+  getSupabaseBrowserClient,
+} from "../../lib/supabaseClient";
 import {
   MapPin,
   Briefcase,
@@ -32,51 +35,52 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
 }) => {
   try {
     if (isSupabaseConfigured) {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string
-      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
+      const supabaseAnonKey = process.env
+        .NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
 
-      const parsed = parseCookieHeader(req.headers.cookie ?? '')
+      const parsed = parseCookieHeader(req.headers.cookie ?? "");
 
       const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
         cookies: {
           getAll() {
-            return parsed.map((c) => ({ name: c.name, value: c.value ?? '' }))
+            return parsed.map((c) => ({ name: c.name, value: c.value ?? "" }));
           },
           setAll(cookies) {
             const setCookie = cookies.map(({ name, value, options }) =>
               serializeCookieHeader(name, value, options),
-            )
-            setCookie.forEach((c) => res.setHeader('Set-Cookie', c))
+            );
+            setCookie.forEach((c) => res.setHeader("Set-Cookie", c));
           },
         },
-      })
+      });
 
       const {
         data: { user },
-      } = await supabase.auth.getUser()
+      } = await supabase.auth.getUser();
 
       if (!user) {
         return {
           props: {
             user: null,
-            ...(await serverSideTranslations(locale ?? 'en', ['common'])),
+            ...(await serverSideTranslations(locale ?? "en", ["common"])),
           },
-        }
+        };
       }
 
       const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle()
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle();
 
       const frontendUser: User | null = profile
         ? {
             id: profile.id,
-            name: profile.full_name ?? '',
-            title: profile.title ?? '',
-            location: profile.location ?? '',
-            bio: profile.bio ?? '',
+            name: profile.full_name ?? "",
+            title: profile.title ?? "",
+            location: profile.location ?? "",
+            bio: profile.bio ?? "",
             tags: profile.tech_stack ?? [],
             roles: profile.roles ?? [],
             avatarInitials: profile.full_name
@@ -84,35 +88,35 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
                   .split(/\s+/)
                   .map((p: string) => p[0])
                   .slice(0, 2)
-                  .join('')
+                  .join("")
                   .toUpperCase()
-              : '',
+              : "",
           }
-        : null
+        : null;
 
       return {
         props: {
           user: frontendUser,
-          ...(await serverSideTranslations(locale ?? 'en', ['common'])),
+          ...(await serverSideTranslations(locale ?? "en", ["common"])),
         },
-      }
+      };
     }
 
     return {
       props: {
         user: null,
-        ...(await serverSideTranslations(locale ?? 'en', ['common'])),
+        ...(await serverSideTranslations(locale ?? "en", ["common"])),
       },
-    }
+    };
   } catch (e) {
     return {
       props: {
         user: null,
-        ...(await serverSideTranslations(locale ?? 'en', ['common'])),
+        ...(await serverSideTranslations(locale ?? "en", ["common"])),
       },
-    }
+    };
   }
-}
+};
 
 const locationFilters = [
   "Only my location",
@@ -125,15 +129,21 @@ const locationFilters = [
 export default function UserPage({ user }: Props) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editedUser, setEditedUser] = useState<User | null>(user);
-  const [editSection, setEditSection] = useState<'profile' | 'bio' | 'skills' | 'roles' | null>(null);
+  const [editSection, setEditSection] = useState<
+    "profile" | "bio" | "skills" | "roles" | null
+  >(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [cvUrl, setCvUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const profileImageInputRef = useRef<HTMLInputElement>(null);
 
   // client-side profile state: undefined = loading, null = no profile, User = loaded
-  const [clientProfile, setClientProfile] = useState<User | null | undefined>(user);
+  const [clientProfile, setClientProfile] = useState<User | null | undefined>(
+    user,
+  );
 
   useEffect(() => {
     // if SSR didn't provide a user/profile, try fetching client-side from Supabase
@@ -141,56 +151,80 @@ export default function UserPage({ user }: Props) {
       setClientProfile(undefined); // loading
       (async () => {
         try {
-          const res = await fetch('/api/profile', { credentials: 'same-origin' });
-          if (!res.ok) throw new Error('fetch failed');
+          const res = await fetch("/api/profile", {
+            credentials: "same-origin",
+          });
+          if (!res.ok) throw new Error("fetch failed");
           const data = await res.json();
           if (data.profile) {
             const p = data.profile;
             const mapped: User = {
               id: p.id,
-              name: p.full_name ?? '',
-              title: p.title ?? '',
-              location: p.location ?? '',
-              bio: p.bio ?? '',
+              name: p.full_name ?? "",
+              title: p.title ?? "",
+              location: p.location ?? "",
+              bio: p.bio ?? "",
               tags: p.tech_stack ?? [],
               roles: p.roles ?? [],
               avatarInitials: p.full_name
-                ? p.full_name.split(/\s+/).map((s: string) => s[0]).slice(0,2).join('').toUpperCase()
-                : '',
+                ? p.full_name
+                    .split(/\s+/)
+                    .map((s: string) => s[0])
+                    .slice(0, 2)
+                    .join("")
+                    .toUpperCase()
+                : "",
             };
             setClientProfile(mapped);
             setEditedUser(mapped);
+            setCvUrl(p.cv_url || null);
           } else {
             // no profile yet — allow user to create one via UI
             setClientProfile(null);
             setEditedUser({
-              id: '',
-              name: '',
-              title: '',
-              location: '',
-              bio: '',
+              id: "",
+              name: "",
+              title: "",
+              location: "",
+              bio: "",
               tags: [],
               roles: [],
-              avatarInitials: '',
+              avatarInitials: "",
             });
           }
         } catch (e) {
           setClientProfile(null);
           setEditedUser({
-            id: '',
-            name: '',
-            title: '',
-            location: '',
-            bio: '',
+            id: "",
+            name: "",
+            title: "",
+            location: "",
+            bio: "",
             tags: [],
             roles: [],
-            avatarInitials: '',
+            avatarInitials: "",
           });
         }
       })();
     } else {
       setClientProfile(user);
       setEditedUser(user);
+      // Fetch CV URL for the user
+      (async () => {
+        try {
+          const res = await fetch("/api/profile", {
+            credentials: "same-origin",
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.profile && data.profile.cv_url) {
+              setCvUrl(data.profile.cv_url);
+            }
+          }
+        } catch (e) {
+          console.error("Failed to fetch CV URL:", e);
+        }
+      })();
     }
   }, [user]);
 
@@ -210,20 +244,49 @@ export default function UserPage({ user }: Props) {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       if (file.size <= 5 * 1024 * 1024) {
         // 5MB
         setUploadedFile(file);
-        // TODO: Upload to backend
+        await uploadCV(file);
       } else {
         alert("File size must be less than 5MB");
       }
     }
   };
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  const uploadCV = async (file: File) => {
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/upload-cv", {
+        method: "POST",
+        credentials: "same-origin",
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setCvUrl(data.cv_url);
+        alert("CV uploaded successfully!");
+      } else {
+        const err = await res.json().catch(() => ({}));
+        console.error("CV upload failed", err);
+        alert("Failed to upload CV");
+      }
+    } catch (error) {
+      console.error("CV upload error:", error);
+      alert("Error uploading CV");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
 
@@ -231,7 +294,7 @@ export default function UserPage({ user }: Props) {
       const file = e.dataTransfer.files[0];
       if (file.size <= 5 * 1024 * 1024) {
         setUploadedFile(file);
-        // TODO: Upload to backend
+        await uploadCV(file);
       } else {
         alert("File size must be less than 5MB");
       }
@@ -251,10 +314,10 @@ export default function UserPage({ user }: Props) {
   const handleSaveProfile = async () => {
     if (!editedUser) return;
     try {
-      const res = await fetch('/api/profile', {
-        method: 'PUT',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/profile", {
+        method: "PUT",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editedUser),
       });
 
@@ -263,12 +326,12 @@ export default function UserPage({ user }: Props) {
         window.location.reload();
       } else {
         const err = await res.json().catch(() => ({}));
-        console.error('save profile failed', err);
-        alert('Failed to save profile');
+        console.error("save profile failed", err);
+        alert("Failed to save profile");
       }
     } catch (error) {
       console.error(error);
-      alert('Error saving profile');
+      alert("Error saving profile");
     }
   };
 
@@ -287,12 +350,12 @@ export default function UserPage({ user }: Props) {
               {profileImage ? (
                 <img
                   src={profileImage}
-                  alt={(clientProfile && clientProfile.name) || 'Profile'}
+                  alt={(clientProfile && clientProfile.name) || "Profile"}
                   className="w-24 h-24 rounded-2xl object-cover"
                 />
               ) : (
                 <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white text-3xl font-bold">
-                  {(clientProfile && clientProfile.avatarInitials) || ''}
+                  {(clientProfile && clientProfile.avatarInitials) || ""}
                 </div>
               )}
             </div>
@@ -300,17 +363,17 @@ export default function UserPage({ user }: Props) {
             {/* User Info */}
             <div className="flex-1">
               <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3">
-                {clientProfile?.name ?? ''}
+                {clientProfile?.name ?? ""}
               </h1>
               <div className="flex items-center gap-4 text-gray-600 dark:text-white/60">
                 <div className="flex items-center gap-2">
                   <Briefcase className="w-4 h-4" />
-                  <span>{(clientProfile && clientProfile.title) || ''}</span>
+                  <span>{(clientProfile && clientProfile.title) || ""}</span>
                 </div>
                 <span className="text-gray-400 dark:text-white/30">•</span>
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4" />
-                  <span>{(clientProfile && clientProfile.location) || ''}</span>
+                  <span>{(clientProfile && clientProfile.location) || ""}</span>
                 </div>
               </div>
             </div>
@@ -318,10 +381,20 @@ export default function UserPage({ user }: Props) {
             {/* Edit Profile Button - edits name/title/location only */}
             <button
               onClick={() => {
-                setEditedUser(clientProfile ?? editedUser ?? {
-                  id: '', name: '', title: '', location: '', bio: '', tags: [], roles: [], avatarInitials: ''
-                });
-                setEditSection('profile');
+                setEditedUser(
+                  clientProfile ??
+                    editedUser ?? {
+                      id: "",
+                      name: "",
+                      title: "",
+                      location: "",
+                      bio: "",
+                      tags: [],
+                      roles: [],
+                      avatarInitials: "",
+                    },
+                );
+                setEditSection("profile");
                 setIsEditModalOpen(true);
               }}
               className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors font-semibold shadow-lg"
@@ -342,21 +415,33 @@ export default function UserPage({ user }: Props) {
                 <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-500/10 flex items-center justify-center">
                   <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 </div>
-                  <div className="flex items-center justify-between w-full">
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">About me</h2>
-                    <button
-                      onClick={() => {
-                        setEditedUser(clientProfile ?? editedUser ?? {
-                          id: '', name: '', title: '', location: '', bio: '', tags: [], roles: [], avatarInitials: ''
-                        });
-                        setEditSection('bio');
-                        setIsEditModalOpen(true);
-                      }}
-                      className="text-sm font-semibold px-3 py-1 rounded-lg bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10"
-                    >
-                      Edit
-                    </button>
-                  </div>
+                <div className="flex items-center justify-between w-full">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                    About me
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setEditedUser(
+                        clientProfile ??
+                          editedUser ?? {
+                            id: "",
+                            name: "",
+                            title: "",
+                            location: "",
+                            bio: "",
+                            tags: [],
+                            roles: [],
+                            avatarInitials: "",
+                          },
+                      );
+                      setEditSection("bio");
+                      setIsEditModalOpen(true);
+                    }}
+                    className="text-sm font-semibold px-3 py-1 rounded-lg bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10"
+                  >
+                    Edit
+                  </button>
+                </div>
               </div>
               <p className="text-gray-700 dark:text-white/70 leading-relaxed">
                 {(clientProfile && clientProfile.bio) || "No bio available"}
@@ -392,13 +477,25 @@ export default function UserPage({ user }: Props) {
                   <Tag className="w-5 h-5 text-green-600 dark:text-green-400" />
                 </div>
                 <div className="flex items-center justify-between w-full">
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Tech stack</h2>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                    Tech stack
+                  </h2>
                   <button
                     onClick={() => {
-                      setEditedUser(clientProfile ?? editedUser ?? {
-                        id: '', name: '', title: '', location: '', bio: '', tags: [], roles: [], avatarInitials: ''
-                      });
-                      setEditSection('skills');
+                      setEditedUser(
+                        clientProfile ??
+                          editedUser ?? {
+                            id: "",
+                            name: "",
+                            title: "",
+                            location: "",
+                            bio: "",
+                            tags: [],
+                            roles: [],
+                            avatarInitials: "",
+                          },
+                      );
+                      setEditSection("skills");
                       setIsEditModalOpen(true);
                     }}
                     className="text-sm font-semibold px-3 py-1 rounded-lg bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10"
@@ -426,13 +523,25 @@ export default function UserPage({ user }: Props) {
                   <Briefcase className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                 </div>
                 <div className="flex items-center justify-between w-full">
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Desired roles</h2>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                    Desired roles
+                  </h2>
                   <button
                     onClick={() => {
-                      setEditedUser(clientProfile ?? editedUser ?? {
-                        id: '', name: '', title: '', location: '', bio: '', tags: [], roles: [], avatarInitials: ''
-                      });
-                      setEditSection('roles');
+                      setEditedUser(
+                        clientProfile ??
+                          editedUser ?? {
+                            id: "",
+                            name: "",
+                            title: "",
+                            location: "",
+                            bio: "",
+                            tags: [],
+                            roles: [],
+                            avatarInitials: "",
+                          },
+                      );
+                      setEditSection("roles");
                       setIsEditModalOpen(true);
                     }}
                     className="text-sm font-semibold px-3 py-1 rounded-lg bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10"
@@ -473,61 +582,103 @@ export default function UserPage({ user }: Props) {
                 accept=".pdf,.doc,.docx"
                 onChange={handleFileChange}
                 className="hidden"
+                disabled={isUploading}
               />
-              <div
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all cursor-pointer ${
-                  isDragging
-                    ? "border-blue-500 bg-blue-50 dark:bg-blue-500/10"
-                    : "border-gray-200 dark:border-white/10 hover:border-blue-400 dark:hover:border-blue-500/50"
-                }`}
-              >
-                <div className="flex flex-col items-center gap-4">
-                  {uploadedFile ? (
-                    <>
-                      <FileText className="w-14 h-14 text-blue-600 dark:text-blue-400" />
-                      <div>
-                        <p className="text-base font-semibold text-gray-900 dark:text-white mb-1">
-                          {uploadedFile.name}
-                        </p>
-                        <p className="text-sm text-gray-500 dark:text-white/50">
-                          {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => setUploadedFile(null)}
-                        className="mt-2 px-8 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold transition-colors shadow-lg"
+
+              {cvUrl ? (
+                <div className="border-2 border-gray-200 dark:border-white/10 rounded-2xl p-8 text-center">
+                  <div className="flex flex-col items-center gap-4">
+                    <FileText className="w-14 h-14 text-green-600 dark:text-green-400" />
+                    <div>
+                      <p className="text-base font-semibold text-gray-900 dark:text-white mb-1">
+                        CV Uploaded
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-white/50">
+                        Your CV is saved and will be used for cover letters
+                      </p>
+                    </div>
+                    <div className="flex gap-3 mt-2">
+                      <a
+                        href={cvUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors shadow-lg"
                       >
-                        Remove File
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-14 h-14 text-gray-400 dark:text-white/30" />
-                      <div>
-                        <p className="text-base font-semibold text-gray-900 dark:text-white mb-1">
-                          Upload your CV
-                        </p>
-                        <p className="text-sm text-gray-500 dark:text-white/50">
-                          PDF, DOC, DOCX • Max 5MB
-                        </p>
-                      </div>
+                        View CV
+                      </a>
                       <button
                         onClick={() => fileInputRef.current?.click()}
-                        className="mt-2 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors shadow-lg"
+                        disabled={isUploading}
+                        className="px-6 py-3 bg-gray-200 hover:bg-gray-300 dark:bg-white/10 dark:hover:bg-white/20 text-gray-700 dark:text-white rounded-xl font-semibold transition-colors disabled:opacity-50"
                       >
-                        Choose File
+                        {isUploading ? "Uploading..." : "Replace CV"}
                       </button>
-                      <p className="text-xs text-gray-500 dark:text-white/50 mt-2 max-w-xs">
-                        Your CV will be used to match you with relevant
-                        opportunities
-                      </p>
-                    </>
-                  )}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all cursor-pointer ${
+                    isDragging
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-500/10"
+                      : "border-gray-200 dark:border-white/10 hover:border-blue-400 dark:hover:border-blue-500/50"
+                  } ${isUploading ? "opacity-50 pointer-events-none" : ""}`}
+                >
+                  <div className="flex flex-col items-center gap-4">
+                    {uploadedFile && !isUploading ? (
+                      <>
+                        <FileText className="w-14 h-14 text-blue-600 dark:text-blue-400" />
+                        <div>
+                          <p className="text-base font-semibold text-gray-900 dark:text-white mb-1">
+                            {uploadedFile.name}
+                          </p>
+                          <p className="text-sm text-gray-500 dark:text-white/50">
+                            {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setUploadedFile(null)}
+                          className="mt-2 px-8 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold transition-colors shadow-lg"
+                        >
+                          Remove File
+                        </button>
+                      </>
+                    ) : isUploading ? (
+                      <>
+                        <FileText className="w-14 h-14 text-blue-600 dark:text-blue-400 animate-pulse" />
+                        <p className="text-base font-semibold text-gray-900 dark:text-white">
+                          Uploading your CV...
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-14 h-14 text-gray-400 dark:text-white/30" />
+                        <div>
+                          <p className="text-base font-semibold text-gray-900 dark:text-white mb-1">
+                            Upload your CV
+                          </p>
+                          <p className="text-sm text-gray-500 dark:text-white/50">
+                            PDF, DOC, DOCX • Max 5MB
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          className="mt-2 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors shadow-lg"
+                        >
+                          Choose File
+                        </button>
+                        <p className="text-xs text-gray-500 dark:text-white/50 mt-2 max-w-xs">
+                          Your CV will be used to generate personalized cover
+                          letters
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -552,7 +703,7 @@ export default function UserPage({ user }: Props) {
 
             {/* Modal Body */}
             <div className="p-6 space-y-6">
-              {editSection === 'profile' && (
+              {editSection === "profile" && (
                 <>
                   {/* Profile Picture */}
                   <div>
@@ -570,7 +721,9 @@ export default function UserPage({ user }: Props) {
                           />
                         ) : (
                           <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white text-3xl font-bold">
-                            {(editedUser && editedUser.avatarInitials) || (clientProfile && clientProfile.avatarInitials) || ''}
+                            {(editedUser && editedUser.avatarInitials) ||
+                              (clientProfile && clientProfile.avatarInitials) ||
+                              ""}
                           </div>
                         )}
                       </div>
@@ -641,7 +794,10 @@ export default function UserPage({ user }: Props) {
                       type="text"
                       value={editedUser.location}
                       onChange={(e) =>
-                        setEditedUser({ ...editedUser, location: e.target.value })
+                        setEditedUser({
+                          ...editedUser,
+                          location: e.target.value,
+                        })
                       }
                       className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
@@ -649,7 +805,7 @@ export default function UserPage({ user }: Props) {
                 </>
               )}
 
-              {editSection === 'bio' && (
+              {editSection === "bio" && (
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
                     About Me
@@ -665,7 +821,7 @@ export default function UserPage({ user }: Props) {
                 </div>
               )}
 
-              {editSection === 'skills' && (
+              {editSection === "skills" && (
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
                     Skills (comma-separated)
@@ -685,7 +841,7 @@ export default function UserPage({ user }: Props) {
                 </div>
               )}
 
-              {editSection === 'roles' && (
+              {editSection === "roles" && (
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
                     Desired Roles (comma-separated)
