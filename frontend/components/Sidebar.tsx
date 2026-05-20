@@ -12,13 +12,15 @@ import {
   Sun,
   Moon,
   LogOut,
+  Bookmark,
 } from 'lucide-react'
 
 const navItemDefs = [
-  { key: 'nav.userDetails', href: '/user',    icon: User },
-  { key: 'nav.home',        href: '/',         icon: Home },
-  { key: 'nav.allJobs',     href: '/jobs',     icon: Briefcase },
-  { key: 'nav.support',     href: '/support',  icon: HelpCircle },
+  { key: 'nav.userDetails', href: '/user',      icon: User },
+  { key: 'nav.home',        href: '/',          icon: Home },
+  { key: 'nav.allJobs',     href: '/jobs',      icon: Briefcase },
+  { key: 'nav.favorites',   href: '/favorites', icon: Bookmark },
+  { key: 'nav.support',     href: '/support',   icon: HelpCircle },
 ]
 
 export default function Sidebar() {

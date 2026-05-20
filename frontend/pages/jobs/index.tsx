@@ -9,9 +9,11 @@ import {
   Briefcase,
   ExternalLink,
   Loader2,
+  Bookmark,
 } from "lucide-react";
 import { formatLocation } from "../../lib/utils";
 import Link from "next/link";
+import { useFavorites } from "../../lib/useFavorites";
 
 export const getStaticProps: GetStaticProps = async ({ locale }) => ({
   props: { ...(await serverSideTranslations(locale ?? "en", ["common"])) },
@@ -280,6 +282,8 @@ function TagInput({
 }
 
 export default function AllJobsPage() {
+  const { toggleFavorite, isFavorite } = useFavorites();
+  
   const [filters, setFilters] = useState<Filters>({
     q: "",
     cities: [],
@@ -846,16 +850,46 @@ export default function AllJobsPage() {
                         </span>
                       )}
                     </div>
-                    {job.webpage_url && (
-                      <a
-                        href={job.webpage_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-shrink-0 text-slate-300 dark:text-white/20 hover:text-purple-500 dark:hover:text-purple-400 transition-colors"
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          toggleFavorite({
+                            id: job.id,
+                            title: job.headline,
+                            company: job.employer?.name,
+                            location: formatLocation(job.workplace_address),
+                            matchGrade: job.matchGrade,
+                          });
+                        }}
+                        className={`flex-shrink-0 transition-colors ${
+                          isFavorite(job.id)
+                            ? "text-purple-500 dark:text-purple-400"
+                            : "text-slate-300 dark:text-white/20 hover:text-purple-500 dark:hover:text-purple-400"
+                        }`}
+                        title={
+                          isFavorite(job.id)
+                            ? "Ta bort från favoriter"
+                            : "Lägg till i favoriter"
+                        }
                       >
-                        <ExternalLink size={15} />
-                      </a>
-                    )}
+                        <Bookmark
+                          size={15}
+                          fill={isFavorite(job.id) ? "currentColor" : "none"}
+                        />
+                      </button>
+                      {job.webpage_url && (
+                        <a
+                          href={job.webpage_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-shrink-0 text-slate-300 dark:text-white/20 hover:text-purple-500 dark:hover:text-purple-400 transition-colors"
+                        >
+                          <ExternalLink size={15} />
+                        </a>
+                      )}
+                    </div>
                   </div>
 
                   <p className="text-xs text-slate-500 dark:text-white/50 mt-0.5">

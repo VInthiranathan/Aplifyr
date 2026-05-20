@@ -8,6 +8,7 @@ import {
 } from "@supabase/auth-helpers-nextjs";
 import { isSupabaseConfigured } from "../lib/supabaseClient";
 import Link from "next/link";
+import { useFavorites } from "../lib/useFavorites";
 
 const BACKEND = process.env.BACKEND_URL ?? "http://localhost:5000";
 
@@ -89,6 +90,8 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
 };
 
 export default function Home({ jobs, progression }: Props) {
+  const { toggleFavorite, isFavorite } = useFavorites();
+  
   const total =
     progression.applied +
       progression.readyToApply +
@@ -338,14 +341,33 @@ export default function Home({ jobs, progression }: Props) {
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          // Add bookmark functionality here
+                          toggleFavorite({
+                            id: job.id,
+                            title: job.title,
+                            company: job.company,
+                            location: job.location,
+                            type: job.type,
+                            grade: job.grade,
+                            perks: job.perks,
+                            isNew: job.isNew,
+                            badge: job.badge,
+                          });
                         }}
-                        className="text-gray-400 dark:text-white/30 hover:text-gray-600 dark:hover:text-white/70 transition-colors p-2"
+                        className={`transition-colors p-2 ${
+                          isFavorite(job.id)
+                            ? "text-purple-500 dark:text-purple-400"
+                            : "text-gray-400 dark:text-white/30 hover:text-purple-500 dark:hover:text-purple-400"
+                        }`}
+                        title={
+                          isFavorite(job.id)
+                            ? "Ta bort från favoriter"
+                            : "Lägg till i favoriter"
+                        }
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           className="w-5 h-5"
-                          fill="none"
+                          fill={isFavorite(job.id) ? "currentColor" : "none"}
                           viewBox="0 0 24 24"
                           stroke="currentColor"
                         >
