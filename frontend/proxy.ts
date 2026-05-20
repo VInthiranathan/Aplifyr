@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/auth-helpers-nextjs'
 
 const PUBLIC_PATHS = ['/auth']
+const ALLOWED_AUTH_PATHS = ['/auth/forgot-password', '/auth/reset-password']
 
 function isPublicPath(pathname: string) {
   if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return true
@@ -37,6 +38,9 @@ export async function proxy(req: NextRequest) {
   }
 
   const isAuthPath = pathname === '/auth' || pathname.startsWith('/auth/')
+  const allowLoggedInAuthPath = ALLOWED_AUTH_PATHS.some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`),
+  )
 
   // Allow static/public paths through without checks (except /auth which we may
   // redirect away from if already authenticated).
@@ -63,7 +67,7 @@ export async function proxy(req: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (user && isAuthPath) {
+  if (user && isAuthPath && !allowLoggedInAuthPath) {
     const redirectUrl = req.nextUrl.clone()
     redirectUrl.pathname = '/'
     redirectUrl.search = ''

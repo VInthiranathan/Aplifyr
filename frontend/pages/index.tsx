@@ -1,8 +1,13 @@
 import type { GetServerSideProps } from "next";
 import type { Job, Progression, JobsData } from "../types/api";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
-import { createServerClient, parseCookieHeader, serializeCookieHeader } from "@supabase/auth-helpers-nextjs";
+import {
+  createServerClient,
+  parseCookieHeader,
+  serializeCookieHeader,
+} from "@supabase/auth-helpers-nextjs";
 import { isSupabaseConfigured } from "../lib/supabaseClient";
+import Link from "next/link";
 
 const BACKEND = process.env.BACKEND_URL ?? "http://localhost:5000";
 
@@ -274,82 +279,88 @@ export default function Home({ jobs, progression }: Props) {
 
           <div className="grid gap-4">
             {jobs.map((job) => (
-              <div
-                key={job.id}
-                className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-6 border border-gray-200 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10 transition-all hover:shadow-md dark:shadow-none group"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                        {job.title}
-                      </h3>
-                      {job.isNew && (
-                        <span className="text-xs font-semibold bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full">
-                          New
+              <Link key={job.id} href={`/jobs/${job.id}`} className="block">
+                <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-6 border border-gray-200 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10 transition-all hover:shadow-md dark:shadow-none group cursor-pointer">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                          {job.title}
+                        </h3>
+                        {job.isNew && (
+                          <span className="text-xs font-semibold bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full">
+                            New
+                          </span>
+                        )}
+                        {job.badge && (
+                          <span className="text-xs font-medium text-purple-600 dark:text-purple-400 border border-purple-300 dark:border-purple-500/40 px-3 py-1 rounded-full">
+                            {job.badge}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-white/60 mb-4">
+                        <span className="font-medium">{job.company}</span>
+                        <span className="text-gray-400 dark:text-white/40">
+                          •
                         </span>
-                      )}
-                      {job.badge && (
-                        <span className="text-xs font-medium text-purple-600 dark:text-purple-400 border border-purple-300 dark:border-purple-500/40 px-3 py-1 rounded-full">
-                          {job.badge}
+                        <span>{job.location}</span>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <span className="text-xs bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-white/70 rounded-full px-3 py-1.5 border border-gray-200 dark:border-white/10">
+                          {job.type}
                         </span>
-                      )}
+                        {job.perks.map((perk) => (
+                          <span
+                            key={perk}
+                            className="text-xs bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-white/70 rounded-full px-3 py-1.5 border border-gray-200 dark:border-white/10"
+                          >
+                            {perk}
+                          </span>
+                        ))}
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-white/60 mb-4">
-                      <span className="font-medium">{job.company}</span>
-                      <span className="text-gray-400 dark:text-white/40">
-                        •
-                      </span>
-                      <span>{job.location}</span>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      <span className="text-xs bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-white/70 rounded-full px-3 py-1.5 border border-gray-200 dark:border-white/10">
-                        {job.type}
-                      </span>
-                      {job.perks.map((perk) => (
-                        <span
-                          key={perk}
-                          className="text-xs bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-white/70 rounded-full px-3 py-1.5 border border-gray-200 dark:border-white/10"
-                        >
-                          {perk}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col items-end gap-3">
-                    <span
-                      className={`text-sm font-bold px-4 py-1.5 rounded-full ${
-                        job.grade === "A"
-                          ? "bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400"
-                          : job.grade === "B"
-                            ? "bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400"
-                            : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
-                      }`}
-                    >
-                      {job.grade} Match
-                    </span>
-                    <button className="text-gray-400 dark:text-white/30 hover:text-gray-600 dark:hover:text-white/70 transition-colors p-2">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="w-5 h-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
+                    <div className="flex flex-col items-end gap-3">
+                      <span
+                        className={`text-sm font-bold px-4 py-1.5 rounded-full ${
+                          job.grade === "A"
+                            ? "bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400"
+                            : job.grade === "B"
+                              ? "bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400"
+                              : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
+                        }`}
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={1.5}
-                          d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-                        />
-                      </svg>
-                    </button>
+                        {job.grade} Match
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          // Add bookmark functionality here
+                        }}
+                        className="text-gray-400 dark:text-white/30 hover:text-gray-600 dark:hover:text-white/70 transition-colors p-2"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="w-5 h-5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={1.5}
+                            d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                          />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>

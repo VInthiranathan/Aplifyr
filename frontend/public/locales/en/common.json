@@ -79,6 +79,8 @@
     "password": "Password",
     "confirmPassword": "Confirm Password",
     "forgotPassword": "Forgot password?",
+    "forgotPasswordTitle": "Reset your password",
+    "forgotPasswordSubtitle": "Enter your email to receive a password reset link",
     "signIn": "Sign in",
     "signUp": "Sign up",
     "noAccount": "Don't have an account? ",
@@ -86,10 +88,22 @@
     "createAccountButton": "Create Account",
     "working": "Working...",
     "signOut": "Sign out",
+    "sendResetLink": "Send reset link",
+    "backToSignIn": "Back to sign in",
+    "resetPasswordEmailSent": "We sent you a password reset email. Open the link in that email to continue.",
+    "resetPasswordTitle": "Choose a new password",
+    "resetPasswordSubtitle": "Enter your new password below to finish resetting your account",
+    "newPassword": "New Password",
+    "confirmNewPassword": "Confirm New Password",
+    "updatePassword": "Update Password",
+    "resetPasswordSuccess": "Your password has been updated.",
+    "resetPasswordOpenFromEmail": "Open this page from the password reset link sent to your email.",
     "checkEmail": "Check your email to confirm your account, then sign in.",
     "errors": {
       "missingSupabaseEnv": "Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in frontend/.env.local.",
+      "missingEmail": "Email is required.",
       "missingEmailOrPassword": "Email and password are required.",
+      "missingNewPassword": "Enter and confirm your new password.",
       "passwordsDoNotMatch": "Passwords do not match."
     }
   }
