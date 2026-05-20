@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
-const FAVORITES_KEY = 'applifyr_favorites';
+const FAVORITES_KEY = "applifyr_favorites";
 
 export interface FavoriteJob {
   id: number | string;
@@ -8,8 +8,8 @@ export interface FavoriteJob {
   company: string;
   location: string;
   type?: string;
-  grade?: 'A' | 'B' | 'C';
-  matchGrade?: 'A' | 'B' | 'C';
+  grade?: "A" | "B" | "C";
+  matchGrade?: "A" | "B" | "C";
   perks?: string[];
   isNew?: boolean;
   badge?: string | null;
@@ -29,7 +29,7 @@ export function useFavorites() {
         setFavorites(parsed);
       }
     } catch (e) {
-      console.error('Failed to load favorites:', e);
+      console.error("Failed to load favorites:", e);
     }
     setLoaded(true);
   }, []);
@@ -40,12 +40,12 @@ export function useFavorites() {
       try {
         localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
       } catch (e) {
-        console.error('Failed to save favorites:', e);
+        console.error("Failed to save favorites:", e);
       }
     }
   }, [favorites, loaded]);
 
-  const addFavorite = (job: Omit<FavoriteJob, 'savedAt'>) => {
+  const addFavorite = (job: Omit<FavoriteJob, "savedAt">) => {
     setFavorites((prev) => {
       // Avoid duplicates
       if (prev.some((f) => String(f.id) === String(job.id))) {
@@ -59,7 +59,7 @@ export function useFavorites() {
     setFavorites((prev) => prev.filter((f) => String(f.id) !== String(jobId)));
   };
 
-  const toggleFavorite = (job: Omit<FavoriteJob, 'savedAt'>) => {
+  const toggleFavorite = (job: Omit<FavoriteJob, "savedAt">) => {
     if (isFavorite(job.id)) {
       removeFavorite(job.id);
     } else {

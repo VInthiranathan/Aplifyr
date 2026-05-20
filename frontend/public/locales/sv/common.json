@@ -68,8 +68,7 @@
     "formSubmit": "Skicka",
     "formSuccess": "Meddelandet skickat!",
     "formSuccessDesc": "Vi återkommer inom 24 timmar."
-  }
-  ,
+  },
   "auth": {
     "welcomeBack": "Välkommen tillbaka",
     "createAccount": "Skapa konto",

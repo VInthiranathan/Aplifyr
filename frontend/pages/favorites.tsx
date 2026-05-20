@@ -29,7 +29,9 @@ export default function FavoritesPage() {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-[#0d0d0d] p-8">
         <div className="max-w-7xl mx-auto">
-          <p className="text-gray-400 dark:text-white/40">Laddar favoriter...</p>
+          <p className="text-gray-400 dark:text-white/40">
+            Laddar favoriter...
+          </p>
         </div>
       </div>
     );
@@ -54,9 +56,7 @@ export default function FavoritesPage() {
             <button
               onClick={() => {
                 if (
-                  confirm(
-                    "Är du säker på att du vill ta bort alla favoriter?",
-                  )
+                  confirm("Är du säker på att du vill ta bort alla favoriter?")
                 ) {
                   clearAllFavorites();
                 }
@@ -131,10 +131,7 @@ export default function FavoritesPage() {
                   className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-6 border border-gray-200 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10 transition-all hover:shadow-md dark:shadow-none group"
                 >
                   <div className="flex items-start justify-between gap-4">
-                    <Link
-                      href={`/jobs/${job.id}`}
-                      className="flex-1 min-w-0"
-                    >
+                    <Link href={`/jobs/${job.id}`} className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-3">
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                           {job.title}

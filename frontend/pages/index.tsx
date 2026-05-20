@@ -91,7 +91,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
 
 export default function Home({ jobs, progression }: Props) {
   const { toggleFavorite, isFavorite } = useFavorites();
-  
+
   const total =
     progression.applied +
       progression.readyToApply +

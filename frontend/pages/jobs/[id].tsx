@@ -30,7 +30,7 @@ export default function JobDetailPage() {
   const router = useRouter();
   const { id, data } = router.query;
   const { toggleFavorite, isFavorite } = useFavorites();
-  
+
   const [job, setJob] = useState<any | null>(null);
   const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);

@@ -283,7 +283,7 @@ function TagInput({
 
 export default function AllJobsPage() {
   const { toggleFavorite, isFavorite } = useFavorites();
-  
+
   const [filters, setFilters] = useState<Filters>({
     q: "",
     cities: [],
