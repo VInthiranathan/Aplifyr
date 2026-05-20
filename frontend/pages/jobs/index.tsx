@@ -29,6 +29,131 @@ interface Filters {
 
 type MatchGradeFilter = "ALL" | "A" | "B" | "C" | "A_C";
 
+type CategoryFilter =
+  | "ALL"
+  | "IT"
+  | "EKONOMI"
+  | "FORSALJNING"
+  | "KUNDSERVICE"
+  | "TEKNIK"
+  | "BYGG"
+  | "VARD"
+  | "UTBILDNING"
+  | "TRANSPORT"
+  | "LAGER"
+  | "ADMINISTRATION"
+  | "RESTAURANG"
+  | "INDUSTRI"
+  | "OVRIGT";
+
+const CATEGORY_OPTIONS = [
+  { value: "ALL" as const, label: "Alla kategorier" },
+  { value: "IT" as const, label: "IT" },
+  { value: "EKONOMI" as const, label: "Ekonomi" },
+  { value: "FORSALJNING" as const, label: "Försäljning" },
+  { value: "KUNDSERVICE" as const, label: "Kundservice" },
+  { value: "TEKNIK" as const, label: "Teknik" },
+  { value: "BYGG" as const, label: "Bygg" },
+  { value: "VARD" as const, label: "Vård" },
+  { value: "UTBILDNING" as const, label: "Utbildning" },
+  { value: "TRANSPORT" as const, label: "Transport" },
+  { value: "LAGER" as const, label: "Lager" },
+  { value: "ADMINISTRATION" as const, label: "Administration" },
+  { value: "RESTAURANG" as const, label: "Restaurang" },
+  { value: "INDUSTRI" as const, label: "Industri" },
+  { value: "OVRIGT" as const, label: "Övrigt" },
+];
+
+const CATEGORY_KEYWORDS: Record<Exclude<CategoryFilter, "ALL">, string[]> = {
+  IT: [
+    "developer",
+    "utvecklare",
+    "frontend",
+    "backend",
+    "fullstack",
+    "react",
+    "javascript",
+    "c#",
+    "systemutvecklare",
+    "programmerare",
+    "mjukvara",
+    "software",
+    "devops",
+    "java",
+    "python",
+    ".net",
+    "web",
+    "app",
+    "data",
+    "IT",
+  ],
+  EKONOMI: [
+    "ekonomi",
+    "ekonom",
+    "redovisning",
+    "bokföring",
+    "accountant",
+    "controller",
+    "revisor",
+    "finance",
+  ],
+  FORSALJNING: [
+    "säljare",
+    "sales",
+    "account manager",
+    "försäljning",
+    "sälj",
+    "business",
+  ],
+  KUNDSERVICE: [
+    "kundtjänst",
+    "support",
+    "customer service",
+    "kundsupport",
+    "kundservice",
+  ],
+  TEKNIK: ["ingenjör", "tekniker", "engineer", "teknisk", "teknik"],
+  BYGG: [
+    "bygg",
+    "byggare",
+    "snickare",
+    "elektriker",
+    "vvs",
+    "construction",
+    "anläggning",
+  ],
+  VARD: [
+    "sjuksköterska",
+    "läkare",
+    "undersköterska",
+    "vård",
+    "omvårdnad",
+    "nurse",
+    "healthcare",
+  ],
+  UTBILDNING: ["lärare", "teacher", "pedagog", "utbildning", "skola"],
+  TRANSPORT: ["transport", "förare", "chaufför", "driver", "bud"],
+  LAGER: ["lager", "truckförare", "logistik", "warehouse", "truck"],
+  ADMINISTRATION: [
+    "administration",
+    "administratör",
+    "admin",
+    "sekreterare",
+    "kontorsassistent",
+  ],
+  RESTAURANG: [
+    "servitör",
+    "kock",
+    "bartender",
+    "restaurang",
+    "kök",
+    "bar",
+    "café",
+  ],
+  INDUSTRI: ["industri", "fabrik", "produktion", "tillverkning", "operatör"],
+  OVRIGT: [],
+};
+
 const EMPLOYMENT_OPTIONS = [
   { value: "", label: "Alla anställningstyper" },
   { value: "Tillsvidare", label: "Tillsvidare" },
@@ -164,6 +289,8 @@ export default function AllJobsPage() {
   });
   const [selectedMatchGrade, setSelectedMatchGrade] =
     useState<MatchGradeFilter>("ALL");
+  const [selectedCategory, setSelectedCategory] =
+    useState<CategoryFilter>("ALL");
   const [debouncedQ, setDebouncedQ] = useState("");
   const [jobs, setJobs] = useState<ExternalJob[]>([]);
   const [regionSuggestions, setRegionSuggestions] = useState<string[]>([]);
@@ -341,6 +468,19 @@ export default function AllJobsPage() {
     setOffset(0);
   };
 
+  // Determine job category based on keywords
+  const determineCategory = (job: ExternalJob): CategoryFilter => {
+    const searchText =
+      `${job.headline} ${job.description?.text ?? ""}`.toLowerCase();
+
+    for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+      if (keywords.some((kw) => searchText.includes(kw.toLowerCase()))) {
+        return category as CategoryFilter;
+      }
+    }
+    return "OVRIGT";
+  };
+
   // Filter jobs by match grade
   const filterByMatchGrade = (jobList: ExternalJob[]): ExternalJob[] => {
     if (selectedMatchGrade === "ALL") return jobList;
@@ -353,7 +493,14 @@ export default function AllJobsPage() {
     return jobList.filter((j) => j.matchGrade === selectedMatchGrade);
   };
 
-  const filteredJobs = filterByMatchGrade(jobs);
+  // Filter jobs by category
+  const filterByCategory = (jobList: ExternalJob[]): ExternalJob[] => {
+    if (selectedCategory === "ALL") return jobList;
+    return jobList.filter((j) => determineCategory(j) === selectedCategory);
+  };
+
+  // Apply all filters
+  const filteredJobs = filterByCategory(filterByMatchGrade(jobs));
 
   const totalPages = Math.ceil(total / LIMIT);
   const currentPage = Math.floor(offset / LIMIT) + 1;
@@ -525,6 +672,72 @@ export default function AllJobsPage() {
             className="ml-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
           >
             Rensa matchfilter
+          </button>
+        )}
+      </div>
+
+      {/* ── Category Filter ── */}
+      <div className="flex flex-wrap gap-2 items-center">
+        <span className="text-xs font-medium text-slate-500 dark:text-white/50 mr-1">
+          Kategori:
+        </span>
+
+        {CATEGORY_OPTIONS.slice(0, 8).map((cat) => (
+          <button
+            key={cat.value}
+            onClick={() => setSelectedCategory(cat.value)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              selectedCategory === cat.value
+                ? "bg-purple-600 dark:bg-purple-600/90 text-white border-2 border-purple-600 dark:border-purple-500"
+                : "bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 text-slate-600 dark:text-white/60 hover:border-purple-300 dark:hover:border-purple-500/30"
+            }`}
+          >
+            {cat.label}
+          </button>
+        ))}
+
+        {/* Dropdown for remaining categories */}
+        <select
+          value={
+            CATEGORY_OPTIONS.slice(0, 8).some(
+              (c) => c.value === selectedCategory,
+            )
+              ? "more"
+              : selectedCategory
+          }
+          onChange={(e) => {
+            if (e.target.value !== "more") {
+              setSelectedCategory(e.target.value as CategoryFilter);
+            }
+          }}
+          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 text-slate-600 dark:text-white/60 hover:border-purple-300 dark:hover:border-purple-500/30 transition-all cursor-pointer"
+        >
+          <option value="more">Fler...</option>
+          {CATEGORY_OPTIONS.slice(8).map((cat) => (
+            <option key={cat.value} value={cat.value}>
+              {cat.label}
+            </option>
+          ))}
+        </select>
+
+        {selectedCategory !== "ALL" && (
+          <button
+            onClick={() => setSelectedCategory("ALL")}
+            className="ml-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+          >
+            Rensa kategori
+          </button>
+        )}
+
+        {(selectedMatchGrade !== "ALL" || selectedCategory !== "ALL") && (
+          <button
+            onClick={() => {
+              setSelectedMatchGrade("ALL");
+              setSelectedCategory("ALL");
+            }}
+            className="ml-2 px-3 py-1.5 rounded-lg text-xs font-bold bg-red-100 dark:bg-red-900/30 border-2 border-red-300 dark:border-red-800/60 text-red-700 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/40 transition-colors"
+          >
+            ✕ Rensa alla filter
           </button>
         )}
       </div>
