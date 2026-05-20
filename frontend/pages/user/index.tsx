@@ -137,6 +137,7 @@ export default function UserPage({ user }: Props) {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [cvUrl, setCvUrl] = useState<string | null>(null);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const profileImageInputRef = useRef<HTMLInputElement>(null);
 
@@ -255,6 +256,14 @@ export default function UserPage({ user }: Props) {
         alert("File size must be less than 5MB");
       }
     }
+  };
+
+  const toggleLocation = (location: string) => {
+    setSelectedLocations((prev) =>
+      prev.includes(location)
+        ? prev.filter((loc) => loc !== location)
+        : [...prev, location],
+    );
   };
 
   const uploadCV = async (file: File) => {
@@ -459,15 +468,35 @@ export default function UserPage({ user }: Props) {
                 </h2>
               </div>
               <div className="flex gap-3 flex-wrap">
-                {locationFilters.map((f) => (
-                  <button
-                    key={f}
-                    className="px-5 py-2.5 rounded-full border border-gray-200 dark:border-white/10 text-gray-700 dark:text-white/70 hover:bg-gray-50 dark:hover:bg-white/5 font-medium transition-colors"
-                  >
-                    {f}
-                  </button>
-                ))}
+                {locationFilters.map((f) => {
+                  const isSelected = selectedLocations.includes(f);
+                  return (
+                    <button
+                      key={f}
+                      onClick={() => toggleLocation(f)}
+                      className={`px-5 py-2.5 rounded-full border font-medium transition-all ${
+                        isSelected
+                          ? "bg-purple-100 dark:bg-purple-500/20 border-purple-500 dark:border-purple-500/50 text-purple-700 dark:text-purple-300"
+                          : "border-gray-200 dark:border-white/10 text-gray-700 dark:text-white/70 hover:bg-gray-50 dark:hover:bg-white/5"
+                      }`}
+                    >
+                      {f}
+                      {isSelected && (
+                        <span className="ml-2 text-purple-600 dark:text-purple-400">
+                          ✓
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
+              {selectedLocations.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10">
+                  <p className="text-sm text-gray-600 dark:text-white/60">
+                    Selected: {selectedLocations.join(", ")}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Tech stack */}
