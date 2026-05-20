@@ -525,13 +525,7 @@ export default function AllJobsPage() {
       const data = await res.json();
       setGeneratedLetters((prev) => [...prev, ...(data ?? [])]);
     } catch (e) {
-      setGeneratedLetters((prev) => [
-        ...prev,
-        {
-          title: job.headline ?? job.title ?? "Fel",
-          error: (e as Error).message,
-        },
-      ]);
+      setGeneratedLetters((prev) => [...prev, { title: job.headline ?? 'Fel', error: (e as Error).message }])
     } finally {
       setGeneratingId(null);
     }
