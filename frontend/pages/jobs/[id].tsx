@@ -170,15 +170,32 @@ export default function JobDetailPage() {
           user: userProfile,
         }),
       });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        try {
+          const errorData = JSON.parse(errorText);
+          setLetter(`Fel: ${errorData.error || `Status ${res.status}`}`);
+        } catch {
+          setLetter(`Fel: Status ${res.status} - ${errorText}`);
+        }
+        setShowModal(true);
+        return;
+      }
+
       const data = await res.json();
+      console.log("Cover letter response:", data);
+
       if (Array.isArray(data) && data[0]?.coverLetter) {
         setLetter(data[0].coverLetter);
         setShowModal(true);
       } else if (Array.isArray(data) && data[0]?.error) {
-        setLetter(`Fel: ${data[0].error}`);
+        setLetter(`Fel: ${data[0].error}\n\n${data[0].detail || ""}`);
         setShowModal(true);
       } else {
-        setLetter("Ingen data mottagen");
+        setLetter(
+          `Ingen data mottagen.\n\nKontrollera att GEMINI_API_KEY eller GROQ_API_KEY är konfigurerad i backend/.env filen.\n\nSvar från backend: ${JSON.stringify(data, null, 2)}`,
+        );
         setShowModal(true);
       }
     } catch (e) {
