@@ -3,10 +3,11 @@ import type { GetServerSideProps } from "next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Briefcase, MapPin, Wifi, Loader2 } from "lucide-react";
+import { Briefcase, MapPin, Wifi, Loader2, Bookmark } from "lucide-react";
 import { formatLocation } from "../../lib/utils";
 import CoverLetterModal from "../../components/CoverLetterModal";
 import { getSupabaseBrowserClient } from "../../lib/supabaseClient";
+import { useFavorites } from "../../lib/useFavorites";
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:5000";
 
@@ -28,6 +29,8 @@ function decodeJob(encoded?: string) {
 export default function JobDetailPage() {
   const router = useRouter();
   const { id, data } = router.query;
+  const { toggleFavorite, isFavorite } = useFavorites();
+
   const [job, setJob] = useState<any | null>(null);
   const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -167,15 +170,32 @@ export default function JobDetailPage() {
           user: userProfile,
         }),
       });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        try {
+          const errorData = JSON.parse(errorText);
+          setLetter(`Fel: ${errorData.error || `Status ${res.status}`}`);
+        } catch {
+          setLetter(`Fel: Status ${res.status} - ${errorText}`);
+        }
+        setShowModal(true);
+        return;
+      }
+
       const data = await res.json();
+      console.log("Cover letter response:", data);
+
       if (Array.isArray(data) && data[0]?.coverLetter) {
         setLetter(data[0].coverLetter);
         setShowModal(true);
       } else if (Array.isArray(data) && data[0]?.error) {
-        setLetter(`Fel: ${data[0].error}`);
+        setLetter(`Fel: ${data[0].error}\n\n${data[0].detail || ""}`);
         setShowModal(true);
       } else {
-        setLetter("Ingen data mottagen");
+        setLetter(
+          `Ingen data mottagen.\n\nKontrollera att GEMINI_API_KEY eller GROQ_API_KEY är konfigurerad i backend/.env filen.\n\nSvar från backend: ${JSON.stringify(data, null, 2)}`,
+        );
         setShowModal(true);
       }
     } catch (e) {
@@ -309,9 +329,37 @@ export default function JobDetailPage() {
                 )}
               </div>
               <div className="flex-1">
-                <h1 className="text-3xl font-semibold leading-tight">
-                  {job.headline ?? job.title ?? "Jobb"}
-                </h1>
+                <div className="flex items-start justify-between gap-4">
+                  <h1 className="text-3xl font-semibold leading-tight">
+                    {job.headline ?? job.title ?? "Jobb"}
+                  </h1>
+                  <button
+                    onClick={() => {
+                      toggleFavorite({
+                        id: job.id,
+                        title: job.headline ?? job.title,
+                        company: job.employer?.name,
+                        location: formatLocation(job.workplace_address),
+                        matchGrade: job.matchGrade,
+                      });
+                    }}
+                    className={`flex-shrink-0 p-2 transition-colors ${
+                      isFavorite(job.id)
+                        ? "text-purple-500 dark:text-purple-400"
+                        : "text-slate-300 dark:text-white/20 hover:text-purple-500 dark:hover:text-purple-400"
+                    }`}
+                    title={
+                      isFavorite(job.id)
+                        ? "Ta bort från favoriter"
+                        : "Lägg till i favoriter"
+                    }
+                  >
+                    <Bookmark
+                      size={24}
+                      fill={isFavorite(job.id) ? "currentColor" : "none"}
+                    />
+                  </button>
+                </div>
                 <div className="text-sm text-slate-500 mt-1">
                   {job.employer?.name}
                 </div>

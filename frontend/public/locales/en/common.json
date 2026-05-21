@@ -3,6 +3,7 @@
     "userDetails": "User Details",
     "home": "Home",
     "allJobs": "All Jobs",
+    "favorites": "Favorites",
     "support": "Support"
   },
   "theme": {
@@ -67,8 +68,7 @@
     "formSubmit": "Send",
     "formSuccess": "Message sent!",
     "formSuccessDesc": "We'll get back to you within 24 hours."
-  }
-  ,
+  },
   "auth": {
     "welcomeBack": "Welcome back",
     "createAccount": "Create account",

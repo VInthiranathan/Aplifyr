@@ -21,12 +21,23 @@ public class CoverLettersController : ControllerBase
         var geminiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY");
         var groqKey = Environment.GetEnvironmentVariable("GROQ_API_KEY");
 
+        Console.WriteLine($"[CoverLetters] GEMINI_API_KEY configured: {!string.IsNullOrEmpty(geminiKey)}");
+        Console.WriteLine($"[CoverLetters] GROQ_API_KEY configured: {!string.IsNullOrEmpty(groqKey)}");
+
         if (string.IsNullOrEmpty(geminiKey) && string.IsNullOrEmpty(groqKey))
-            return BadRequest(new { error = "Neither GEMINI_API_KEY nor GROQ_API_KEY is set" });
+        {
+            Console.WriteLine("[CoverLetters] ERROR: No API keys configured!");
+            return BadRequest(new { error = "Neither GEMINI_API_KEY nor GROQ_API_KEY is set in backend/.env" });
+        }
 
         // Extract jobs and user profile from request
         if (!request.TryGetProperty("jobs", out var jobs) || jobs.ValueKind != JsonValueKind.Array)
+        {
+            Console.WriteLine("[CoverLetters] ERROR: Missing 'jobs' array in request");
             return BadRequest(new { error = "Expected 'jobs' array in request body" });
+        }
+
+        Console.WriteLine($"[CoverLetters] Processing {jobs.GetArrayLength()} job(s)");
 
         string userJson = "{}";
         string cvText = "";
@@ -34,6 +45,7 @@ public class CoverLettersController : ControllerBase
         if (request.TryGetProperty("user", out var userProfile))
         {
             userJson = JsonSerializer.Serialize(userProfile, new JsonSerializerOptions { WriteIndented = true });
+            Console.WriteLine($"[CoverLetters] User profile provided: {userJson.Length} chars");
             
             // Extract CV URL if present
             if (userProfile.TryGetProperty("cv_url", out var cvUrlProp))
@@ -42,8 +54,13 @@ public class CoverLettersController : ControllerBase
                 if (!string.IsNullOrEmpty(cvUrl))
                 {
                     cvText = $"[CV file available at: {cvUrl}]";
+                    Console.WriteLine($"[CoverLetters] CV URL found: {cvUrl}");
                 }
             }
+        }
+        else
+        {
+            Console.WriteLine("[CoverLetters] WARNING: No user profile provided in request");
         }
 
         var results = new List<object>();
@@ -96,33 +113,41 @@ public class CoverLettersController : ControllerBase
             // Try Gemini first
             if (!string.IsNullOrEmpty(geminiKey))
             {
+                Console.WriteLine($"[CoverLetters] Trying Gemini for job: {title}");
                 coverLetter = await TryGenerateWithGemini(geminiKey, prompt, language);
                 if (!string.IsNullOrEmpty(coverLetter))
                 {
+                    Console.WriteLine($"[CoverLetters] ✓ Gemini succeeded for: {title}");
                     results.Add(new { title, coverLetter, provider = "Gemini" });
                     await Task.Delay(500);
                     continue;
                 }
+                Console.WriteLine($"[CoverLetters] ✗ Gemini failed for: {title}");
                 errorMsg = "Gemini failed, trying Groq...";
             }
 
             // Fallback to Groq
             if (!string.IsNullOrEmpty(groqKey))
             {
+                Console.WriteLine($"[CoverLetters] Trying Groq for job: {title}");
                 coverLetter = await TryGenerateWithGroq(groqKey, prompt, language);
                 if (!string.IsNullOrEmpty(coverLetter))
                 {
+                    Console.WriteLine($"[CoverLetters] ✓ Groq succeeded for: {title}");
                     results.Add(new { title, coverLetter, provider = "Groq" });
                     await Task.Delay(500);
                     continue;
                 }
+                Console.WriteLine($"[CoverLetters] ✗ Groq failed for: {title}");
                 errorMsg += " Groq also failed.";
             }
 
+            Console.WriteLine($"[CoverLetters] ✗ Both AI providers failed for: {title}");
             results.Add(new { title, error = errorMsg, detail = "Both AI providers failed" });
             await Task.Delay(500);
         }
 
+        Console.WriteLine($"[CoverLetters] Completed processing. Returning {results.Count} result(s)");
         return Ok(results);
     }
 
@@ -165,7 +190,12 @@ public class CoverLettersController : ControllerBase
             req.Content = new StringContent(JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
 
             var res = await _http.SendAsync(req);
-            if (!res.IsSuccessStatusCode) return "";
+            if (!res.IsSuccessStatusCode)
+            {
+                var errorBody = await res.Content.ReadAsStringAsync();
+                Console.WriteLine($"Gemini API error: Status {res.StatusCode}, Body: {errorBody}");
+                return "";
+            }
 
             var content = await res.Content.ReadAsStringAsync();
             using var doc = JsonDocument.Parse(content);
@@ -184,11 +214,12 @@ public class CoverLettersController : ControllerBase
                 }
             }
 
+            Console.WriteLine($"Gemini response missing expected structure: {content}");
             return "";
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Gemini error: {ex.Message}");
+            Console.WriteLine($"Gemini exception: {ex.GetType().Name} - {ex.Message}");
             return "";
         }
     }
@@ -217,7 +248,12 @@ public class CoverLettersController : ControllerBase
             req.Content = new StringContent(JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
 
             var res = await _http.SendAsync(req);
-            if (!res.IsSuccessStatusCode) return "";
+            if (!res.IsSuccessStatusCode)
+            {
+                var errorBody = await res.Content.ReadAsStringAsync();
+                Console.WriteLine($"Groq API error: Status {res.StatusCode}, Body: {errorBody}");
+                return "";
+            }
 
             var content = await res.Content.ReadAsStringAsync();
             using var doc = JsonDocument.Parse(content);
@@ -232,11 +268,12 @@ public class CoverLettersController : ControllerBase
                 }
             }
 
+            Console.WriteLine($"Groq response missing expected structure: {content}");
             return "";
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Groq error: {ex.Message}");
+            Console.WriteLine($"Groq exception: {ex.GetType().Name} - {ex.Message}");
             return "";
         }
     }
