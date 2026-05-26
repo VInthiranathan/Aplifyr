@@ -29,8 +29,6 @@ interface Filters {
   employmentType: string;
 }
 
-type MatchGradeFilter = "ALL" | "A" | "B" | "C" | "A_C";
-
 type CategoryFilter =
   | "ALL"
   | "IT"
@@ -291,8 +289,6 @@ export default function AllJobsPage() {
     remote: false,
     employmentType: "",
   });
-  const [selectedMatchGrade, setSelectedMatchGrade] =
-    useState<MatchGradeFilter>("ALL");
   const [selectedCategory, setSelectedCategory] =
     useState<CategoryFilter>("ALL");
   const [selectedLocation, setSelectedLocation] = useState<string>("");
@@ -305,6 +301,7 @@ export default function AllJobsPage() {
     {},
   );
   const staticRegionMapRef = useRef<Record<string, string[]>>({});
+  const requestIdRef = useRef(0);
   // Try loading authoritative region->municipalities map from static JSON file
   useEffect(() => {
     let mounted = true;
@@ -337,6 +334,13 @@ export default function AllJobsPage() {
   const [offset, setOffset] = useState(0);
   const LIMIT = 20;
 
+  // Reset paging when category changes
+  useEffect(() => {
+    setOffset(0);
+    setJobs([]);
+    setTotal(0);
+  }, [selectedCategory]);
+
   // Debounce search query 400ms
   useEffect(() => {
     const t = setTimeout(() => {
@@ -348,19 +352,19 @@ export default function AllJobsPage() {
 
   const fetchJobs = useCallback(async () => {
     setLoading(true);
+    const reqId = ++requestIdRef.current;
     setError(null);
     try {
       const params = new URLSearchParams();
       if (debouncedQ) params.set("q", debouncedQ);
-      // When a region is selected, send only the region to the AF API.
-      // The backend [FromQuery] string? municipality only reads ONE value, so sending
-      // all municipalities individually causes most of them to be silently ignored.
-      // Sending the region covers all its municipalities; client-side filter then
-      // narrows to the specific municipalities the user selected.
+      // Send regions and municipalities (if any). Backend now supports
+      // resolving multiple municipality params to AF codes, so always send
+      // both when selected. This ensures AF does server-side filtering and
+      // pagination is consistent (no empty pages before results).
       if (filters.regions?.length) {
         filters.regions.forEach((r) => params.append("region", r));
-      } else if (filters.municipalities?.length) {
-        // Send all selected municipalities so backend can resolve them to codes.
+      }
+      if (filters.municipalities?.length) {
         filters.municipalities.forEach((m) => params.append("municipality", m));
       }
       if (filters.remote) params.set("remote", "true");
@@ -373,6 +377,8 @@ export default function AllJobsPage() {
       const requestUrl = `${BACKEND}/api/externaljobs?${params}`;
       const res = await fetch(requestUrl);
       const text = await res.text();
+      // Ignore stale responses
+      if (reqId !== requestIdRef.current) return;
       setApiRawResponse(`${requestUrl}\n\n${text}`);
       if (!res.ok) throw new Error(`${res.status}`);
       let data: AFSearchResult | any = null;
@@ -402,14 +408,33 @@ export default function AllJobsPage() {
         // Region-only or no location filter: trust the AF API result.
         return true;
       });
+      const serverTotal = (data && (data.total?.value ?? data.total)) ?? filteredHits.length;
+
+      // If this response is stale (a newer request started), ignore it.
+      if (reqId !== requestIdRef.current) return;
+
+      // If the current offset is beyond the server-reported total, clamp to
+      // the last available page and trigger a refetch. This prevents empty
+      // pages when filters reduce the result set or when the user navigated
+      // to a later page before applying filters.
+      if (serverTotal > 0 && offset >= serverTotal) {
+        const newOffset = Math.max(0, Math.floor((serverTotal - 1) / LIMIT) * LIMIT);
+        setOffset(newOffset);
+        // Do not clear loading here; the subsequent fetch will set loading.
+        return;
+      }
 
       setJobs(filteredHits);
-      setTotal((data && (data.total?.value ?? data.total)) ?? filteredHits.length);
+      setTotal(serverTotal);
     } catch (e) {
-      setError("Kunde inte hämta jobb. Kontrollera att backend körs.");
-      setJobs([]);
+      // Only set error for the latest request
+      if (requestIdRef.current === reqId) {
+        setError("Kunde inte hämta jobb. Kontrollera att backend körs.");
+        setJobs([]);
+      }
     } finally {
-      setLoading(false);
+      // Only update loading state for the latest request
+      if (requestIdRef.current === reqId) setLoading(false);
     }
   }, [
     debouncedQ,
@@ -584,6 +609,8 @@ export default function AllJobsPage() {
   const update = (patch: Partial<Filters>) => {
     setFilters((f) => ({ ...f, ...patch }));
     setOffset(0);
+    setJobs([]);
+    setTotal(0);
   };
 
   // Determine job category based on keywords
@@ -599,18 +626,6 @@ export default function AllJobsPage() {
     return "OVRIGT";
   };
 
-  // Filter jobs by match grade
-  const filterByMatchGrade = (jobList: ExternalJob[]): ExternalJob[] => {
-    if (selectedMatchGrade === "ALL") return jobList;
-    if (selectedMatchGrade === "A_C") {
-      return jobList.filter(
-        (j) =>
-          j.matchGrade === "A" || j.matchGrade === "B" || j.matchGrade === "C",
-      );
-    }
-    return jobList.filter((j) => j.matchGrade === selectedMatchGrade);
-  };
-
   // Filter jobs by category
   const filterByCategory = (jobList: ExternalJob[]): ExternalJob[] => {
     if (selectedCategory === "ALL") return jobList;
@@ -618,7 +633,7 @@ export default function AllJobsPage() {
   };
 
   // Apply all filters
-  const filteredJobs = filterByCategory(filterByMatchGrade(jobs));
+  const filteredJobs = filterByCategory(jobs);
 
   const totalPages = Math.ceil(total / LIMIT);
   const currentPage = Math.floor(offset / LIMIT) + 1;
@@ -840,10 +855,9 @@ export default function AllJobsPage() {
               </select>
             </div>
 
-            {(selectedMatchGrade !== "ALL" || selectedCategory !== "ALL") && (
+            {selectedCategory !== "ALL" && (
               <button
                 onClick={() => {
-                  setSelectedMatchGrade("ALL");
                   setSelectedCategory("ALL");
                   setSelectedLocation("");
                   update({ regions: [], municipalities: [] });

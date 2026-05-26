@@ -81,80 +81,13 @@ public class ExternalJobsController : ControllerBase
     {
         var qs = System.Web.HttpUtility.ParseQueryString(string.Empty);
         if (!string.IsNullOrWhiteSpace(q))            qs["q"]             = q;
-        if (municipality != null && municipality.Length > 0)
-        {
-            // Map each provided municipality (name or code) to AF code(s).
-            var mapped = new List<string>();
-            // Determine if we need to fetch stats (any non-digit input)
-            var needLookup = municipality.Any(m => !m.All(char.IsDigit));
-            JsonDocument? docMun = null;
-            try
-            {
-                if (needLookup)
-                {
-                    // Request a large stats.limit to include all municipalities
-                    var statsUrlMun = $"{AF_BASE}/{AF_SEARCH_PATH}?limit=0&stats=municipality&stats.limit=1000";
-                    var statsResMun = await _http.GetAsync(statsUrlMun);
-                    var statsContentMun = await statsResMun.Content.ReadAsStringAsync();
-                    docMun = JsonDocument.Parse(statsContentMun);
-                }
+        var municipalityFilters = municipality?
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray() ?? Array.Empty<string>();
+        var resolvedRegionCodes = new List<string>();
 
-                foreach (var m in municipality)
-                {
-                    var mTrim = (m ?? string.Empty).Trim();
-                    if (string.IsNullOrEmpty(mTrim)) continue;
-                    if (mTrim.All(char.IsDigit))
-                    {
-                        mapped.Add(mTrim);
-                        continue;
-                    }
-
-                    string? found = null;
-                    if (docMun != null && docMun.RootElement.TryGetProperty("stats", out var statsArrMun) && statsArrMun.GetArrayLength() > 0)
-                    {
-                        foreach (var stat in statsArrMun.EnumerateArray())
-                        {
-                            if (stat.GetProperty("type").GetString() != "municipality") continue;
-                            if (!stat.TryGetProperty("values", out var valsMun)) continue;
-                            foreach (var v in valsMun.EnumerateArray())
-                            {
-                                var term = v.GetProperty("term").GetString() ?? string.Empty;
-                                string? code = null;
-                                if (v.TryGetProperty("code", out var codeEl) && codeEl.ValueKind != JsonValueKind.Null)
-                                {
-                                    code = codeEl.GetString();
-                                }
-                                if (string.IsNullOrWhiteSpace(code)) continue;
-                                if (term.Contains(mTrim, StringComparison.OrdinalIgnoreCase) ||
-                                    mTrim.Contains(term, StringComparison.OrdinalIgnoreCase))
-                                {
-                                    found = code;
-                                    break;
-                                }
-                            }
-                            if (found != null) break;
-                        }
-                    }
-
-                    mapped.Add(found ?? mTrim);
-                }
-            }
-            catch
-            {
-                // On any error, fall back to passing original values through
-                mapped.AddRange(municipality.Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s.Trim()));
-            }
-            finally
-            {
-                docMun?.Dispose();
-            }
-
-            // Add each mapped municipality as its own query param
-            foreach (var mm in mapped)
-            {
-                qs.Add("municipality", mm);
-            }
-        }
         // Resolve human-friendly region names → 2-digit AF/SCB codes using the
         // static dictionary. Accept multiple region query params.
         if (region != null && region.Length > 0)
@@ -166,12 +99,14 @@ public class ExternalJobsController : ControllerBase
                 if (rTrim.All(char.IsDigit))
                 {
                     qs.Add("region", rTrim);
+                    resolvedRegionCodes.Add(rTrim);
                     continue;
                 }
 
                 if (_regionCodes.TryGetValue(rTrim, out var exactCode))
                 {
                     qs.Add("region", exactCode);
+                    resolvedRegionCodes.Add(exactCode);
                     continue;
                 }
 
@@ -180,9 +115,41 @@ public class ExternalJobsController : ControllerBase
                     k.Contains(lower, StringComparison.OrdinalIgnoreCase) ||
                     lower.Contains(k, StringComparison.OrdinalIgnoreCase));
 
-                qs.Add("region", fuzzyMatch != null ? _regionCodes[fuzzyMatch] : rTrim);
+                var resolvedCode = fuzzyMatch != null ? _regionCodes[fuzzyMatch] : rTrim;
+                qs.Add("region", resolvedCode);
+                if (resolvedCode.All(char.IsDigit))
+                {
+                    resolvedRegionCodes.Add(resolvedCode);
+                }
             }
         }
+
+        if (municipalityFilters.Length > 0)
+        {
+            try
+            {
+                var mappedMunicipalities = await ResolveMunicipalityFiltersAsync(municipalityFilters, resolvedRegionCodes);
+                if (mappedMunicipalities.Length == 0 && municipalityFilters.Any(filter => !filter.All(char.IsDigit)))
+                {
+                    return Content(JsonSerializer.Serialize(new { total = new { value = 0 }, hits = Array.Empty<object>() }), "application/json");
+                }
+
+                foreach (var mappedMunicipality in mappedMunicipalities)
+                {
+                    qs.Add("municipality", mappedMunicipality);
+                }
+
+                // AF returns municipality-filtered hits but a region-wide total when
+                // region and municipality are combined. Municipality codes are unique,
+                // so once we have them the region filter becomes redundant.
+                qs.Remove("region");
+            }
+            catch
+            {
+                return Content(JsonSerializer.Serialize(new { total = new { value = 0 }, hits = Array.Empty<object>() }), "application/json");
+            }
+        }
+
         if (remote.HasValue)                          qs["remote"]        = remote.Value.ToString().ToLower();
         if (!string.IsNullOrWhiteSpace(workingHoursType)) qs["working_hours_type"] = workingHoursType;
         if (!string.IsNullOrWhiteSpace(employmentType))
@@ -227,11 +194,11 @@ public class ExternalJobsController : ControllerBase
 
             qs["employment_type"] = empToUse;
         }
+
         qs["limit"]  = limit.ToString();
         qs["offset"] = offset.ToString();
 
         var url = $"{AF_BASE}/{AF_SEARCH_PATH}?{qs}";
-
         try
         {
             var response = await _http.GetAsync(url);
@@ -242,6 +209,103 @@ public class ExternalJobsController : ControllerBase
         {
             return StatusCode(502, new { error = "Could not reach Arbetsförmedlingen API", detail = ex.Message });
         }
+    }
+
+    private static async Task<string[]> ResolveMunicipalityFiltersAsync(
+        IReadOnlyCollection<string> municipalityFilters,
+        IReadOnlyCollection<string> resolvedRegionCodes)
+    {
+        var resolved = new List<string>();
+        JsonDocument? statsDocument = null;
+
+        if (municipalityFilters.Any(filter => !filter.All(char.IsDigit)))
+        {
+            var statsQuery = System.Web.HttpUtility.ParseQueryString(string.Empty);
+            foreach (var regionCode in resolvedRegionCodes.Where(code => !string.IsNullOrWhiteSpace(code)))
+            {
+                statsQuery.Add("region", regionCode);
+            }
+            statsQuery["limit"] = "0";
+            statsQuery["stats"] = "municipality";
+            statsQuery["stats.limit"] = resolvedRegionCodes.Count > 0 ? "30" : "30";
+
+            var statsUrl = $"{AF_BASE}/{AF_SEARCH_PATH}?{statsQuery}";
+            var statsResponse = await _http.GetAsync(statsUrl);
+            var statsContent = await statsResponse.Content.ReadAsStringAsync();
+            statsResponse.EnsureSuccessStatusCode();
+            statsDocument = JsonDocument.Parse(statsContent);
+        }
+
+        try
+        {
+            foreach (var municipalityFilter in municipalityFilters)
+            {
+                if (municipalityFilter.All(char.IsDigit))
+                {
+                    resolved.Add(municipalityFilter);
+                    continue;
+                }
+
+                var code = FindMunicipalityCode(statsDocument, municipalityFilter);
+                if (!string.IsNullOrWhiteSpace(code))
+                {
+                    resolved.Add(code);
+                }
+            }
+
+            return resolved.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        }
+        finally
+        {
+            statsDocument?.Dispose();
+        }
+    }
+
+    private static string? FindMunicipalityCode(JsonDocument? statsDocument, string municipalityFilter)
+    {
+        if (statsDocument == null ||
+            !statsDocument.RootElement.TryGetProperty("stats", out var statsElement) ||
+            statsElement.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        var normalizedFilter = NormalizeLocation(municipalityFilter);
+        foreach (var stat in statsElement.EnumerateArray())
+        {
+            if (!stat.TryGetProperty("type", out var typeElement) ||
+                !string.Equals(typeElement.GetString(), "municipality", StringComparison.OrdinalIgnoreCase) ||
+                !stat.TryGetProperty("values", out var valuesElement) ||
+                valuesElement.ValueKind != JsonValueKind.Array)
+            {
+                continue;
+            }
+
+            foreach (var value in valuesElement.EnumerateArray())
+            {
+                var term = value.TryGetProperty("term", out var termElement) ? termElement.GetString() : null;
+                var code = value.TryGetProperty("code", out var codeElement) ? codeElement.GetString() : null;
+                if (string.IsNullOrWhiteSpace(term) || string.IsNullOrWhiteSpace(code))
+                {
+                    continue;
+                }
+
+                var normalizedTerm = NormalizeLocation(term);
+                if (normalizedTerm == normalizedFilter ||
+                    normalizedTerm.Contains(normalizedFilter, StringComparison.OrdinalIgnoreCase) ||
+                    normalizedFilter.Contains(normalizedTerm, StringComparison.OrdinalIgnoreCase))
+                {
+                    return code;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static string NormalizeLocation(string? value)
+    {
+        return (value ?? string.Empty).Trim().ToLowerInvariant();
     }
 
     [HttpGet("{id}")]
