@@ -39,11 +39,14 @@ export interface ExternalJob {
   employer: { name: string; workplace: string };
   workplace_address: {
     municipality: string;
+    municipality_code?: string;
     region: string;
     country: string;
   };
-  employment_type: { label: string } | null;
+  employment_type: { concept_id?: string; label: string } | null;
   working_hours_type: { label: string } | null;
+  occupation: { concept_id?: string; label: string } | null;
+  occupation_group?: { concept_id?: string; label: string } | null;
   scope_of_work: { min: number; max: number } | null;
   application_deadline: string | null;
   webpage_url: string | null;
