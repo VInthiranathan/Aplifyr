@@ -12,6 +12,7 @@ public class ExternalJobsController : ControllerBase
     private const string AF_BASE = "https://jobsearch.api.jobtechdev.se";
     private const string AF_SEARCH_PATH = "search";
     private const string AF_AD_PATH = "ad";
+    private const int AF_STATS_LIMIT = 30;
 
     // Static mapping of Swedish region display names → 2-digit SCB/AF codes.
     // These codes are stable (they match SCB's Länskoder) and never require a
@@ -68,11 +69,34 @@ public class ExternalJobsController : ControllerBase
         ["norrbottens län"]         = "25",
     };
 
+    private static readonly Dictionary<string, string> _employmentTypeCodes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["PFZr_Syz_cUq"] = "PFZr_Syz_cUq",
+        ["kpPX_CNN_gDU"] = "kpPX_CNN_gDU",
+        ["sTu5_NBQ_udq"] = "sTu5_NBQ_udq",
+        ["1paU_aCR_nGn"] = "1paU_aCR_nGn",
+        ["EBhX_Qm2_8eX"] = "EBhX_Qm2_8eX",
+        ["gro4_cWF_6D7"] = "gro4_cWF_6D7",
+        ["Jh8f_q9J_pbJ"] = "Jh8f_q9J_pbJ",
+        ["Vanlig anställning"] = "PFZr_Syz_cUq",
+        ["Tillsvidareanställning (inkl. eventuell provanställning)"] = "kpPX_CNN_gDU",
+        ["Tidsbegränsad anställning"] = "sTu5_NBQ_udq",
+        ["Behovsanställning"] = "1paU_aCR_nGn",
+        ["Säsongsanställning"] = "EBhX_Qm2_8eX",
+        ["Vikariat"] = "gro4_cWF_6D7",
+        ["Sommarjobb / feriejobb"] = "Jh8f_q9J_pbJ",
+        ["Tillsvidare"] = "kpPX_CNN_gDU",
+        ["Projektanställning"] = "sTu5_NBQ_udq",
+        ["Provanställning"] = "kpPX_CNN_gDU",
+        ["Timanställning"] = "1paU_aCR_nGn",
+    };
+
     [HttpGet]
     public async Task<IActionResult> Search(
         [FromQuery] string? q,
         [FromQuery] string[]? municipality,
         [FromQuery] string[]? region,
+        [FromQuery] string[]? occupation,
         [FromQuery] bool? remote,
         [FromQuery] string? workingHoursType,  // "FULL_TIME" | "PART_TIME"
         [FromQuery] string? employmentType,    // forwarded to AF as employment_type
@@ -152,48 +176,8 @@ public class ExternalJobsController : ControllerBase
 
         if (remote.HasValue)                          qs["remote"]        = remote.Value.ToString().ToLower();
         if (!string.IsNullOrWhiteSpace(workingHoursType)) qs["working_hours_type"] = workingHoursType;
-        if (!string.IsNullOrWhiteSpace(employmentType))
-        {
-            var empToUse = employmentType.Trim();
-            // If not already a code, try to resolve via AF stats endpoint
-            if (!empToUse.All(char.IsDigit))
-            {
-                try
-                {
-                    var statsUrlEmp = $"{AF_BASE}/{AF_SEARCH_PATH}?limit=0&stats=employment_type&stats.limit=200";
-                    var statsResEmp = await _http.GetAsync(statsUrlEmp);
-                    var statsContentEmp = await statsResEmp.Content.ReadAsStringAsync();
-                    using var docEmp = JsonDocument.Parse(statsContentEmp);
-                    if (docEmp.RootElement.TryGetProperty("stats", out var statsArrEmp) && statsArrEmp.GetArrayLength() > 0)
-                    {
-                        foreach (var stat in statsArrEmp.EnumerateArray())
-                        {
-                            if (stat.GetProperty("type").GetString() != "employment_type") continue;
-                            if (!stat.TryGetProperty("values", out var valsEmp)) continue;
-                            foreach (var v in valsEmp.EnumerateArray())
-                            {
-                                var term = v.GetProperty("term").GetString() ?? string.Empty;
-                                var code = v.TryGetProperty("code", out var codeEl) ? codeEl.GetString() : null;
-                                if (string.IsNullOrWhiteSpace(code)) continue;
-                                if (term.Contains(empToUse, StringComparison.OrdinalIgnoreCase) ||
-                                    empToUse.Contains(term, StringComparison.OrdinalIgnoreCase))
-                                {
-                                    empToUse = code;
-                                    break;
-                                }
-                            }
-                            if (empToUse != employmentType.Trim()) break;
-                        }
-                    }
-                }
-                catch
-                {
-                    // ignore and fall back to original
-                }
-            }
-
-            qs["employment_type"] = empToUse;
-        }
+        ApplyEmploymentTypeFilter(qs, employmentType);
+        ApplyOccupationFilters(qs, occupation);
 
         qs["limit"]  = limit.ToString();
         qs["offset"] = offset.ToString();
@@ -208,6 +192,163 @@ public class ExternalJobsController : ControllerBase
         catch (Exception ex)
         {
             return StatusCode(502, new { error = "Could not reach Arbetsförmedlingen API", detail = ex.Message });
+        }
+    }
+
+    [HttpGet("occupations")]
+    public async Task<IActionResult> GetOccupationOptions(
+        [FromQuery] string? q,
+        [FromQuery] string[]? municipality,
+        [FromQuery] string[]? region,
+        [FromQuery] bool? remote,
+        [FromQuery] string? employmentType)
+    {
+        var qs = System.Web.HttpUtility.ParseQueryString(string.Empty);
+        if (!string.IsNullOrWhiteSpace(q)) qs["q"] = q;
+
+        var municipalityFilters = municipality?
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray() ?? Array.Empty<string>();
+        var resolvedRegionCodes = new List<string>();
+
+        if (region != null && region.Length > 0)
+        {
+            foreach (var regionCode in ResolveRegionCodes(region))
+            {
+                qs.Add("region", regionCode);
+                resolvedRegionCodes.Add(regionCode);
+            }
+        }
+
+        if (municipalityFilters.Length > 0)
+        {
+            try
+            {
+                var mappedMunicipalities = await ResolveMunicipalityFiltersAsync(municipalityFilters, resolvedRegionCodes);
+                if (mappedMunicipalities.Length == 0 && municipalityFilters.Any(filter => !filter.All(char.IsDigit)))
+                {
+                    return Ok(Array.Empty<object>());
+                }
+
+                foreach (var mappedMunicipality in mappedMunicipalities)
+                {
+                    qs.Add("municipality", mappedMunicipality);
+                }
+
+                qs.Remove("region");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(502, new { error = "Could not reach Arbetsförmedlingen API", detail = ex.Message });
+            }
+        }
+
+        if (remote.HasValue) qs["remote"] = remote.Value.ToString().ToLower();
+        ApplyEmploymentTypeFilter(qs, employmentType);
+        qs["limit"] = "0";
+        qs["offset"] = "0";
+        qs["stats"] = "occupation-name";
+        qs["stats.limit"] = AF_STATS_LIMIT.ToString();
+
+        var url = $"{AF_BASE}/{AF_SEARCH_PATH}?{qs}";
+
+        try
+        {
+            var response = await _http.GetAsync(url);
+            var content = await response.Content.ReadAsStringAsync();
+            response.EnsureSuccessStatusCode();
+
+            using var document = JsonDocument.Parse(content);
+            var values = document.RootElement
+                .GetProperty("stats")
+                .EnumerateArray()
+                .FirstOrDefault(stat => string.Equals(stat.GetProperty("type").GetString(), "occupation-name", StringComparison.OrdinalIgnoreCase))
+                .GetProperty("values")
+                .EnumerateArray()
+                .Select(value => new
+                {
+                    code = value.TryGetProperty("code", out var codeElement) ? codeElement.GetString() : null,
+                    label = value.TryGetProperty("term", out var termElement) ? termElement.GetString() : null,
+                    count = value.TryGetProperty("count", out var countElement) && countElement.TryGetInt32(out var count) ? count : 0,
+                })
+                .Where(value => !string.IsNullOrWhiteSpace(value.code) && !string.IsNullOrWhiteSpace(value.label))
+                .GroupBy(value => value.label!, StringComparer.OrdinalIgnoreCase)
+                .Select(group => new
+                {
+                    label = group.First().label,
+                    codes = group.Select(value => value.code!).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+                    count = group.Sum(value => value.count),
+                })
+                .OrderByDescending(value => value.count)
+                .ThenBy(value => value.label)
+                .ToArray();
+
+            return Ok(values);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(502, new { error = "Could not reach Arbetsförmedlingen API", detail = ex.Message });
+        }
+    }
+
+    private static void ApplyEmploymentTypeFilter(System.Collections.Specialized.NameValueCollection qs, string? employmentType)
+    {
+        if (string.IsNullOrWhiteSpace(employmentType))
+        {
+            return;
+        }
+
+        var rawValue = employmentType.Trim();
+        var code = _employmentTypeCodes.TryGetValue(rawValue, out var mappedCode) ? mappedCode : rawValue;
+        qs.Add("employment-type", code);
+    }
+
+    private static void ApplyOccupationFilters(System.Collections.Specialized.NameValueCollection qs, string[]? occupation)
+    {
+        if (occupation == null || occupation.Length == 0)
+        {
+            return;
+        }
+
+        foreach (var value in occupation.Where(value => !string.IsNullOrWhiteSpace(value)).Select(value => value.Trim()).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            qs.Add("occupation-name", value);
+        }
+    }
+
+    private static IEnumerable<string> ResolveRegionCodes(IEnumerable<string> regions)
+    {
+        foreach (var region in regions)
+        {
+            var rTrim = (region ?? string.Empty).Trim();
+            if (string.IsNullOrEmpty(rTrim))
+            {
+                continue;
+            }
+
+            if (rTrim.All(char.IsDigit))
+            {
+                yield return rTrim;
+                continue;
+            }
+
+            if (_regionCodes.TryGetValue(rTrim, out var exactCode))
+            {
+                yield return exactCode;
+                continue;
+            }
+
+            var lower = rTrim.ToLowerInvariant();
+            var fuzzyMatch = _regionCodes.Keys.FirstOrDefault(k =>
+                k.Contains(lower, StringComparison.OrdinalIgnoreCase) ||
+                lower.Contains(k, StringComparison.OrdinalIgnoreCase));
+
+            if (!string.IsNullOrWhiteSpace(fuzzyMatch))
+            {
+                yield return _regionCodes[fuzzyMatch];
+            }
         }
     }
 

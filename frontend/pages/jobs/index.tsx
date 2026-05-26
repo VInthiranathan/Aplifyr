@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import type { GetStaticProps } from "next";
 import type { ExternalJob, AFSearchResult } from "../../types/api";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import employmentOptionsData from "../../data/employment_types.json";
+import municipalitiesByRegion from "../../data/municipalities_by_region.json";
 import {
   Search,
   MapPin,
@@ -25,259 +27,25 @@ interface Filters {
   q: string;
   municipalities: string[];
   regions: string[];
+  occupationCodes: string[];
   remote: boolean;
   employmentType: string;
 }
 
-type CategoryFilter =
-  | "ALL"
-  | "IT"
-  | "EKONOMI"
-  | "FORSALJNING"
-  | "KUNDSERVICE"
-  | "TEKNIK"
-  | "BYGG"
-  | "VARD"
-  | "UTBILDNING"
-  | "TRANSPORT"
-  | "LAGER"
-  | "ADMINISTRATION"
-  | "RESTAURANG"
-  | "INDUSTRI"
-  | "OVRIGT";
-
-const CATEGORY_OPTIONS = [
-  { value: "ALL" as const, label: "Alla kategorier" },
-  { value: "IT" as const, label: "IT" },
-  { value: "EKONOMI" as const, label: "Ekonomi" },
-  { value: "FORSALJNING" as const, label: "Försäljning" },
-  { value: "KUNDSERVICE" as const, label: "Kundservice" },
-  { value: "TEKNIK" as const, label: "Teknik" },
-  { value: "BYGG" as const, label: "Bygg" },
-  { value: "VARD" as const, label: "Vård" },
-  { value: "UTBILDNING" as const, label: "Utbildning" },
-  { value: "TRANSPORT" as const, label: "Transport" },
-  { value: "LAGER" as const, label: "Lager" },
-  { value: "ADMINISTRATION" as const, label: "Administration" },
-  { value: "RESTAURANG" as const, label: "Restaurang" },
-  { value: "INDUSTRI" as const, label: "Industri" },
-  { value: "OVRIGT" as const, label: "Övrigt" },
-];
-
-const CATEGORY_KEYWORDS: Record<Exclude<CategoryFilter, "ALL">, string[]> = {
-  IT: [
-    "developer",
-    "utvecklare",
-    "frontend",
-    "backend",
-    "fullstack",
-    "react",
-    "javascript",
-    "c#",
-    "systemutvecklare",
-    "programmerare",
-    "mjukvara",
-    "software",
-    "devops",
-    "java",
-    "python",
-    ".net",
-    "web",
-    "app",
-    "data",
-    "IT",
-  ],
-  EKONOMI: [
-    "ekonomi",
-    "ekonom",
-    "redovisning",
-    "bokföring",
-    "accountant",
-    "controller",
-    "revisor",
-    "finance",
-  ],
-  FORSALJNING: [
-    "säljare",
-    "sales",
-    "account manager",
-    "försäljning",
-    "sälj",
-    "business",
-  ],
-  KUNDSERVICE: [
-    "kundtjänst",
-    "support",
-    "customer service",
-    "kundsupport",
-    "kundservice",
-  ],
-  TEKNIK: ["ingenjör", "tekniker", "engineer", "teknisk", "teknik"],
-  BYGG: [
-    "bygg",
-    "byggare",
-    "snickare",
-    "elektriker",
-    "vvs",
-    "construction",
-    "anläggning",
-  ],
-  VARD: [
-    "sjuksköterska",
-    "läkare",
-    "undersköterska",
-    "vård",
-    "omvårdnad",
-    "nurse",
-    "healthcare",
-  ],
-  UTBILDNING: ["lärare", "teacher", "pedagog", "utbildning", "skola"],
-  TRANSPORT: ["transport", "förare", "chaufför", "driver", "bud"],
-  LAGER: ["lager", "truckförare", "logistik", "warehouse", "truck"],
-  ADMINISTRATION: [
-    "administration",
-    "administratör",
-    "admin",
-    "sekreterare",
-    "kontorsassistent",
-  ],
-  RESTAURANG: [
-    "servitör",
-    "kock",
-    "bartender",
-    "restaurang",
-    "kök",
-    "bar",
-    "café",
-  ],
-  INDUSTRI: ["industri", "fabrik", "produktion", "tillverkning", "operatör"],
-  OVRIGT: [],
+type OccupationOption = {
+  codes: string[];
+  label: string;
+  count: number;
 };
 
-const EMPLOYMENT_OPTIONS = [
-  { value: "", label: "Alla anställningstyper" },
-  { value: "Tillsvidare", label: "Tillsvidare" },
-  { value: "Vikariat", label: "Vikariat" },
-  { value: "Projektanställning", label: "Projektanställning" },
-  { value: "Provanställning", label: "Provanställning" },
-  { value: "Timanställning", label: "Timanställning" },
-];
-
-const STATIC_REGIONS = [
-  "Stockholm",
-  "Västra Götaland",
-  "Skåne",
-  "Uppsala",
-  "Västmanland",
-  "Östergötland",
-  "Värmland",
-  "Jönköping",
-  "Kronoberg",
-  "Kalmar",
-  "Blekinge",
-  "Gotland",
-  "Halland",
-  "Norrbotten",
-  "Västerbotten",
-  "Västernorrland",
-  "Södermanland",
-  "Dalarna",
-  "Gävleborg",
-];
-
-const STATIC_CITY_TO_REGION: Record<string, string> = {
-  Malmö: "Skåne",
-  Lund: "Skåne",
-  Helsingborg: "Skåne",
-  Göteborg: "Västra Götaland",
-  Gothenburg: "Västra Götaland",
-  Stockholm: "Stockholm",
-  Uppsala: "Uppsala",
-  Västerås: "Västmanland",
-  Linköping: "Östergötland",
-  Norrköping: "Östergötland",
+type EmploymentOption = {
+  value: string;
+  label: string;
 };
 
-type TagInputProps = {
-  values: string[];
-  onChange: (v: string[]) => void;
-  placeholder?: string;
-  suggestions?: string[];
-  id?: string;
-};
-
-function TagInput({
-  values,
-  onChange,
-  placeholder,
-  suggestions = [],
-  id,
-}: TagInputProps) {
-  const [input, setInput] = useState("");
-  const inputRef = useRef<HTMLInputElement | null>(null);
-
-  const add = (val: string) => {
-    const v = val.trim();
-    if (!v) return;
-    if (values.includes(v)) return;
-    onChange([...values, v]);
-    setInput("");
-  };
-
-  const remove = (idx: number) => {
-    const next = [...values];
-    next.splice(idx, 1);
-    onChange(next);
-  };
-
-  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      add(input);
-    } else if (e.key === "Backspace" && input === "" && values.length > 0) {
-      remove(values.length - 1);
-    }
-  };
-
-  return (
-    <div className="min-w-[220px]">
-      <div className="w-full bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 rounded-xl pl-9 pr-3 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 flex items-center gap-2 flex-wrap">
-        {values.map((v, i) => (
-          <span
-            key={v + i}
-            className="bg-slate-100 dark:bg-white/5 text-xs text-slate-700 dark:text-white/70 px-2 py-0.5 rounded-full flex items-center gap-2"
-          >
-            <span className="max-w-[140px] truncate">{v}</span>
-            <button
-              onClick={() => remove(i)}
-              className="text-slate-400 hover:text-red-500 ml-1"
-            >
-              ✕
-            </button>
-          </span>
-        ))}
-        <input
-          id={id}
-          ref={inputRef}
-          list={suggestions.length ? `${id}-list` : undefined}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={onKeyDown}
-          onBlur={() => add(input)}
-          placeholder={placeholder}
-          className="flex-1 bg-transparent outline-none p-1 text-sm text-slate-900 dark:text-white"
-        />
-        {suggestions.length > 0 && (
-          <datalist id={`${id}-list`}>
-            {suggestions.map((s) => (
-              <option key={s} value={s} />
-            ))}
-          </datalist>
-        )}
-      </div>
-    </div>
-  );
-}
+const EMPLOYMENT_OPTIONS = employmentOptionsData as EmploymentOption[];
+const REGION_CITY_MAP = municipalitiesByRegion as Record<string, string[]>;
+const REGION_SUGGESTIONS = Object.keys(REGION_CITY_MAP);
 
 export default function AllJobsPage() {
   const { toggleFavorite, isFavorite } = useFavorites();
@@ -286,42 +54,18 @@ export default function AllJobsPage() {
     q: "",
     municipalities: [],
     regions: [],
+    occupationCodes: [],
     remote: false,
     employmentType: "",
   });
-  const [selectedCategory, setSelectedCategory] =
-    useState<CategoryFilter>("ALL");
-  const [selectedLocation, setSelectedLocation] = useState<string>("");
+  const [occupationOptions, setOccupationOptions] = useState<OccupationOption[]>([]);
+  const [selectedOccupationLabel, setSelectedOccupationLabel] = useState("");
   const [showLocationPanel, setShowLocationPanel] = useState(false);
   const [activeRegion, setActiveRegion] = useState<string | null>(null);
   const [debouncedQ, setDebouncedQ] = useState("");
   const [jobs, setJobs] = useState<ExternalJob[]>([]);
-  const [regionSuggestions, setRegionSuggestions] = useState<string[]>([]);
-  const [regionCityMap, setRegionCityMap] = useState<Record<string, string[]>>(
-    {},
-  );
-  const staticRegionMapRef = useRef<Record<string, string[]>>({});
   const requestIdRef = useRef(0);
-  // Try loading authoritative region->municipalities map from static JSON file
-  useEffect(() => {
-    let mounted = true;
-    import("../../data/municipalities_by_region.json")
-      .then((m) => {
-        if (!mounted) return;
-        const payload = (m && (m.default ?? m)) as Record<string, string[]>;
-        if (payload && Object.keys(payload).length > 0) {
-          staticRegionMapRef.current = payload;
-          setRegionCityMap(payload);
-          setRegionSuggestions(Object.keys(payload));
-        }
-      })
-      .catch(() => {
-        // ignore; fallback heuristics later will populate suggestions/map
-      });
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  const locationPanelRef = useRef<HTMLDivElement | null>(null);
   const [total, setTotal] = useState(0);
   const [generatedLetters, setGeneratedLetters] = useState<
     Array<{ title: string; coverLetter?: string; error?: string }>
@@ -334,12 +78,26 @@ export default function AllJobsPage() {
   const [offset, setOffset] = useState(0);
   const LIMIT = 20;
 
-  // Reset paging when category changes
   useEffect(() => {
-    setOffset(0);
-    setJobs([]);
-    setTotal(0);
-  }, [selectedCategory]);
+    if (!showLocationPanel) return;
+
+    const handleOutside = (event: MouseEvent | TouchEvent) => {
+      if (
+        locationPanelRef.current &&
+        !locationPanelRef.current.contains(event.target as Node)
+      ) {
+        setShowLocationPanel(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("touchstart", handleOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("touchstart", handleOutside);
+    };
+  }, [showLocationPanel]);
 
   // Debounce search query 400ms
   useEffect(() => {
@@ -371,6 +129,11 @@ export default function AllJobsPage() {
       if (filters.employmentType) {
         params.set("employmentType", filters.employmentType);
       }
+      if (filters.occupationCodes.length > 0) {
+        filters.occupationCodes.forEach((occupationCode) =>
+          params.append("occupation", occupationCode),
+        );
+      }
       params.set("limit", String(LIMIT));
       params.set("offset", String(offset));
 
@@ -387,28 +150,8 @@ export default function AllJobsPage() {
       } catch {
         data = null;
       }
-      const hits: any[] = (data && (data.hits ?? data.jobs)) || [];
-
-      // Case-insensitive partial match — handles "Skåne" vs "Skåne län" etc.
-      const locMatch = (a: string, b: string) => {
-        const al = a.toLowerCase().trim();
-        const bl = b.toLowerCase().trim();
-        return al === bl || al.includes(bl) || bl.includes(al);
-      };
-
-      // The AF API already filters by region (sent as a numeric code by the backend).
-      // We only need client-side filtering to narrow further to specific municipalities
-      // when the user has selected some — not all — within the active region.
-      const filteredHits = hits.filter((j: any) => {
-        if (filters.municipalities && filters.municipalities.length > 0) {
-          const wa = j.workplace_address ?? {};
-          const mun = (wa.municipality || j.municipality || j.location || "").trim();
-          return filters.municipalities.some((fm) => locMatch(mun, fm));
-        }
-        // Region-only or no location filter: trust the AF API result.
-        return true;
-      });
-      const serverTotal = (data && (data.total?.value ?? data.total)) ?? filteredHits.length;
+      const hits: ExternalJob[] = (data && (data.hits ?? data.jobs)) || [];
+      const serverTotal = (data && (data.total?.value ?? data.total)) ?? hits.length;
 
       // If this response is stale (a newer request started), ignore it.
       if (reqId !== requestIdRef.current) return;
@@ -424,7 +167,7 @@ export default function AllJobsPage() {
         return;
       }
 
-      setJobs(filteredHits);
+      setJobs(hits);
       setTotal(serverTotal);
     } catch (e) {
       // Only set error for the latest request
@@ -442,6 +185,7 @@ export default function AllJobsPage() {
     filters.regions,
     filters.remote,
     filters.employmentType,
+    filters.occupationCodes,
     offset,
   ]);
 
@@ -449,162 +193,67 @@ export default function AllJobsPage() {
     fetchJobs();
   }, [fetchJobs]);
 
-  // Fetch available regions/cities for suggestions from backend jobs endpoint
   useEffect(() => {
-    let mounted = true;
-    (async () => {
+    let cancelled = false;
+
+    const fetchOccupationOptions = async () => {
       try {
-        const res = await fetch(`/api/jobs`);
-        if (!res.ok) return;
-        const data = await res.json();
-        const items: any[] = data?.jobs ?? data?.hits ?? [];
-        const regions = new Set<string>();
-        const municipalities = new Set<string>();
-        const rcMap = new Map<string, Set<string>>();
-        for (const it of items) {
-          const wa = it.workplace_address;
-          if (wa) {
-            if (wa.region) regions.add(wa.region);
-            if (wa.municipality) {
-              municipalities.add(wa.municipality);
-              if (wa.region) {
-                const s = rcMap.get(wa.region) ?? new Set<string>();
-                s.add(wa.municipality);
-                rcMap.set(wa.region, s);
-              } else {
-                const inferred = STATIC_CITY_TO_REGION[wa.municipality];
-                if (inferred) {
-                  regions.add(inferred);
-                  const s = rcMap.get(inferred) ?? new Set<string>();
-                  s.add(wa.municipality);
-                  rcMap.set(inferred, s);
-                }
-              }
-            }
-          }
-          if (it.region) regions.add(it.region);
-            if (it.municipality) {
-            municipalities.add(it.municipality);
-            if (it.region) {
-              const s = rcMap.get(it.region) ?? new Set<string>();
-              s.add(it.municipality);
-              rcMap.set(it.region, s);
-            } else {
-              const inferred = STATIC_CITY_TO_REGION[it.municipality];
-              if (inferred) {
-                regions.add(inferred);
-                const s = rcMap.get(inferred) ?? new Set<string>();
-                s.add(it.municipality);
-                rcMap.set(inferred, s);
-              }
-            }
-          }
-          if (it.location) {
-            municipalities.add(it.location);
-            const inferred = STATIC_CITY_TO_REGION[it.location];
-            if (inferred) {
-              regions.add(inferred);
-              const s = rcMap.get(inferred) ?? new Set<string>();
-              s.add(it.location);
-              rcMap.set(inferred, s);
-            }
-          }
+        const params = new URLSearchParams();
+        if (debouncedQ) params.set("q", debouncedQ);
+        if (filters.regions.length > 0) {
+          filters.regions.forEach((region) => params.append("region", region));
         }
-        if (!mounted) return;
-        const derivedRegions = Array.from(regions).filter(Boolean);
-        const staticKeys = Object.keys(staticRegionMapRef.current || {});
-        const mergedRegions = Array.from(
-          new Set([...STATIC_REGIONS, ...staticKeys, ...derivedRegions]),
+        if (filters.municipalities.length > 0) {
+          filters.municipalities.forEach((municipality) =>
+            params.append("municipality", municipality),
+          );
+        }
+        if (filters.remote) params.set("remote", "true");
+        if (filters.employmentType) {
+          params.set("employmentType", filters.employmentType);
+        }
+
+        const response = await fetch(
+          `${BACKEND}/api/externaljobs/occupations?${params}`,
         );
-        setRegionSuggestions(mergedRegions);
-        const allMunicipalities = Array.from(municipalities).filter(Boolean);
-        // convert rcMap to plain object
-        // convert rcMap to plain object
-        const rcObj: Record<string, string[]> = {};
-        for (const [k, s] of rcMap.entries()) rcObj[k] = Array.from(s).filter(Boolean);
-        // Ensure every known region has at least an empty array
-        for (const r of mergedRegions) if (!rcObj[r]) rcObj[r] = [];
 
-        // If we have a static authoritative map, merge its municipalities into rcObj
-        const staticMap = staticRegionMapRef.current || {};
-        if (Object.keys(staticMap).length > 0) {
-          for (const [r, list] of Object.entries(staticMap)) {
-            rcObj[r] = Array.from(new Set([...(list || []), ...(rcObj[r] || [])]));
-          }
+        if (!response.ok) {
+          throw new Error(String(response.status));
         }
 
-        // Helper: normalize names for fuzzy matching
-        const norm = (s?: string) => (s || "").trim().toLowerCase();
+        const data = (await response.json()) as OccupationOption[];
+        if (cancelled) return;
 
-        // Build reverse lookup from STATIC_CITY_TO_REGION with normalized keys
-        const staticRev: Record<string, string> = {};
-        for (const [city, reg] of Object.entries(STATIC_CITY_TO_REGION)) staticRev[norm(city)] = reg;
+        setOccupationOptions(data);
 
-        // Ensure an "Övriga" region exists for unassigned municipalities
-        const OTHER_REGION = "Övriga";
-        if (!rcObj[OTHER_REGION]) rcObj[OTHER_REGION] = [];
-
-        // Assign municipalities not present in any region
-        for (const m of allMunicipalities) {
-          const mNorm = norm(m);
-          const already = Object.values(rcObj).some((arr) => arr.some((x) => norm(x) === mNorm));
-          if (already) continue;
-
-          // 1) exact static mapping
-          if (staticRev[mNorm]) {
-            const reg = staticRev[mNorm];
-            rcObj[reg] = Array.from(new Set([...(rcObj[reg] || []), m]));
-            continue;
-          }
-
-          // 2) try to find by substring match against existing municipality lists
-          let placed = false;
-          for (const [reg, list] of Object.entries(rcObj)) {
-            if (list.some((item) => norm(item) === mNorm)) {
-              rcObj[reg] = Array.from(new Set([...(rcObj[reg] || []), m]));
-              placed = true;
-              break;
-            }
-            // substring: if municipality name contains or is contained by existing item
-            if (list.some((item) => norm(item).includes(mNorm) || mNorm.includes(norm(item)))) {
-              rcObj[reg] = Array.from(new Set([...(rcObj[reg] || []), m]));
-              placed = true;
-              break;
-            }
-          }
-          if (placed) continue;
-
-          // 3) try to infer region name from municipality string (e.g., endsWith ' län' or contains region)
-          let inferredRegion: string | undefined;
-          for (const r of mergedRegions) {
-            if (mNorm.includes(norm(r))) {
-              inferredRegion = r;
-              break;
-            }
-          }
-          if (inferredRegion) {
-            rcObj[inferredRegion] = Array.from(new Set([...(rcObj[inferredRegion] || []), m]));
-            continue;
-          }
-
-          // 4) fallback: put into Övriga
-          rcObj[OTHER_REGION] = Array.from(new Set([...(rcObj[OTHER_REGION] || []), m]));
+        const selectedOption = data.find((option) =>
+          option.codes.some((code) => filters.occupationCodes.includes(code)),
+        );
+        if (selectedOption) {
+          setSelectedOccupationLabel(selectedOption.label);
+        } else if (filters.occupationCodes.length === 0) {
+          setSelectedOccupationLabel("");
         }
-
-        // Sort municipality lists for deterministic UI
-        for (const k of Object.keys(rcObj)) rcObj[k] = (rcObj[k] || []).sort((a, b) => a.localeCompare(b, "sv"));
-
-        setRegionCityMap(rcObj);
-      } catch (e) {
-        // ignore
+      } catch {
+        if (!cancelled) {
+          setOccupationOptions([]);
+        }
       }
-    })();
-    return () => {
-      mounted = false;
     };
-  }, []);
 
-  
+    fetchOccupationOptions();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    debouncedQ,
+    filters.regions,
+    filters.municipalities,
+    filters.remote,
+    filters.employmentType,
+    filters.occupationCodes,
+  ]);
 
   const update = (patch: Partial<Filters>) => {
     setFilters((f) => ({ ...f, ...patch }));
@@ -613,27 +262,14 @@ export default function AllJobsPage() {
     setTotal(0);
   };
 
-  // Determine job category based on keywords
-  const determineCategory = (job: ExternalJob): CategoryFilter => {
-    const searchText =
-      `${job.headline} ${job.description?.text ?? ""}`.toLowerCase();
-
-    for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
-      if (keywords.some((kw) => searchText.includes(kw.toLowerCase()))) {
-        return category as CategoryFilter;
-      }
-    }
-    return "OVRIGT";
-  };
-
-  // Filter jobs by category
-  const filterByCategory = (jobList: ExternalJob[]): ExternalJob[] => {
-    if (selectedCategory === "ALL") return jobList;
-    return jobList.filter((j) => determineCategory(j) === selectedCategory);
-  };
-
-  // Apply all filters
-  const filteredJobs = filterByCategory(jobs);
+  const filteredJobs = jobs;
+  const hasActiveFilters =
+    filters.q.trim() !== "" ||
+    filters.regions.length > 0 ||
+    filters.municipalities.length > 0 ||
+    filters.remote ||
+    filters.employmentType !== "" ||
+    filters.occupationCodes.length > 0;
 
   const totalPages = Math.ceil(total / LIMIT);
   const currentPage = Math.floor(offset / LIMIT) + 1;
@@ -732,9 +368,9 @@ export default function AllJobsPage() {
         </button>
       </div>
 
-          {/* ── Compact filters: Location + Category (single dropdowns) ── */}
+          {/* ── Compact filters: Location + Occupation ── */}
           <div className="flex flex-wrap gap-3 mt-3 items-center">
-            <div className="relative min-w-[300px]">
+            <div className="relative min-w-[300px]" ref={locationPanelRef}>
               <MapPin
                 size={15}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30"
@@ -743,10 +379,10 @@ export default function AllJobsPage() {
                 onClick={() => setShowLocationPanel((s) => !s)}
                 className="w-full text-left bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-slate-600 dark:text-white/70 focus:outline-none"
               >
-                {filters.regions.length > 0
-                  ? filters.regions.join(", ")
-                  : filters.municipalities.length > 0
+                {filters.municipalities.length > 0
                   ? filters.municipalities.join(", ")
+                  : filters.regions.length > 0
+                  ? filters.regions.join(", ")
                   : "Välj region / kommun"}
               </button>
 
@@ -765,7 +401,7 @@ export default function AllJobsPage() {
                         Rensa
                       </button>
                     </div>
-                    {regionSuggestions.map((r) => (
+                    {REGION_SUGGESTIONS.map((r) => (
                       <div
                         key={r}
                         onClick={() => {
@@ -797,12 +433,12 @@ export default function AllJobsPage() {
                           <input
                             type="checkbox"
                             checked={
-                              (regionCityMap[activeRegion] || []).every((c) =>
+                              (REGION_CITY_MAP[activeRegion] || []).every((c) =>
                                   filters.municipalities.includes(c),
-                              ) && (regionCityMap[activeRegion] || []).length > 0
+                              ) && (REGION_CITY_MAP[activeRegion] || []).length > 0
                             }
                             onChange={(e) => {
-                              const list = regionCityMap[activeRegion] || [];
+                              const list = REGION_CITY_MAP[activeRegion] || [];
                               if (e.target.checked) {
                                   update({ municipalities: list });
                               } else {
@@ -815,7 +451,7 @@ export default function AllJobsPage() {
                         </label>
 
                         <div className="grid grid-cols-1 gap-2">
-                          {(regionCityMap[activeRegion] || []).map((m) => (
+                          {(REGION_CITY_MAP[activeRegion] || []).map((m) => (
                             <label key={m} className="flex items-center gap-2 text-sm">
                               <input
                                 type="checkbox"
@@ -842,25 +478,52 @@ export default function AllJobsPage() {
             </div>
 
             <div className="relative min-w-[220px]">
+              <Briefcase
+                size={15}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30"
+              />
               <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value as CategoryFilter)}
-                className="w-full bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 rounded-xl pl-3 pr-4 py-2.5 text-sm text-slate-600 dark:text-white/70 focus:outline-none focus:border-purple-400 dark:focus:border-purple-500/50 appearance-none"
+                value={selectedOccupationLabel}
+                onChange={(e) => {
+                  const nextOption = occupationOptions.find(
+                    (option) => option.label === e.target.value,
+                  );
+                  setSelectedOccupationLabel(nextOption?.label ?? "");
+                  update({ occupationCodes: nextOption?.codes ?? [] });
+                }}
+                className="w-full bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-slate-600 dark:text-white/70 focus:outline-none focus:border-purple-400 dark:focus:border-purple-500/50 appearance-none"
               >
-                {CATEGORY_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
+                <option value="">Alla yrken</option>
+                {selectedOccupationLabel &&
+                  !occupationOptions.some(
+                    (option) => option.label === selectedOccupationLabel,
+                  ) && (
+                    <option value={selectedOccupationLabel}>
+                      {selectedOccupationLabel || "Valt yrke"}
+                    </option>
+                  )}
+                {occupationOptions.map((option) => (
+                  <option key={option.label} value={option.label}>
+                    {option.label} ({option.count})
                   </option>
                 ))}
               </select>
             </div>
 
-            {selectedCategory !== "ALL" && (
+            {hasActiveFilters && (
               <button
                 onClick={() => {
-                  setSelectedCategory("ALL");
-                  setSelectedLocation("");
-                  update({ regions: [], municipalities: [] });
+                  setActiveRegion(null);
+                  setShowLocationPanel(false);
+                  setSelectedOccupationLabel("");
+                  update({
+                    q: "",
+                    regions: [],
+                    municipalities: [],
+                    occupationCodes: [],
+                    remote: false,
+                    employmentType: "",
+                  });
                 }}
                 className="ml-2 px-3 py-1.5 rounded-lg text-xs font-bold bg-red-100 dark:bg-red-900/30 border-2 border-red-300 dark:border-red-800/60 text-red-700 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/40 transition-colors"
               >
