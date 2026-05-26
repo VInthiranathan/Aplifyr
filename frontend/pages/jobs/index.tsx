@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import type { GetStaticProps } from "next";
 import type { ExternalJob, AFSearchResult } from "../../types/api";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import { useTranslation } from "next-i18next";
 import employmentOptionsData from "../../data/employment_types.json";
 import municipalitiesByRegion from "../../data/municipalities_by_region.json";
 import {
@@ -15,6 +16,8 @@ import {
 } from "lucide-react";
 import { formatLocation } from "../../lib/utils";
 import Link from "next/link";
+import { useRouter } from "next/router";
+import JobListCard from "../../components/JobListCard";
 import { useFavorites } from "../../lib/useFavorites";
 
 export const getStaticProps: GetStaticProps = async ({ locale }) => ({
@@ -48,7 +51,18 @@ const REGION_CITY_MAP = municipalitiesByRegion as Record<string, string[]>;
 const REGION_SUGGESTIONS = Object.keys(REGION_CITY_MAP);
 
 export default function AllJobsPage() {
+  const { t } = useTranslation("common");
+  const { locale } = useRouter();
   const { toggleFavorite, isFavorite } = useFavorites();
+  const localeTag = locale === "sv" ? "sv-SE" : "en-US";
+  const employmentOptions = useMemo(
+    () =>
+      EMPLOYMENT_OPTIONS.map((option) => ({
+        ...option,
+        label: option.value === "" ? t("jobs.allTypes") : option.label,
+      })),
+    [t],
+  );
 
   const [filters, setFilters] = useState<Filters>({
     q: "",
@@ -67,10 +81,6 @@ export default function AllJobsPage() {
   const requestIdRef = useRef(0);
   const locationPanelRef = useRef<HTMLDivElement | null>(null);
   const [total, setTotal] = useState(0);
-  const [generatedLetters, setGeneratedLetters] = useState<
-    Array<{ title: string; coverLetter?: string; error?: string }>
-  >([]);
-  const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [apiRawResponse, setApiRawResponse] = useState<string | null>(null);
@@ -172,7 +182,7 @@ export default function AllJobsPage() {
     } catch (e) {
       // Only set error for the latest request
       if (requestIdRef.current === reqId) {
-        setError("Kunde inte hämta jobb. Kontrollera att backend körs.");
+        setError(t("jobs.fetchError"));
         setJobs([]);
       }
     } finally {
@@ -187,6 +197,7 @@ export default function AllJobsPage() {
     filters.employmentType,
     filters.occupationCodes,
     offset,
+    t,
   ]);
 
   useEffect(() => {
@@ -274,44 +285,25 @@ export default function AllJobsPage() {
   const totalPages = Math.ceil(total / LIMIT);
   const currentPage = Math.floor(offset / LIMIT) + 1;
 
-  const generateJob = async (job: ExternalJob) => {
-    if (!job) return;
-    setGeneratingId(job.id);
-    try {
-      const res = await fetch(`${BACKEND}/api/coverletters/generate-all`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify([job]),
-      });
-      if (!res.ok) {
-        const t = await res.json().catch(() => null);
-        throw new Error(t?.error ?? `Status ${res.status}`);
-      }
-      const data = await res.json();
-      setGeneratedLetters((prev) => [...prev, ...(data ?? [])]);
-    } catch (e) {
-      setGeneratedLetters((prev) => [...prev, { title: job.headline ?? 'Fel', error: (e as Error).message }])
-    } finally {
-      setGeneratingId(null);
-    }
-  };
-
   return (
     <div className="p-6 space-y-5">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-slate-900 dark:text-white">
-          Alla jobb
+          {t("jobs.title")}
         </h1>
         <div className="flex items-center gap-3">
           {!loading && filteredJobs.length > 0 && (
             <span className="text-slate-400 dark:text-white/40 text-sm">
               {filteredJobs.length !== total ? (
-                <>
-                  {filteredJobs.length.toLocaleString("sv-SE")} av{" "}
-                  {total.toLocaleString("sv-SE")} annonser
-                </>
+                t("jobs.filteredTotalAds", {
+                  shown: filteredJobs.length.toLocaleString(localeTag),
+                  total: total.toLocaleString(localeTag),
+                })
               ) : (
-                <>{total.toLocaleString("sv-SE")} annonser</>
+                t("jobs.totalAds", {
+                  count: total,
+                  countLabel: total.toLocaleString(localeTag),
+                })
               )}
             </span>
           )}
@@ -328,7 +320,7 @@ export default function AllJobsPage() {
           />
           <input
             type="text"
-            placeholder="Sök titel, kompetens…"
+            placeholder={t("jobs.searchPlaceholder")}
             value={filters.q}
             onChange={(e) => update({ q: e.target.value })}
             className="w-full bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/30 focus:outline-none focus:border-purple-400 dark:focus:border-purple-500/50"
@@ -346,7 +338,7 @@ export default function AllJobsPage() {
             onChange={(e) => update({ employmentType: e.target.value })}
             className="w-full bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-slate-600 dark:text-white/70 focus:outline-none focus:border-purple-400 dark:focus:border-purple-500/50 appearance-none"
           >
-            {EMPLOYMENT_OPTIONS.map((o) => (
+            {employmentOptions.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
               </option>
@@ -364,7 +356,7 @@ export default function AllJobsPage() {
           }`}
         >
           <Wifi size={15} />
-          Remote
+          {t("jobs.remoteLabel")}
         </button>
       </div>
 
@@ -383,14 +375,14 @@ export default function AllJobsPage() {
                   ? filters.municipalities.join(", ")
                   : filters.regions.length > 0
                   ? filters.regions.join(", ")
-                  : "Välj region / kommun"}
+                  : t("jobs.selectRegionPlaceholder")}
               </button>
 
               {showLocationPanel && (
                 <div className="absolute z-50 mt-2 w-[640px] bg-white dark:bg-[#111] border border-slate-200 dark:border-white/10 rounded-xl shadow-lg p-3 flex">
                   <div className="w-1/2 max-h-[360px] overflow-auto pr-3 border-r border-slate-100 dark:border-white/5">
                     <div className="flex items-center justify-between mb-2">
-                      <strong className="text-sm">Län</strong>
+                      <strong className="text-sm">{t("jobs.regions")}</strong>
                       <button
                         onClick={() => {
                           setActiveRegion(null);
@@ -398,7 +390,7 @@ export default function AllJobsPage() {
                         }}
                         className="text-xs text-purple-600"
                       >
-                        Rensa
+                        {t("jobs.clear")}
                       </button>
                     </div>
                     {REGION_SUGGESTIONS.map((r) => (
@@ -422,9 +414,9 @@ export default function AllJobsPage() {
 
                   <div className="w-1/2 pl-4 max-h-[360px] overflow-auto">
                     <div className="flex items-center justify-between mb-2">
-                      <strong className="text-sm">Kommuner</strong>
+                      <strong className="text-sm">{t("jobs.municipalities")}</strong>
                       <div className="text-xs text-slate-500">
-                        {activeRegion ? activeRegion : "Välj ett län"}
+                        {activeRegion ? activeRegion : t("jobs.regions")}
                       </div>
                     </div>
                     {activeRegion ? (
@@ -447,7 +439,7 @@ export default function AllJobsPage() {
                               }
                             }}
                           />
-                          Välj alla kommuner
+                          {t("jobs.selectAllMunicipalities")}
                         </label>
 
                         <div className="grid grid-cols-1 gap-2">
@@ -470,7 +462,7 @@ export default function AllJobsPage() {
                         </div>
                       </div>
                     ) : (
-                      <div className="text-sm text-slate-500">Välj ett län till vänster för att se kommuner.</div>
+                      <div className="text-sm text-slate-500">{t("jobs.selectRegionPrompt")}</div>
                     )}
                   </div>
                 </div>
@@ -493,13 +485,13 @@ export default function AllJobsPage() {
                 }}
                 className="w-full bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-slate-600 dark:text-white/70 focus:outline-none focus:border-purple-400 dark:focus:border-purple-500/50 appearance-none"
               >
-                <option value="">Alla yrken</option>
+                <option value="">{t("jobs.allOccupations")}</option>
                 {selectedOccupationLabel &&
                   !occupationOptions.some(
                     (option) => option.label === selectedOccupationLabel,
                   ) && (
                     <option value={selectedOccupationLabel}>
-                      {selectedOccupationLabel || "Valt yrke"}
+                      {selectedOccupationLabel || t("jobs.selectedOccupation")}
                     </option>
                   )}
                 {occupationOptions.map((option) => (
@@ -525,9 +517,9 @@ export default function AllJobsPage() {
                     employmentType: "",
                   });
                 }}
-                className="ml-2 px-3 py-1.5 rounded-lg text-xs font-bold bg-red-100 dark:bg-red-900/30 border-2 border-red-300 dark:border-red-800/60 text-red-700 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/40 transition-colors"
+                className="app-secondary-button ml-2 px-3 py-1.5 text-xs text-red-700 dark:text-red-400 border-red-300 dark:border-red-800/60 hover:bg-red-200 dark:hover:bg-red-900/40 hover:text-red-700 dark:hover:text-red-300"
               >
-                ✕ Rensa alla filter
+                ✕ {t("jobs.clearFilters")}
               </button>
             )}
           </div>
@@ -538,7 +530,7 @@ export default function AllJobsPage() {
       {loading && (
         <div className="flex items-center justify-center py-16 text-slate-400 dark:text-white/40">
           <Loader2 size={24} className="animate-spin mr-3" />
-          Hämtar annonser…
+          {t("jobs.loading")}
         </div>
       )}
 
@@ -547,10 +539,10 @@ export default function AllJobsPage() {
           onClick={() => setShowApiLog((s) => !s)}
           className="px-3 py-1 rounded-md bg-gray-200 dark:bg-white/5 text-sm"
         >
-          {showApiLog ? "Dölj API-logg" : "Visa API-logg"}
+          {showApiLog ? t("jobs.hideApiLog") : t("jobs.showApiLog")}
         </button>
         <span className="text-sm text-slate-500 ml-2">
-          (Visar rått API-svar och upp till 10 första annonserna för felsökning)
+          ({t("jobs.apiLogDescription")})
         </span>
       </div>
 
@@ -558,14 +550,14 @@ export default function AllJobsPage() {
         <div className="mt-3 space-y-3">
           {apiRawResponse && (
             <div>
-              <div className="text-xs font-medium mb-1">Rått API-svar:</div>
+              <div className="text-xs font-medium mb-1">{t("jobs.rawApiResponse")}</div>
               <pre className="max-h-64 overflow-auto text-xs bg-slate-100 dark:bg-[#0b0b0b] p-3 rounded">
                 {apiRawResponse}
               </pre>
             </div>
           )}
           <div>
-            <div className="text-xs font-medium mb-1">Parsed (upp till 10 annonser):</div>
+            <div className="text-xs font-medium mb-1">{t("jobs.parsedJobs")}</div>
             <pre className="max-h-72 overflow-auto text-xs bg-slate-100 dark:bg-[#0b0b0b] p-3 rounded">
               {JSON.stringify(jobs.slice(0, 10), null, 2)}
             </pre>
@@ -584,9 +576,7 @@ export default function AllJobsPage() {
       {!loading && !error && filteredJobs.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-slate-300 dark:text-white/30">
           <Briefcase size={40} className="mb-3 opacity-30" />
-          <p className="text-sm">
-            Inga jobb hittades. Prova andra sökord eller filter.
-          </p>
+          <p className="text-sm">{t("jobs.empty")}</p>
         </div>
       )}
 
@@ -594,161 +584,126 @@ export default function AllJobsPage() {
       {!loading && filteredJobs.length > 0 && (
         <div className="space-y-3">
           {filteredJobs.map((job) => (
-            <div
+            <JobListCard
               key={job.id}
-              className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-5 border border-slate-200 dark:border-white/5 hover:border-purple-300 dark:hover:border-purple-500/20 transition-colors group shadow-sm dark:shadow-none"
-            >
-              <div className="flex items-start gap-4">
-                {/* Logo placeholder */}
-                <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 flex-shrink-0 flex items-center justify-center text-slate-300 dark:text-white/20 overflow-hidden">
+              title={
+                <Link
+                  href={`/jobs/${job.id}`}
+                  className="text-lg font-semibold text-gray-900 dark:text-white hover:underline leading-snug"
+                >
+                  {job.headline}
+                </Link>
+              }
+              badges={
+                job.matchGrade ? (
+                  <span
+                    className={`flex-shrink-0 text-xs font-bold px-3 py-1 rounded-full ${
+                      job.matchGrade === "A"
+                        ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-300 dark:border-green-800/50"
+                        : job.matchGrade === "B"
+                          ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border border-yellow-300 dark:border-yellow-800/50"
+                          : "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border border-orange-300 dark:border-orange-800/50"
+                    }`}
+                  >
+                    {job.matchGrade} {t("jobs.match")}
+                  </span>
+                ) : null
+              }
+              leading={
+                <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-300 dark:text-white/20 overflow-hidden">
                   {job.logo_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={job.logo_url}
-                      alt=""
-                      className="w-full h-full object-contain p-1"
-                    />
+                    <img src={job.logo_url} alt="" className="w-full h-full object-contain p-1.5" />
                   ) : (
-                    <Briefcase size={18} />
+                    <Briefcase size={20} />
                   )}
                 </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <h2 className="text-sm font-semibold text-slate-900 dark:text-white leading-snug">
-                        <Link
-                          href={`/jobs/${job.id}`}
-                          className="hover:underline"
-                        >
-                          {job.headline}
-                        </Link>
-                      </h2>
-                      {job.matchGrade && (
-                        <span
-                          className={`flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            job.matchGrade === "A"
-                              ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-300 dark:border-green-800/50"
-                              : job.matchGrade === "B"
-                                ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border border-yellow-300 dark:border-yellow-800/50"
-                                : "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border border-orange-300 dark:border-orange-800/50"
-                          }`}
-                        >
-                          {job.matchGrade} Match
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          toggleFavorite({
-                            id: job.id,
-                            title: job.headline,
-                            company: job.employer?.name,
-                            location: formatLocation(job.workplace_address),
-                            matchGrade: job.matchGrade,
-                          });
-                        }}
-                        className={`flex-shrink-0 transition-colors ${
-                          isFavorite(job.id)
-                            ? "text-purple-500 dark:text-purple-400"
-                            : "text-slate-300 dark:text-white/20 hover:text-purple-500 dark:hover:text-purple-400"
-                        }`}
-                        title={
-                          isFavorite(job.id)
-                            ? "Ta bort från favoriter"
-                            : "Lägg till i favoriter"
-                        }
-                      >
-                        <Bookmark
-                          size={15}
-                          fill={isFavorite(job.id) ? "currentColor" : "none"}
-                        />
-                      </button>
-                      {job.webpage_url && (
-                        <a
-                          href={job.webpage_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex-shrink-0 text-slate-300 dark:text-white/20 hover:text-purple-500 dark:hover:text-purple-400 transition-colors"
-                        >
-                          <ExternalLink size={15} />
-                        </a>
-                      )}
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-slate-500 dark:text-white/50 mt-0.5">
-                    {job.employer?.name}
-                  </p>
-
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
-                    {(job.workplace_address?.municipality ||
-                      job.workplace_address?.region) && (
-                      <span className="flex items-center gap-1 text-xs text-slate-400 dark:text-white/40">
-                        <MapPin size={11} />
-                        {formatLocation(job.workplace_address)}
-                      </span>
-                    )}
-                    {job.remote && (
-                      <span className="flex items-center gap-1 text-xs text-purple-500 dark:text-purple-400">
-                        <Wifi size={11} />
-                        Remote
-                      </span>
-                    )}
-                  </div>
+              }
+              subtitle={job.employer?.name}
+              meta={
+                <>
+                  {(job.workplace_address?.municipality || job.workplace_address?.region) && (
+                    <span className="flex items-center gap-1">
+                      <MapPin size={13} />
+                      {formatLocation(job.workplace_address)}
+                    </span>
+                  )}
+                  {job.remote && (
+                    <span className="flex items-center gap-1 text-purple-500 dark:text-purple-400">
+                      <Wifi size={13} />
+                      {t("jobs.remoteLabel")}
+                    </span>
+                  )}
+                </>
+              }
+              tags={
+                <>
+                  {job.working_hours_type?.label && (
+                    <span className="text-xs bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-white/70 rounded-full px-3 py-1.5 border border-gray-200 dark:border-white/10">
+                      {job.working_hours_type.label}
+                    </span>
+                  )}
+                  {job.employment_type?.label && (
+                    <span className="text-xs bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-white/70 rounded-full px-3 py-1.5 border border-gray-200 dark:border-white/10">
+                      {job.employment_type.label}
+                    </span>
+                  )}
+                </>
+              }
+              aside={
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      toggleFavorite({
+                        id: job.id,
+                        title: job.headline,
+                        company: job.employer?.name,
+                        location: formatLocation(job.workplace_address),
+                        matchGrade: job.matchGrade,
+                      });
+                    }}
+                    className={`flex-shrink-0 transition-colors p-2 ${
+                      isFavorite(job.id)
+                        ? "text-purple-500 dark:text-purple-400"
+                        : "text-slate-300 dark:text-white/20 hover:text-purple-500 dark:hover:text-purple-400"
+                    }`}
+                    title={
+                      isFavorite(job.id)
+                        ? t("jobs.removeFavorite")
+                        : t("jobs.addFavorite")
+                    }
+                  >
+                    <Bookmark
+                      size={18}
+                      fill={isFavorite(job.id) ? "currentColor" : "none"}
+                    />
+                  </button>
+                  {job.webpage_url && (
+                    <a
+                      href={job.webpage_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="app-secondary-button px-3 py-2 text-sm"
+                    >
+                      <ExternalLink size={15} />
+                    </a>
+                  )}
                 </div>
-              </div>
-
-              {/* Footer */}
-              <div className="flex items-center gap-2 mt-3 flex-wrap">
-                {job.working_hours_type?.label && (
-                  <span className="text-xs border border-slate-200 dark:border-white/10 text-slate-400 dark:text-white/40 rounded-full px-3 py-0.5">
-                    {job.working_hours_type.label}
-                  </span>
-                )}
-                {job.employment_type?.label && (
-                  <span className="text-xs border border-slate-200 dark:border-white/10 text-slate-400 dark:text-white/40 rounded-full px-3 py-0.5">
-                    {job.employment_type.label}
-                  </span>
-                )}
-                {job.application_deadline && (
-                  <span className="ml-auto text-xs text-slate-300 dark:text-white/25">
-                    Sista ansökningsdag:{" "}
-                    {new Date(job.application_deadline).toLocaleDateString(
-                      "sv-SE",
-                    )}
-                  </span>
-                )}
-                {/* Generera brev tas bort från listvyn; finns endast på jobbsidan */}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── Generated letters ── */}
-      {generatedLetters.length > 0 && (
-        <div className="mt-6 space-y-4">
-          <h3 className="text-sm font-semibold">Genererade personliga brev</h3>
-          {generatedLetters.map((g, i) => (
-            <div
-              key={i}
-              className="bg-white dark:bg-[#111] border border-slate-200 dark:border-white/5 rounded-xl p-4"
-            >
-              <div className="text-xs text-slate-500 dark:text-white/50 mb-2">
-                {g.title}
-              </div>
-              {g.error ? (
-                <div className="text-red-500 text-sm">Fel: {g.error}</div>
-              ) : (
-                <pre className="whitespace-pre-wrap text-sm text-slate-700 dark:text-white">
-                  {g.coverLetter}
-                </pre>
-              )}
-            </div>
+              }
+              footer={
+                job.application_deadline ? (
+                  <div className="flex justify-end">
+                    <span className="text-xs text-slate-400 dark:text-white/30">
+                      {t("jobs.deadline", {
+                        date: new Date(job.application_deadline).toLocaleDateString(localeTag),
+                      })}
+                    </span>
+                  </div>
+                ) : null
+              }
+            />
           ))}
         </div>
       )}
@@ -759,9 +714,9 @@ export default function AllJobsPage() {
           <button
             onClick={() => setOffset(Math.max(0, offset - LIMIT))}
             disabled={offset === 0}
-            className="px-4 py-2 rounded-xl bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 text-sm text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 transition-colors shadow-sm dark:shadow-none"
+            className="app-secondary-button px-4 py-2 text-sm"
           >
-            ← Föregående
+            ← {t("jobs.previous")}
           </button>
           <span className="text-sm text-slate-400 dark:text-white/40">
             {currentPage} / {totalPages}
@@ -769,9 +724,9 @@ export default function AllJobsPage() {
           <button
             onClick={() => setOffset(offset + LIMIT)}
             disabled={currentPage >= totalPages}
-            className="px-4 py-2 rounded-xl bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 text-sm text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 transition-colors shadow-sm dark:shadow-none"
+            className="app-secondary-button px-4 py-2 text-sm"
           >
-            Nästa →
+            {t("jobs.next")} →
           </button>
         </div>
       )}

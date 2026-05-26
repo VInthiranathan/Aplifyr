@@ -1,5 +1,6 @@
 import { X, Copy, RefreshCw, Edit2, Send, Check } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useTranslation } from "next-i18next";
 
 interface CoverLetterModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ export default function CoverLetterModal({
   onRegenerate,
   isRegenerating = false,
 }: CoverLetterModalProps) {
+  const { t } = useTranslation("common");
   const [isEditing, setIsEditing] = useState(false);
   const [editedLetter, setEditedLetter] = useState(letter);
   const [copied, setCopied] = useState(false);
@@ -59,7 +61,7 @@ export default function CoverLetterModal({
         <div className="flex items-start justify-between p-6 border-b border-gray-200 dark:border-white/10">
           <div>
             <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
-              Personligt brev
+              {t("coverLetter.title")}
             </h2>
             <p className="text-sm text-gray-500 dark:text-white/60 mt-1">
               {jobTitle} {company && `• ${company}`}
@@ -80,7 +82,7 @@ export default function CoverLetterModal({
               value={editedLetter}
               onChange={(e) => setEditedLetter(e.target.value)}
               className="w-full min-h-[400px] p-4 bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-white/10 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
-              placeholder="Redigera ditt personliga brev..."
+              placeholder={t("coverLetter.editPlaceholder")}
             />
           ) : (
             <div className="bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-white/5 rounded-xl p-6">
@@ -99,14 +101,14 @@ export default function CoverLetterModal({
               className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-900 dark:text-white text-sm transition-colors"
             >
               <Edit2 size={16} />
-              {isEditing ? "Spara" : "Redigera"}
+              {isEditing ? t("coverLetter.save") : t("coverLetter.edit")}
             </button>
             <button
               onClick={handleCopy}
               className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-900 dark:text-white text-sm transition-colors"
             >
               {copied ? <Check size={16} /> : <Copy size={16} />}
-              {copied ? "Kopierat!" : "Kopiera"}
+              {copied ? t("coverLetter.copied") : t("coverLetter.copy")}
             </button>
             <button
               onClick={onRegenerate}
@@ -117,7 +119,7 @@ export default function CoverLetterModal({
                 size={16}
                 className={isRegenerating ? "animate-spin" : ""}
               />
-              Generera om
+              {t("coverLetter.regenerate")}
             </button>
           </div>
           {applicationUrl && (
@@ -126,7 +128,7 @@ export default function CoverLetterModal({
               className="flex items-center gap-2 px-6 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium transition-colors"
             >
               <Send size={16} />
-              Skicka ansökan
+              {t("coverLetter.sendApplication")}
             </button>
           )}
         </div>

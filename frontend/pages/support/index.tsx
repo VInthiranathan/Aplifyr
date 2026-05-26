@@ -23,7 +23,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
     <div className="border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-5 py-4 text-left bg-white dark:bg-[#1a1a1a] hover:bg-slate-50 dark:hover:bg-[#222] transition-colors"
+        className="app-hover-standard w-full flex items-center justify-between px-5 py-4 text-left bg-white dark:bg-[#1a1a1a]"
       >
         <span className="font-medium text-slate-800 dark:text-white">{t(q)}</span>
         <ChevronDown
@@ -66,7 +66,7 @@ export default function SupportPage() {
         ].map(({ icon: Icon, label, desc }) => (
           <div
             key={label}
-            className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-5 border border-slate-200 dark:border-white/5 shadow-sm dark:shadow-none flex flex-col gap-2"
+            className="app-card-base app-card-hover rounded-2xl p-5 flex flex-col gap-2"
           >
             <div className="w-9 h-9 rounded-xl bg-sky-500/10 flex items-center justify-center">
               <Icon className="w-5 h-5 text-sky-500" />
@@ -117,7 +117,7 @@ export default function SupportPage() {
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   className="rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#111] text-slate-800 dark:text-white text-sm px-3 py-2 outline-none focus:ring-2 focus:ring-sky-500/50 transition"
-                  placeholder="namn@exempel.se"
+                  placeholder={t('support.formEmailPlaceholder')}
                 />
               </div>
             </div>
@@ -134,7 +134,7 @@ export default function SupportPage() {
             </div>
             <button
               type="submit"
-              className="px-6 py-2 rounded-lg bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold transition-colors"
+              className="app-primary-button px-6 py-2.5 text-sm"
             >
               {t('support.formSubmit')}
             </button>

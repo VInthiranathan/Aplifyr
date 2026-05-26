@@ -149,7 +149,7 @@ export default function Sidebar() {
           </div>
           <div className="leading-tight">
             <p className="text-sm text-slate-800 dark:text-white font-medium">
-              {displayName ?? "User"}
+              {displayName ?? t("nav.guest")}
             </p>
             <p className="text-xs text-slate-400 dark:text-white/40">
               {t("nav.userDetails")}
@@ -163,7 +163,7 @@ export default function Sidebar() {
           className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
         >
           <LogOut size={16} />
-          {t("signOut")}
+          {t("auth.signOut")}
         </button>
       </div>
     </aside>

@@ -6,11 +6,16 @@ import {
   parseCookieHeader,
   serializeCookieHeader,
 } from "@supabase/auth-helpers-nextjs";
+import { useTranslation } from "next-i18next";
 import { isSupabaseConfigured } from "../lib/supabaseClient";
 import Link from "next/link";
+import JobListCard from "../components/JobListCard";
 import { useFavorites } from "../lib/useFavorites";
 
-const BACKEND = process.env.BACKEND_URL ?? "http://localhost:5000";
+const BACKEND =
+  process.env.BACKEND_URL ??
+  process.env.NEXT_PUBLIC_BACKEND_URL ??
+  "http://localhost:5000";
 
 interface Props {
   jobs: Job[];
@@ -90,6 +95,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
 };
 
 export default function Home({ jobs, progression }: Props) {
+  const { t } = useTranslation("common");
   const { toggleFavorite, isFavorite } = useFavorites();
 
   const total =
@@ -112,10 +118,10 @@ export default function Home({ jobs, progression }: Props) {
         {/* Header Section */}
         <div className="space-y-2">
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-            Dashboard
+            {t("home.title")}
           </h1>
           <p className="text-gray-500 dark:text-white/60">
-            Track your job applications and matches
+            {t("home.subtitle")}
           </p>
         </div>
 
@@ -124,7 +130,7 @@ export default function Home({ jobs, progression }: Props) {
           {/* Progression Card */}
           <div className="lg:col-span-1 bg-gradient-to-br from-orange-300 via-purple-500 to-purple-700 rounded-3xl p-8 shadow-lg hover:shadow-xl transition-shadow">
             <h3 className="text-sm font-semibold text-white/90 uppercase tracking-wider mb-6">
-              Progression
+              {t("home.progression")}
             </h3>
 
             <div className="flex justify-center mb-8">
@@ -171,7 +177,7 @@ export default function Home({ jobs, progression }: Props) {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className="w-3 h-3 rounded-full bg-white" />
-                  <span className="text-sm text-white/90">Applied</span>
+                  <span className="text-sm text-white/90">{t("home.applied")}</span>
                 </div>
                 <span className="text-sm font-semibold text-white">
                   {progression.applied}
@@ -180,7 +186,7 @@ export default function Home({ jobs, progression }: Props) {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className="w-3 h-3 rounded-full bg-white/50" />
-                  <span className="text-sm text-white/90">Ready to apply</span>
+                  <span className="text-sm text-white/90">{t("home.readyToApply")}</span>
                 </div>
                 <span className="text-sm font-semibold text-white">
                   {progression.readyToApply}
@@ -189,9 +195,7 @@ export default function Home({ jobs, progression }: Props) {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className="w-3 h-3 rounded-full bg-white/20" />
-                  <span className="text-sm text-white/90">
-                    Ready to generate
-                  </span>
+                  <span className="text-sm text-white/90">{t("home.readyToGenerate")}</span>
                 </div>
                 <span className="text-sm font-semibold text-white">
                   {progression.readyToGenerate}
@@ -207,7 +211,7 @@ export default function Home({ jobs, progression }: Props) {
               <div className="flex items-center justify-center mb-6">
                 <div className="px-4 py-2 rounded-full bg-green-100 dark:bg-green-500/20 group-hover:scale-110 transition-transform">
                   <span className="text-sm font-bold text-green-600 dark:text-green-400 uppercase tracking-wider">
-                    A GRADE
+                    A
                   </span>
                 </div>
               </div>
@@ -216,7 +220,7 @@ export default function Home({ jobs, progression }: Props) {
                   {gradeA}
                 </p>
                 <p className="text-sm text-gray-500 dark:text-white/50">
-                  Matches
+                  {t("home.matches")}
                 </p>
               </div>
             </div>
@@ -226,7 +230,7 @@ export default function Home({ jobs, progression }: Props) {
               <div className="flex items-center justify-center mb-6">
                 <div className="px-4 py-2 rounded-full bg-yellow-100 dark:bg-yellow-500/20 group-hover:scale-110 transition-transform">
                   <span className="text-sm font-bold text-yellow-600 dark:text-yellow-400 uppercase tracking-wider">
-                    B GRADE
+                    B
                   </span>
                 </div>
               </div>
@@ -235,7 +239,7 @@ export default function Home({ jobs, progression }: Props) {
                   {gradeB}
                 </p>
                 <p className="text-sm text-gray-500 dark:text-white/50">
-                  Matches
+                  {t("home.matches")}
                 </p>
               </div>
             </div>
@@ -245,7 +249,7 @@ export default function Home({ jobs, progression }: Props) {
               <div className="flex items-center justify-center mb-6">
                 <div className="px-4 py-2 rounded-full bg-red-100 dark:bg-red-500/20 group-hover:scale-110 transition-transform">
                   <span className="text-sm font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">
-                    C GRADE
+                    C
                   </span>
                 </div>
               </div>
@@ -254,7 +258,7 @@ export default function Home({ jobs, progression }: Props) {
                   {gradeC}
                 </p>
                 <p className="text-sm text-gray-500 dark:text-white/50">
-                  Matches
+                  {t("home.matches")}
                 </p>
               </div>
             </div>
@@ -265,124 +269,127 @@ export default function Home({ jobs, progression }: Props) {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Recent Jobs
+              {t("home.recentJobs")}
             </h2>
             <span className="text-sm text-gray-500 dark:text-white/60">
-              {jobs.length} jobs
+              {t("home.jobCount", { count: jobs.length })}
             </span>
           </div>
 
           {jobs.length === 0 && (
             <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-12 border border-gray-200 dark:border-white/5 text-center">
               <p className="text-gray-400 dark:text-white/40">
-                No jobs available. Make sure the backend is running.
+                {t("home.noJobs")}
               </p>
             </div>
           )}
 
           <div className="grid gap-4">
             {jobs.map((job) => (
-              <Link key={job.id} href={`/jobs/${job.id}`} className="block">
-                <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-6 border border-gray-200 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10 transition-all hover:shadow-md dark:shadow-none group cursor-pointer">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                          {job.title}
-                        </h3>
-                        {job.isNew && (
-                          <span className="text-xs font-semibold bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full">
-                            New
-                          </span>
-                        )}
-                        {job.badge && (
-                          <span className="text-xs font-medium text-purple-600 dark:text-purple-400 border border-purple-300 dark:border-purple-500/40 px-3 py-1 rounded-full">
-                            {job.badge}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-white/60 mb-4">
-                        <span className="font-medium">{job.company}</span>
-                        <span className="text-gray-400 dark:text-white/40">
-                          •
-                        </span>
-                        <span>{job.location}</span>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2">
-                        <span className="text-xs bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-white/70 rounded-full px-3 py-1.5 border border-gray-200 dark:border-white/10">
-                          {job.type}
-                        </span>
-                        {job.perks.map((perk) => (
-                          <span
-                            key={perk}
-                            className="text-xs bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-white/70 rounded-full px-3 py-1.5 border border-gray-200 dark:border-white/10"
-                          >
-                            {perk}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col items-end gap-3">
-                      <span
-                        className={`text-sm font-bold px-4 py-1.5 rounded-full ${
-                          job.grade === "A"
-                            ? "bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400"
-                            : job.grade === "B"
-                              ? "bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400"
-                              : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
-                        }`}
-                      >
-                        {job.grade} Match
+              <JobListCard
+                key={job.id}
+                title={
+                  <Link
+                    href={`/jobs/${job.id}`}
+                    className="text-lg font-semibold text-gray-900 dark:text-white hover:underline"
+                  >
+                    {job.title}
+                  </Link>
+                }
+                badges={
+                  <>
+                    {job.isNew && (
+                      <span className="text-xs font-semibold bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full">
+                        {t("home.new")}
                       </span>
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          toggleFavorite({
-                            id: job.id,
-                            title: job.title,
-                            company: job.company,
-                            location: job.location,
-                            type: job.type,
-                            grade: job.grade,
-                            perks: job.perks,
-                            isNew: job.isNew,
-                            badge: job.badge,
-                          });
-                        }}
-                        className={`transition-colors p-2 ${
-                          isFavorite(job.id)
-                            ? "text-purple-500 dark:text-purple-400"
-                            : "text-gray-400 dark:text-white/30 hover:text-purple-500 dark:hover:text-purple-400"
-                        }`}
-                        title={
-                          isFavorite(job.id)
-                            ? "Ta bort från favoriter"
-                            : "Lägg till i favoriter"
-                        }
+                    )}
+                    {job.badge && (
+                      <span className="text-xs font-medium text-purple-600 dark:text-purple-400 border border-purple-300 dark:border-purple-500/40 px-3 py-1 rounded-full">
+                        {job.badge}
+                      </span>
+                    )}
+                  </>
+                }
+                meta={
+                  <>
+                    <span className="font-medium">{job.company}</span>
+                    <span className="text-gray-400 dark:text-white/40">•</span>
+                    <span>{job.location}</span>
+                  </>
+                }
+                tags={
+                  <>
+                    <span className="text-xs bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-white/70 rounded-full px-3 py-1.5 border border-gray-200 dark:border-white/10">
+                      {job.type}
+                    </span>
+                    {job.perks.map((perk) => (
+                      <span
+                        key={perk}
+                        className="text-xs bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-white/70 rounded-full px-3 py-1.5 border border-gray-200 dark:border-white/10"
                       >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="w-5 h-5"
-                          fill={isFavorite(job.id) ? "currentColor" : "none"}
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={1.5}
-                            d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </Link>
+                        {perk}
+                      </span>
+                    ))}
+                  </>
+                }
+                aside={
+                  <>
+                    <span
+                      className={`text-sm font-bold px-4 py-1.5 rounded-full ${
+                        job.grade === "A"
+                          ? "bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400"
+                          : job.grade === "B"
+                            ? "bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400"
+                            : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
+                      }`}
+                    >
+                      {job.grade} {t("home.match")}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        toggleFavorite({
+                          id: job.id,
+                          title: job.title,
+                          company: job.company,
+                          location: job.location,
+                          type: job.type,
+                          grade: job.grade,
+                          perks: job.perks,
+                          isNew: job.isNew,
+                          badge: job.badge,
+                        });
+                      }}
+                      className={`transition-colors p-2 ${
+                        isFavorite(job.id)
+                          ? "text-purple-500 dark:text-purple-400"
+                          : "text-gray-400 dark:text-white/30 hover:text-purple-500 dark:hover:text-purple-400"
+                      }`}
+                      title={
+                        isFavorite(job.id)
+                          ? t("home.removeFavorite")
+                          : t("home.addFavorite")
+                      }
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="w-5 h-5"
+                        fill={isFavorite(job.id) ? "currentColor" : "none"}
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={1.5}
+                          d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                        />
+                      </svg>
+                    </button>
+                  </>
+                }
+              />
             ))}
           </div>
         </div>

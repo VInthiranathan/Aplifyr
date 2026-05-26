@@ -1,6 +1,7 @@
 import type { GetServerSideProps } from "next";
 import type { User } from "../../types/api";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import { useTranslation } from "next-i18next";
 import {
   createServerClient,
   parseCookieHeader,
@@ -118,15 +119,16 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
   }
 };
 
-const locationFilters = [
-  "Only my location",
-  "Nearby location",
-  "Region",
-  "Country",
-  "Remote",
+const locationFilterKeys = [
+  "user.onlyMyLocation",
+  "user.nearbyLocation",
+  "user.region",
+  "user.country",
+  "user.remote",
 ];
 
 export default function UserPage({ user }: Props) {
+  const { t } = useTranslation("common");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editedUser, setEditedUser] = useState<User | null>(user);
   const [editSection, setEditSection] = useState<
@@ -140,6 +142,7 @@ export default function UserPage({ user }: Props) {
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const profileImageInputRef = useRef<HTMLInputElement>(null);
+  const locationFilters = locationFilterKeys.map((key) => t(key));
 
   // client-side profile state: undefined = loading, null = no profile, User = loaded
   const [clientProfile, setClientProfile] = useState<User | null | undefined>(
@@ -240,7 +243,7 @@ export default function UserPage({ user }: Props) {
         reader.readAsDataURL(file);
         // TODO: Upload to backend
       } else {
-        alert("File size must be less than 5MB");
+        alert(t("user.fileSizeTooLarge"));
       }
     }
   };
@@ -253,7 +256,7 @@ export default function UserPage({ user }: Props) {
         setUploadedFile(file);
         await uploadCV(file);
       } else {
-        alert("File size must be less than 5MB");
+        alert(t("user.fileSizeTooLarge"));
       }
     }
   };
@@ -281,15 +284,15 @@ export default function UserPage({ user }: Props) {
       if (res.ok) {
         const data = await res.json();
         setCvUrl(data.cv_url);
-        alert("CV uploaded successfully!");
+        alert(t("user.cvUploadedSuccess"));
       } else {
         const err = await res.json().catch(() => ({}));
         console.error("CV upload failed", err);
-        alert("Failed to upload CV");
+        alert(t("user.cvUploadFailed"));
       }
     } catch (error) {
       console.error("CV upload error:", error);
-      alert("Error uploading CV");
+      alert(t("user.cvUploadError"));
     } finally {
       setIsUploading(false);
     }
@@ -305,7 +308,7 @@ export default function UserPage({ user }: Props) {
         setUploadedFile(file);
         await uploadCV(file);
       } else {
-        alert("File size must be less than 5MB");
+        alert(t("user.fileSizeTooLarge"));
       }
     }
   };
@@ -336,11 +339,11 @@ export default function UserPage({ user }: Props) {
       } else {
         const err = await res.json().catch(() => ({}));
         console.error("save profile failed", err);
-        alert("Failed to save profile");
+        alert(t("user.saveProfileFailed"));
       }
     } catch (error) {
       console.error(error);
-      alert("Error saving profile");
+      alert(t("user.saveProfileError"));
     }
   };
 
@@ -359,7 +362,7 @@ export default function UserPage({ user }: Props) {
               {profileImage ? (
                 <img
                   src={profileImage}
-                  alt={(clientProfile && clientProfile.name) || "Profile"}
+                  alt={(clientProfile && clientProfile.name) || t("user.profileAlt")}
                   className="w-24 h-24 rounded-2xl object-cover"
                 />
               ) : (
@@ -406,10 +409,10 @@ export default function UserPage({ user }: Props) {
                 setEditSection("profile");
                 setIsEditModalOpen(true);
               }}
-              className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors font-semibold shadow-lg"
+              className="app-primary-button px-6 py-3"
             >
               <Edit className="w-4 h-4" />
-              Edit Profile
+              {t("user.editProfile")}
             </button>
           </div>
         </div>
@@ -426,7 +429,7 @@ export default function UserPage({ user }: Props) {
                 </div>
                 <div className="flex items-center justify-between w-full">
                   <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                    About me
+                    {t("user.aboutMe")}
                   </h2>
                   <button
                     onClick={() => {
@@ -448,12 +451,12 @@ export default function UserPage({ user }: Props) {
                     }}
                     className="text-sm font-semibold px-3 py-1 rounded-lg bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10"
                   >
-                    Edit
+                    {t("user.edit")}
                   </button>
                 </div>
               </div>
               <p className="text-gray-700 dark:text-white/70 leading-relaxed">
-                {(clientProfile && clientProfile.bio) || "No bio available"}
+                {(clientProfile && clientProfile.bio) || t("user.noBioAvailable")}
               </p>
             </div>
 
@@ -464,7 +467,7 @@ export default function UserPage({ user }: Props) {
                   <MapPin className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                 </div>
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                  Location preferences
+                  {t("user.locationPreferences")}
                 </h2>
               </div>
               <div className="flex gap-3 flex-wrap">
@@ -493,7 +496,7 @@ export default function UserPage({ user }: Props) {
               {selectedLocations.length > 0 && (
                 <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10">
                   <p className="text-sm text-gray-600 dark:text-white/60">
-                    Selected: {selectedLocations.join(", ")}
+                    {t("user.selected", { value: selectedLocations.join(", ") })}
                   </p>
                 </div>
               )}
@@ -507,7 +510,7 @@ export default function UserPage({ user }: Props) {
                 </div>
                 <div className="flex items-center justify-between w-full">
                   <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                    Tech stack
+                    {t("user.techStack")}
                   </h2>
                   <button
                     onClick={() => {
@@ -529,7 +532,7 @@ export default function UserPage({ user }: Props) {
                     }}
                     className="text-sm font-semibold px-3 py-1 rounded-lg bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10"
                   >
-                    Edit
+                    {t("user.edit")}
                   </button>
                 </div>
               </div>
@@ -553,7 +556,7 @@ export default function UserPage({ user }: Props) {
                 </div>
                 <div className="flex items-center justify-between w-full">
                   <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                    Desired roles
+                    {t("user.desiredRoles")}
                   </h2>
                   <button
                     onClick={() => {
@@ -575,7 +578,7 @@ export default function UserPage({ user }: Props) {
                     }}
                     className="text-sm font-semibold px-3 py-1 rounded-lg bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10"
                   >
-                    Edit
+                    {t("user.edit")}
                   </button>
                 </div>
               </div>
@@ -600,7 +603,7 @@ export default function UserPage({ user }: Props) {
                   <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                  CV / Resume
+                  {t("user.cvResume")}
                 </h2>
               </div>
 
@@ -620,10 +623,10 @@ export default function UserPage({ user }: Props) {
                     <FileText className="w-14 h-14 text-green-600 dark:text-green-400" />
                     <div>
                       <p className="text-base font-semibold text-gray-900 dark:text-white mb-1">
-                        CV Uploaded
+                        {t("user.cvUploaded")}
                       </p>
                       <p className="text-sm text-gray-500 dark:text-white/50">
-                        Your CV is saved and will be used for cover letters
+                        {t("user.cvSavedHint")}
                       </p>
                     </div>
                     <div className="flex gap-3 mt-2">
@@ -631,16 +634,16 @@ export default function UserPage({ user }: Props) {
                         href={cvUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors shadow-lg"
+                        className="app-primary-button px-6 py-3"
                       >
-                        View CV
+                        {t("user.viewCv")}
                       </a>
                       <button
                         onClick={() => fileInputRef.current?.click()}
                         disabled={isUploading}
-                        className="px-6 py-3 bg-gray-200 hover:bg-gray-300 dark:bg-white/10 dark:hover:bg-white/20 text-gray-700 dark:text-white rounded-xl font-semibold transition-colors disabled:opacity-50"
+                        className="app-secondary-button px-6 py-3"
                       >
-                        {isUploading ? "Uploading..." : "Replace CV"}
+                        {isUploading ? t("user.uploadingCv") : t("user.replaceCv")}
                       </button>
                     </div>
                   </div>
@@ -672,14 +675,14 @@ export default function UserPage({ user }: Props) {
                           onClick={() => setUploadedFile(null)}
                           className="mt-2 px-8 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold transition-colors shadow-lg"
                         >
-                          Remove File
+                          {t("user.removeFile")}
                         </button>
                       </>
                     ) : isUploading ? (
                       <>
                         <FileText className="w-14 h-14 text-blue-600 dark:text-blue-400 animate-pulse" />
                         <p className="text-base font-semibold text-gray-900 dark:text-white">
-                          Uploading your CV...
+                          {t("user.uploadingCv")}
                         </p>
                       </>
                     ) : (
@@ -687,7 +690,7 @@ export default function UserPage({ user }: Props) {
                         <Upload className="w-14 h-14 text-gray-400 dark:text-white/30" />
                         <div>
                           <p className="text-base font-semibold text-gray-900 dark:text-white mb-1">
-                            Upload your CV
+                            {t("user.uploadYourCv")}
                           </p>
                           <p className="text-sm text-gray-500 dark:text-white/50">
                             PDF, DOC, DOCX • Max 5MB
@@ -695,13 +698,12 @@ export default function UserPage({ user }: Props) {
                         </div>
                         <button
                           onClick={() => fileInputRef.current?.click()}
-                          className="mt-2 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors shadow-lg"
+                          className="app-primary-button mt-2 px-8 py-3"
                         >
-                          Choose File
+                          {t("user.chooseFile")}
                         </button>
                         <p className="text-xs text-gray-500 dark:text-white/50 mt-2 max-w-xs">
-                          Your CV will be used to generate personalized cover
-                          letters
+                          {t("user.cvUploadHint")}
                         </p>
                       </>
                     )}
@@ -720,7 +722,7 @@ export default function UserPage({ user }: Props) {
             {/* Modal Header */}
             <div className="sticky top-0 bg-white dark:bg-[#1a1a1a] border-b border-gray-200 dark:border-white/5 p-6 flex items-center justify-between">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Edit Profile
+                {t("user.editModalTitle")}
               </h2>
               <button
                 onClick={() => setIsEditModalOpen(false)}
@@ -737,7 +739,7 @@ export default function UserPage({ user }: Props) {
                   {/* Profile Picture */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-3">
-                      Profile Picture
+                      {t("user.profilePicture")}
                     </label>
                     <div className="flex items-center gap-6">
                       {/* Avatar Preview */}
@@ -745,7 +747,7 @@ export default function UserPage({ user }: Props) {
                         {profileImage ? (
                           <img
                             src={profileImage}
-                            alt="Profile"
+                            alt={t("user.profileAlt")}
                             className="w-24 h-24 rounded-2xl object-cover"
                           />
                         ) : (
@@ -768,16 +770,16 @@ export default function UserPage({ user }: Props) {
                         />
                         <button
                           onClick={() => profileImageInputRef.current?.click()}
-                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors text-sm"
+                          className="app-primary-button px-4 py-2 text-sm"
                         >
-                          Upload Image
+                          {t("user.uploadImage")}
                         </button>
                         {profileImage && (
                           <button
                             onClick={() => setProfileImage(null)}
-                            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-white/10 dark:hover:bg-white/20 text-gray-700 dark:text-white rounded-lg font-medium transition-colors text-sm"
+                            className="app-secondary-button px-4 py-2 text-sm"
                           >
-                            Use Initials
+                            {t("user.useInitials")}
                           </button>
                         )}
                       </div>
@@ -787,7 +789,7 @@ export default function UserPage({ user }: Props) {
                   {/* Name */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                      Name
+                      {t("user.name")}
                     </label>
                     <input
                       type="text"
@@ -802,7 +804,7 @@ export default function UserPage({ user }: Props) {
                   {/* Title */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                      Title
+                      {t("user.titleLabel")}
                     </label>
                     <input
                       type="text"
@@ -817,7 +819,7 @@ export default function UserPage({ user }: Props) {
                   {/* Location */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                      Location
+                      {t("user.location")}
                     </label>
                     <input
                       type="text"
@@ -837,7 +839,7 @@ export default function UserPage({ user }: Props) {
               {editSection === "bio" && (
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                    About Me
+                    {t("user.aboutMeLabel")}
                   </label>
                   <textarea
                     value={editedUser.bio}
@@ -853,7 +855,7 @@ export default function UserPage({ user }: Props) {
               {editSection === "skills" && (
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                    Skills (comma-separated)
+                    {t("user.skillsCommaSeparated")}
                   </label>
                   <input
                     type="text"
@@ -865,7 +867,7 @@ export default function UserPage({ user }: Props) {
                       })
                     }
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="C#, TypeScript, React, Next.js"
+                    placeholder={t("user.skillsPlaceholder")}
                   />
                 </div>
               )}
@@ -873,7 +875,7 @@ export default function UserPage({ user }: Props) {
               {editSection === "roles" && (
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                    Desired Roles (comma-separated)
+                    {t("user.rolesCommaSeparated")}
                   </label>
                   <input
                     type="text"
@@ -885,7 +887,7 @@ export default function UserPage({ user }: Props) {
                       })
                     }
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Frontend Developer, Fullstack Developer"
+                    placeholder={t("user.rolesPlaceholder")}
                   />
                 </div>
               )}
@@ -895,16 +897,16 @@ export default function UserPage({ user }: Props) {
             <div className="sticky bottom-0 bg-white dark:bg-[#1a1a1a] border-t border-gray-200 dark:border-white/5 p-6 flex items-center justify-end gap-3">
               <button
                 onClick={() => setIsEditModalOpen(false)}
-                className="px-6 py-3 rounded-xl border border-gray-200 dark:border-white/10 text-gray-700 dark:text-white/70 hover:bg-gray-50 dark:hover:bg-white/5 font-medium transition-colors"
+                className="app-secondary-button px-6 py-3"
               >
-                Cancel
+                {t("user.cancel")}
               </button>
               <button
                 onClick={handleSaveProfile}
-                className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors shadow-lg"
+                className="app-primary-button px-6 py-3"
               >
                 <Save className="w-4 h-4" />
-                Save Changes
+                {t("user.saveChanges")}
               </button>
             </div>
           </div>
