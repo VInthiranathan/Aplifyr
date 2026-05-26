@@ -185,7 +185,48 @@ public class ExternalJobsController : ControllerBase
         }
         if (remote.HasValue)                          qs["remote"]        = remote.Value.ToString().ToLower();
         if (!string.IsNullOrWhiteSpace(workingHoursType)) qs["working_hours_type"] = workingHoursType;
-        if (!string.IsNullOrWhiteSpace(employmentType))   qs["employment_type"]   = employmentType;
+        if (!string.IsNullOrWhiteSpace(employmentType))
+        {
+            var empToUse = employmentType.Trim();
+            // If not already a code, try to resolve via AF stats endpoint
+            if (!empToUse.All(char.IsDigit))
+            {
+                try
+                {
+                    var statsUrlEmp = $"{AF_BASE}/{AF_SEARCH_PATH}?limit=0&stats=employment_type&stats.limit=200";
+                    var statsResEmp = await _http.GetAsync(statsUrlEmp);
+                    var statsContentEmp = await statsResEmp.Content.ReadAsStringAsync();
+                    using var docEmp = JsonDocument.Parse(statsContentEmp);
+                    if (docEmp.RootElement.TryGetProperty("stats", out var statsArrEmp) && statsArrEmp.GetArrayLength() > 0)
+                    {
+                        foreach (var stat in statsArrEmp.EnumerateArray())
+                        {
+                            if (stat.GetProperty("type").GetString() != "employment_type") continue;
+                            if (!stat.TryGetProperty("values", out var valsEmp)) continue;
+                            foreach (var v in valsEmp.EnumerateArray())
+                            {
+                                var term = v.GetProperty("term").GetString() ?? string.Empty;
+                                var code = v.TryGetProperty("code", out var codeEl) ? codeEl.GetString() : null;
+                                if (string.IsNullOrWhiteSpace(code)) continue;
+                                if (term.Contains(empToUse, StringComparison.OrdinalIgnoreCase) ||
+                                    empToUse.Contains(term, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    empToUse = code;
+                                    break;
+                                }
+                            }
+                            if (empToUse != employmentType.Trim()) break;
+                        }
+                    }
+                }
+                catch
+                {
+                    // ignore and fall back to original
+                }
+            }
+
+            qs["employment_type"] = empToUse;
+        }
         qs["limit"]  = limit.ToString();
         qs["offset"] = offset.ToString();
 
