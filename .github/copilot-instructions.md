@@ -89,6 +89,16 @@ npm run dev
 - Use `app-card-base` + `app-card-hover` for hoverable cards and panels.
 - Do not introduce blue-only hover states for standard app surfaces.
 
+### Page Layout
+
+- Page-level spacing should follow the in-app shell used by Support and All Jobs.
+- Prefer shared page layout primitives from `frontend/styles/globals.css` for standard page structure:
+  - `app-page-shell` for outer page padding and vertical rhythm
+  - `app-page-header` for title/subtitle grouping
+  - `app-page-title` for the main page heading
+  - `app-page-subtitle` for the supporting line below the title
+- Home and Favorites should align with the same page-shell spacing and header rhythm as the rest of the app instead of using custom `min-h-screen`, `p-8`, or oversized hero-style headings.
+
 ### Buttons
 
 - Prefer the shared button system in `frontend/components/ui/button.tsx`.

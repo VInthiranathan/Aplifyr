@@ -21,6 +21,22 @@
     @apply app-card-base app-card-hover rounded-3xl p-6;
   }
 
+  .app-page-shell {
+    @apply p-6 space-y-8;
+  }
+
+  .app-page-header {
+    @apply space-y-1;
+  }
+
+  .app-page-title {
+    @apply text-2xl font-bold text-slate-900 dark:text-white;
+  }
+
+  .app-page-subtitle {
+    @apply text-sm text-slate-500 dark:text-white/50;
+  }
+
   .app-primary-button {
     @apply inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold transition-all hover:bg-slate-700 hover:shadow-md dark:hover:bg-slate-200 dark:hover:shadow-lg disabled:pointer-events-none disabled:opacity-50 shadow-sm;
   }

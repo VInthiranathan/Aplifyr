@@ -113,14 +113,13 @@ export default function Home({ jobs, progression }: Props) {
   const gradeC = gradeCount("C");
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0d0d0d] p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="app-page-shell">
         {/* Header Section */}
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
+        <div className="app-page-header">
+          <h1 className="app-page-title">
             {t("home.title")}
           </h1>
-          <p className="text-gray-500 dark:text-white/60">
+          <p className="app-page-subtitle">
             {t("home.subtitle")}
           </p>
         </div>
@@ -268,10 +267,10 @@ export default function Home({ jobs, progression }: Props) {
         {/* Job List Section */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            <h2 className="text-lg font-semibold text-slate-800 dark:text-white">
               {t("home.recentJobs")}
             </h2>
-            <span className="text-sm text-gray-500 dark:text-white/60">
+            <span className="text-sm text-slate-500 dark:text-white/50">
               {t("home.jobCount", { count: jobs.length })}
             </span>
           </div>
@@ -393,7 +392,6 @@ export default function Home({ jobs, progression }: Props) {
             ))}
           </div>
         </div>
-      </div>
     </div>
   );
 }

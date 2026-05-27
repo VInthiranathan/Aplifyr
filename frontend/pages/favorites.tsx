@@ -34,26 +34,23 @@ export default function FavoritesPage() {
 
   if (!loaded) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#0d0d0d] p-8">
-        <div className="max-w-7xl mx-auto">
+      <div className="app-page-shell">
           <p className="text-gray-400 dark:text-white/40">
             {t("favorites.loading")}
           </p>
-        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0d0d0d] p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="app-page-shell">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+        <div className="flex items-start justify-between gap-4">
+          <div className="app-page-header">
+            <h1 className="app-page-title">
               {t("favorites.title")}
             </h1>
-            <p className="text-gray-500 dark:text-white/60">
+            <p className="app-page-subtitle">
               {t("favorites.savedCount", { count: favorites.length })}
             </p>
           </div>
@@ -227,7 +224,6 @@ export default function FavoritesPage() {
             })}
           </div>
         )}
-      </div>
     </div>
   );
 }
