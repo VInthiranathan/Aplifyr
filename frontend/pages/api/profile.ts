@@ -5,6 +5,17 @@ import {
   serializeCookieHeader,
 } from '@supabase/auth-helpers-nextjs'
 
+function normalizeStringArray(value: unknown) {
+  if (!Array.isArray(value)) {
+    return null
+  }
+
+  return value
+    .filter((entry): entry is string => typeof entry === 'string')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+}
+
 function appendSetCookie(res: NextApiResponse, values: string[]) {
   const existing = res.getHeader('Set-Cookie')
   const existingArray =
@@ -77,8 +88,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         title: body.title ?? null,
         location: body.location ?? null,
         bio: body.bio ?? null,
-        tech_stack: body.tags ?? null,
-        roles: body.roles ?? null,
+        location_preferences: normalizeStringArray(body.locationPreferences),
+        tech_stack: normalizeStringArray(body.tags),
+        roles: normalizeStringArray(body.roles),
         cv_url: body.cv_url ?? null,
       }
 

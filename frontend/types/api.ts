@@ -26,6 +26,7 @@ export interface User {
   name: string;
   title: string;
   location: string;
+  locationPreferences: string[];
   bio: string;
   tags: string[];
   roles: string[];
