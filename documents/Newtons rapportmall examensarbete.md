@@ -197,8 +197,79 @@ Genom att använda embeddings möjliggörs matchning även när olika formulerin
 för liknande kompetenser, vilket ger en mer robust bedömning än enbart nyckelordsbaserad
 matchning.
 7. Resultatredovisning
+Detta examensarbete resulterade i en fungerande prototyp av Aplifyr. Prototypen visar att det går att kombinera jobbannonser, användarprofil, CV-data och AI-stöd i en och samma
+webbapplikation. Resultatet är en lösning där användaren kan få en mer strukturerad och
+tidseffektiv process för sitt jobbsökande.
+
+7.1 Uppnådda funktioner
+Flera av de planerade kärnfunktionerna har implementerats i prototypen:
+• Användaren kan skapa konto och hantera sin profil
+• Användaren kan ladda upp sitt CV och spara relevant information
+• Systemet kan hämta och visa jobbannonser
+• Systemet kan matcha användaren mot jobb och presentera resultatet i nivåerna A, B och C
+• Systemet kan generera ett personligt brev utifrån användarens profil och innehållet i
+jobbannonsen
+
+Detta innebär att applikationen täcker de viktigaste delarna i det tänkta användarflödet, från profilskapande till att användaren får stöd i själva ansökningsprocessen.
+
+7.2 Resultat i användarflödet
+Ur användarens perspektiv innebär prototypen att flera manuella moment har samlats på ett
+och samma ställe. Istället för att själv behöva leta igenom ett stort antal annonser utan tydlig vägledning, kan användaren få en översikt över vilka jobb som passar bäst. Matchningsgraden
+ger en snabb indikation på vilka annonser som bör prioriteras.
+
+Det genererade personliga brevet fungerar som ett första utkast som utgår från både
+jobbannonsen och användarens egen information. På så sätt sparar användaren tid samtidigt
+som brevet blir mer anpassat än ett generellt standardbrev.
+
+7.3 Tekniskt resultat
+Projektet har också visat att den valda tekniska lösningen fungerar väl för den här typen av applikation. Frontend i Next.js, backend i .NET och datalagring i Supabase har gjort det möjligt att bygga en tydligt uppdelad struktur där varje del har ett eget ansvar.
+
+Det tekniska resultatet är därför inte bara en fungerande prototyp, utan också en grund som går att bygga vidare på. Arkitekturen gör det möjligt att lägga till fler funktioner i framtiden utan att hela systemet behöver göras om från början.
 8. Analys och slutsatser
+Resultatet från projektet visar att grundidén bakom Aplifyr är genomförbar. Det går att skapa en applikation som både hjälper användaren att förstå sin matchning mot jobbannonser och minskar tiden som läggs på repetitiva delar av jobbsökandet.
+
+8.1 Analys av måluppfyllelse
+Målet med examensarbetet var att ta fram en fungerande prototyp som kunde underlätta
+jobbsökandet genom matchning och automatiserad generering av personligt brev. Det målet har i stora drag uppnåtts. Prototypen visar att användaren kan få stöd i flera steg av processen och att systemet kan binda samman flera tekniker till en gemensam lösning.
+
+En viktig del av måluppfyllelsen är att applikationen inte bara visar jobbannonser, utan också försöker ge användaren ett faktiskt beslutsstöd. Matchningsgraderna A, B och C gör det enklare att snabbt bedöma vilka annonser som verkar mest relevanta.
+
+8.2 Begränsningar i resultatet
+Samtidigt finns det tydliga begränsningar. Matchningslogiken är förenklad och bör därför inte ses som en exakt bedömning av om en användare passar för ett jobb. Resultatet påverkas också av hur mycket information som finns i användarens profil, hur tydligt CV:t är formulerat och hur detaljerad jobbannonsen är.
+
+Även funktionen för personliga brev har sina begränsningar. Ett AI-genererat brev kan ge en bra start, men det behöver fortfarande granskas av användaren. Innehållet kan annars bli för generellt eller innehålla formuleringar som inte fullt ut speglar användarens erfarenheter.
+
+Eftersom projektet är en prototyp har fokus främst legat på att visa att lösningen fungerar i praktiken. Det betyder att vissa delar, till exempel större användartester, djupare utvärdering av träffsäkerhet och mer avancerad optimering, inte har genomförts fullt ut.
+
+8.3 Slutsatser
+Den övergripande slutsatsen är att Aplifyr visar tydlig potential som stödverktyg för
+arbetssökande. Lösningen bidrar med struktur, sparar tid och gör det lättare för användaren att komma igång med ansökningar. Projektet visar också att AI kan användas på ett praktiskt sätt för att stötta användaren utan att ta över hela processen.
+
+Samtidigt är det viktigt att se systemet som ett hjälpmedel och inte som en garanti för rättvisa eller helt korrekta bedömningar. Det bästa värdet uppstår när användaren använder resultatet som stöd, granskar informationen själv och gör egna justeringar där det behövs.
 9. Rekommendationer
+Utifrån resultatet av projektet finns flera rekommendationer för fortsatt utveckling av
+applikationen.
+
+9.1 Vidareutveckling av matchningslogik
+En tydlig rekommendation är att utveckla matchningsmodellen ytterligare. I en framtida version kan fler faktorer vägas in, till exempel tidigare arbetslivserfarenhet, utbildningsnivå, språkkunskaper och hur långt användaren är villig att resa eller flytta. Det skulle ge en mer nyanserad och användbar matchningsbedömning.
+
+Det kan också vara värdefullt att låta användaren få en kort motivering till varför ett jobb har fått en viss matchningsgrad. Det skulle göra resultatet mer begripligt och öka förtroendet för systemet.
+
+9.2 Förbättring av personliga brev
+Funktionen för personligt brev bör utvecklas så att användaren får ännu större möjlighet att styra tonen och innehållet. Exempelvis kan systemet erbjuda olika stilar beroende på typ av jobb eller bransch. Det vore också bra att låta användaren välja vilka delar av sin profil som ska betonas i brevet.
+
+9.3 Testning och utvärdering
+En annan viktig rekommendation är att genomföra användartester i större omfattning. Det
+skulle ge bättre underlag för att förstå hur tydlig applikationen är, hur användbar
+matchningsgraden upplevs och hur väl de genererade breven fungerar i verkliga situationer.
+
+Det är även relevant att utvärdera systemets träffsäkerhet mer systematiskt genom att jämföra matchningsresultat med användarnas egna bedömningar eller faktiska ansökningsutfall.
+
+9.4 Fortsatt arbete
+På längre sikt kan applikationen byggas ut med fler funktioner, till exempel CV-förbättring, intervjuförberedelser, rekommendationer kring kompetensutveckling och mer avancerad uppföljning av användarens jobbsökande. Den nuvarande prototypen ger en stabil grund för sådan vidareutveckling.
+
+Sammanfattningsvis rekommenderas att nästa steg fokuserar på bättre precision, tydligare
+användarstöd och mer testning med riktiga användare. Det skulle göra lösningen mer mogen och öka dess praktiska värde.
 10. Källförteckning
 Next.js
 Next.js Documentation. https://nextjs.org/
