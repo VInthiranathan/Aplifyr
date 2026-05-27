@@ -89,12 +89,13 @@ export default function ForgotPasswordPage() {
       isFocused={isFocused}
       footer={
         <div className="mt-8 text-center">
-          <button
+          <Button
             onClick={() => router.push("/auth")}
-            className="text-sm text-sky-600 dark:text-sky-400 font-medium hover:underline"
+            variant="link"
+            className="h-auto px-0 py-0 text-sm"
           >
             {t("auth.backToSignIn")}
-          </button>
+          </Button>
         </div>
       }
     >
@@ -129,7 +130,7 @@ export default function ForgotPasswordPage() {
 
         <Button
           type="submit"
-          className="w-full mt-4 rounded-none h-12 text-sm font-medium uppercase tracking-widest"
+          className="mt-4 h-12 w-full uppercase tracking-widest"
           disabled={submitting || !isSupabaseConfigured}
         >
           {submitting ? t("auth.working") : t("auth.sendResetLink")}

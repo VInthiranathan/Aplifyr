@@ -102,9 +102,12 @@ npm run dev
   - `Button variant="secondary"` for secondary actions
   - `Button variant="ghost"` for navbar-like icon or subtle utility actions
   - `Button variant="external"` only for outbound/external-link actions such as opening original job ads or external apply flows
+  - `Button variant="link"` for inline text-only actions that should still use the shared API
   - `app-primary-button` and `app-secondary-button` when a plain element or link must match the same system
 - Avoid reintroducing `bg-blue-600 hover:bg-blue-700`, `bg-purple-600 hover:bg-purple-700`, or page-local button palettes for standard actions.
 - On job detail surfaces, prefer shared primary/secondary buttons and reserve the external variant for outbound links only.
+- Do not override shared button shape with `rounded-none` on auth or other standard app surfaces.
+- Auth pages, favorites actions, and sidebar/auth-shell utility controls should use the shared Button API for submit, toggle, close, and icon actions unless the control is a true navigation link.
 
 ### Job Lists
 

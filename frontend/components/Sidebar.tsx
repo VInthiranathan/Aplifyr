@@ -14,6 +14,7 @@ import {
   LogOut,
   Bookmark,
 } from "lucide-react";
+import { Button } from "./ui/button";
 
 const navItemDefs = [
   { key: "nav.userDetails", href: "/user", icon: User },
@@ -97,22 +98,26 @@ export default function Sidebar() {
       {/* language + theme toggles */}
       <div className="flex items-center gap-2 px-1 mt-2">
         {/* language toggle */}
-        <button
+        <Button
           onClick={toggleLanguage}
-          className="flex-1 text-xs font-semibold py-1.5 rounded-lg bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white transition-colors"
+          variant="secondary"
+          size="sm"
+          className="flex-1 h-auto rounded-lg py-1.5 text-xs"
         >
           {locale === "en" ? "SV" : "EN"}
-        </button>
+        </Button>
 
         {/* theme toggle */}
         {mounted && (
-          <button
+          <Button
             onClick={() => setTheme(isDark ? "light" : "dark")}
-            className="flex-1 flex items-center justify-center py-1.5 rounded-lg bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white transition-colors"
+            variant="secondary"
+            size="sm"
+            className="flex-1 h-auto rounded-lg py-1.5"
             title={isDark ? t("theme.light") : t("theme.dark")}
           >
             {isDark ? <Sun size={14} /> : <Moon size={14} />}
-          </button>
+          </Button>
         )}
       </div>
 
@@ -158,13 +163,14 @@ export default function Sidebar() {
         </Link>
 
         {/* sign out button */}
-        <button
+        <Button
           onClick={() => (window.location.href = "/api/auth/signout")}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+          variant="ghost"
+          className="justify-start rounded-lg px-3 py-2 text-sm"
         >
           <LogOut size={16} />
           {t("auth.signOut")}
-        </button>
+        </Button>
       </div>
     </aside>
   );

@@ -142,12 +142,13 @@ export default function AuthPage() {
           <span className="text-sm text-gray-500 dark:text-white/60">
             {isLogin ? t("auth.noAccount") : t("auth.haveAccount")}
           </span>
-          <button
+          <Button
             onClick={() => setIsLogin(!isLogin)}
-            className="text-sm text-sky-600 dark:text-sky-400 font-medium hover:underline"
+            variant="link"
+            className="ml-1 h-auto px-0 py-0 text-sm"
           >
             {isLogin ? t("auth.signUp") : t("auth.signIn")}
-          </button>
+          </Button>
         </div>
       }
     >
@@ -207,13 +208,15 @@ export default function AuthPage() {
                   onFocus={() => setIsFocused(true)}
                   onBlur={() => setIsFocused(false)}
                 />
-                <button
+                <Button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-500 dark:text-white/60 hover:text-gray-900 dark:hover:text-white transition-colors"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-1/2 h-8 w-8 -translate-y-1/2 text-gray-500 dark:text-white/60"
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -234,13 +237,14 @@ export default function AuthPage() {
             )}
 
             {isLogin && (
-              <button
+              <Button
                 type="button"
                 onClick={() => router.push("/auth/forgot-password")}
-                className="self-end text-xs text-gray-500 dark:text-white/60 hover:text-sky-600 dark:hover:text-sky-400 transition-colors -mt-4"
+                variant="link"
+                className="-mt-4 h-auto self-end px-0 py-0 text-xs"
               >
                 {t("auth.forgotPassword")}
-              </button>
+              </Button>
             )}
 
             {error && (
@@ -257,7 +261,7 @@ export default function AuthPage() {
 
             <Button
               type="submit"
-              className="w-full mt-4 rounded-none h-12 text-sm font-medium uppercase tracking-widest"
+              className="mt-4 h-12 w-full uppercase tracking-widest"
               disabled={submitting || !isSupabaseConfigured}
             >
               {submitting

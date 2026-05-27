@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { Search, Bookmark, Trash2, MapPin, Briefcase } from "lucide-react";
 import JobListCard from "../components/JobListCard";
+import { Button } from "../components/ui/button";
 
 export const getStaticProps: GetStaticProps = async ({ locale }) => ({
   props: { ...(await serverSideTranslations(locale ?? "en", ["common"])) },
@@ -58,17 +59,18 @@ export default function FavoritesPage() {
           </div>
 
           {favorites.length > 0 && (
-            <button
+            <Button
               onClick={() => {
                 if (confirm(t("favorites.clearAllConfirm"))) {
                   clearAllFavorites();
                 }
               }}
-              className="app-secondary-button px-4 py-2 text-sm text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/40 hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-700 dark:hover:text-red-300"
+              variant="secondary"
+              className="px-4 py-2 text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/40 hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-700 dark:hover:text-red-300"
             >
               <Trash2 size={16} />
               {t("favorites.clearAll")}
-            </button>
+            </Button>
           )}
         </div>
 
@@ -102,12 +104,9 @@ export default function FavoritesPage() {
             <p className="text-gray-500 dark:text-white/50 mb-6">
               {t("favorites.emptyDescription")}
             </p>
-            <Link
-              href="/jobs"
-              className="app-primary-button px-6 py-3"
-            >
-              {t("favorites.exploreJobs")}
-            </Link>
+            <Button asChild className="px-6 py-3">
+              <Link href="/jobs">{t("favorites.exploreJobs")}</Link>
+            </Button>
           </div>
         )}
 
@@ -197,17 +196,19 @@ export default function FavoritesPage() {
                           {gradeToUse} {t("favorites.match")}
                         </span>
                       )}
-                      <button
+                      <Button
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
                           removeFavorite(job.id);
                         }}
-                        className="text-purple-500 dark:text-purple-400 hover:text-red-500 dark:hover:text-red-400 transition-colors p-2"
+                        variant="ghost"
+                        size="icon"
+                        className="text-purple-500 dark:text-purple-400 hover:text-red-500 dark:hover:text-red-400"
                         title={t("favorites.removeFavorite")}
                       >
                         <Bookmark size={20} fill="currentColor" />
-                      </button>
+                      </Button>
                     </>
                   }
                   footer={
