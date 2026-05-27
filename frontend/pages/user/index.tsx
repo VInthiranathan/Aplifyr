@@ -81,6 +81,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
             name: profile.full_name ?? "",
             title: profile.title ?? "",
             location: profile.location ?? "",
+            locationPreferences: profile.location_preferences ?? [],
             bio: profile.bio ?? "",
             tags: profile.tech_stack ?? [],
             roles: profile.roles ?? [],
@@ -127,6 +128,55 @@ const locationFilterKeys = [
   "user.remote",
 ];
 
+const emptyUser: User = {
+  id: "",
+  name: "",
+  title: "",
+  location: "",
+  locationPreferences: [],
+  bio: "",
+  tags: [],
+  roles: [],
+  avatarInitials: "",
+};
+
+const mapProfileToUser = (profile: Record<string, any>): User => ({
+  id: profile.id,
+  name: profile.full_name ?? "",
+  title: profile.title ?? "",
+  location: profile.location ?? "",
+  locationPreferences: profile.location_preferences ?? [],
+  bio: profile.bio ?? "",
+  tags: profile.tech_stack ?? [],
+  roles: profile.roles ?? [],
+  avatarInitials: profile.full_name
+    ? profile.full_name
+        .split(/\s+/)
+        .map((segment: string) => segment[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase()
+    : "",
+});
+
+const saveProfile = async (nextUser: User) => {
+  const res = await fetch("/api/profile", {
+    method: "PUT",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(nextUser),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    console.error("save profile failed", err);
+    throw new Error("save profile failed");
+  }
+
+  const data = await res.json();
+  return data.profile ? mapProfileToUser(data.profile) : nextUser;
+};
+
 export default function UserPage({ user }: Props) {
   const { t } = useTranslation("common");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -139,7 +189,9 @@ export default function UserPage({ user }: Props) {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [cvUrl, setCvUrl] = useState<string | null>(null);
-  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>(
+    user?.locationPreferences ?? [],
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const profileImageInputRef = useRef<HTMLInputElement>(null);
   const locationFilters = locationFilterKeys.map((key) => t(key));
@@ -161,58 +213,27 @@ export default function UserPage({ user }: Props) {
           if (!res.ok) throw new Error("fetch failed");
           const data = await res.json();
           if (data.profile) {
-            const p = data.profile;
-            const mapped: User = {
-              id: p.id,
-              name: p.full_name ?? "",
-              title: p.title ?? "",
-              location: p.location ?? "",
-              bio: p.bio ?? "",
-              tags: p.tech_stack ?? [],
-              roles: p.roles ?? [],
-              avatarInitials: p.full_name
-                ? p.full_name
-                    .split(/\s+/)
-                    .map((s: string) => s[0])
-                    .slice(0, 2)
-                    .join("")
-                    .toUpperCase()
-                : "",
-            };
+            const mapped = mapProfileToUser(data.profile);
             setClientProfile(mapped);
             setEditedUser(mapped);
-            setCvUrl(p.cv_url || null);
+            setSelectedLocations(mapped.locationPreferences);
+            setCvUrl(data.profile.cv_url || null);
           } else {
             // no profile yet — allow user to create one via UI
             setClientProfile(null);
-            setEditedUser({
-              id: "",
-              name: "",
-              title: "",
-              location: "",
-              bio: "",
-              tags: [],
-              roles: [],
-              avatarInitials: "",
-            });
+            setEditedUser({ ...emptyUser });
+            setSelectedLocations([]);
           }
         } catch (e) {
           setClientProfile(null);
-          setEditedUser({
-            id: "",
-            name: "",
-            title: "",
-            location: "",
-            bio: "",
-            tags: [],
-            roles: [],
-            avatarInitials: "",
-          });
+          setEditedUser({ ...emptyUser });
+          setSelectedLocations([]);
         }
       })();
     } else {
       setClientProfile(user);
       setEditedUser(user);
+      setSelectedLocations(user.locationPreferences);
       // Fetch CV URL for the user
       (async () => {
         try {
@@ -261,12 +282,34 @@ export default function UserPage({ user }: Props) {
     }
   };
 
-  const toggleLocation = (location: string) => {
-    setSelectedLocations((prev) =>
-      prev.includes(location)
-        ? prev.filter((loc) => loc !== location)
-        : [...prev, location],
-    );
+  const toggleLocation = async (location: string) => {
+    const previousLocations = selectedLocations;
+    const nextLocations = previousLocations.includes(location)
+      ? previousLocations.filter((loc) => loc !== location)
+      : [...previousLocations, location];
+
+    const baseUser = clientProfile ?? editedUser ?? emptyUser;
+    const nextUser: User = {
+      ...baseUser,
+      locationPreferences: nextLocations,
+    };
+
+    setSelectedLocations(nextLocations);
+    setClientProfile((prev) => (prev === undefined ? prev : nextUser));
+    setEditedUser(nextUser);
+
+    try {
+      const savedProfile = await saveProfile(nextUser);
+      setClientProfile(savedProfile);
+      setEditedUser(savedProfile);
+      setSelectedLocations(savedProfile.locationPreferences);
+    } catch (error) {
+      console.error(error);
+      setSelectedLocations(previousLocations);
+      setClientProfile((prev) => (prev === undefined ? prev : baseUser));
+      setEditedUser(baseUser);
+      alert(t("user.saveProfileError"));
+    }
   };
 
   const uploadCV = async (file: File) => {
@@ -326,21 +369,14 @@ export default function UserPage({ user }: Props) {
   const handleSaveProfile = async () => {
     if (!editedUser) return;
     try {
-      const res = await fetch("/api/profile", {
-        method: "PUT",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editedUser),
+      const savedProfile = await saveProfile({
+        ...editedUser,
+        locationPreferences: selectedLocations,
       });
-
-      if (res.ok) {
-        setIsEditModalOpen(false);
-        window.location.reload();
-      } else {
-        const err = await res.json().catch(() => ({}));
-        console.error("save profile failed", err);
-        alert(t("user.saveProfileFailed"));
-      }
+      setClientProfile(savedProfile);
+      setEditedUser(savedProfile);
+      setSelectedLocations(savedProfile.locationPreferences);
+      setIsEditModalOpen(false);
     } catch (error) {
       console.error(error);
       alert(t("user.saveProfileError"));
@@ -395,16 +431,8 @@ export default function UserPage({ user }: Props) {
               onClick={() => {
                 setEditedUser(
                   clientProfile ??
-                    editedUser ?? {
-                      id: "",
-                      name: "",
-                      title: "",
-                      location: "",
-                      bio: "",
-                      tags: [],
-                      roles: [],
-                      avatarInitials: "",
-                    },
+                    editedUser ??
+                    emptyUser,
                 );
                 setEditSection("profile");
                 setIsEditModalOpen(true);
@@ -435,16 +463,8 @@ export default function UserPage({ user }: Props) {
                     onClick={() => {
                       setEditedUser(
                         clientProfile ??
-                          editedUser ?? {
-                            id: "",
-                            name: "",
-                            title: "",
-                            location: "",
-                            bio: "",
-                            tags: [],
-                            roles: [],
-                            avatarInitials: "",
-                          },
+                          editedUser ??
+                          emptyUser,
                       );
                       setEditSection("bio");
                       setIsEditModalOpen(true);
@@ -516,16 +536,8 @@ export default function UserPage({ user }: Props) {
                     onClick={() => {
                       setEditedUser(
                         clientProfile ??
-                          editedUser ?? {
-                            id: "",
-                            name: "",
-                            title: "",
-                            location: "",
-                            bio: "",
-                            tags: [],
-                            roles: [],
-                            avatarInitials: "",
-                          },
+                          editedUser ??
+                          emptyUser,
                       );
                       setEditSection("skills");
                       setIsEditModalOpen(true);
@@ -562,16 +574,8 @@ export default function UserPage({ user }: Props) {
                     onClick={() => {
                       setEditedUser(
                         clientProfile ??
-                          editedUser ?? {
-                            id: "",
-                            name: "",
-                            title: "",
-                            location: "",
-                            bio: "",
-                            tags: [],
-                            roles: [],
-                            avatarInitials: "",
-                          },
+                          editedUser ??
+                          emptyUser,
                       );
                       setEditSection("roles");
                       setIsEditModalOpen(true);
