@@ -1,6 +1,7 @@
 import { X, Copy, RefreshCw, Edit2, Send, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTranslation } from "next-i18next";
+import { Button } from "./ui/button";
 
 interface CoverLetterModalProps {
   isOpen: boolean;
@@ -67,12 +68,14 @@ export default function CoverLetterModal({
               {jobTitle} {company && `• ${company}`}
             </p>
           </div>
-          <button
+          <Button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-white/5 transition-colors"
+            variant="ghost"
+            size="icon"
+            className="text-gray-500 dark:text-white/60"
           >
             <X size={20} className="text-gray-500 dark:text-white/60" />
-          </button>
+          </Button>
         </div>
 
         {/* Content */}
@@ -81,7 +84,7 @@ export default function CoverLetterModal({
             <textarea
               value={editedLetter}
               onChange={(e) => setEditedLetter(e.target.value)}
-              className="w-full min-h-[400px] p-4 bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-white/10 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+              className="w-full min-h-[400px] p-4 bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-white/10 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-400 resize-none"
               placeholder={t("coverLetter.editPlaceholder")}
             />
           ) : (
@@ -94,42 +97,46 @@ export default function CoverLetterModal({
         </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-between gap-3 p-6 border-t border-gray-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a]">
-          <div className="flex gap-2">
-            <button
+        <div className="flex flex-wrap items-center justify-between gap-3 p-6 border-t border-gray-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a]">
+          <div className="flex flex-wrap gap-2">
+            <Button
               onClick={() => setIsEditing(!isEditing)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-900 dark:text-white text-sm transition-colors"
+              variant="secondary"
+              className="h-auto px-4 py-2"
             >
               <Edit2 size={16} />
               {isEditing ? t("coverLetter.save") : t("coverLetter.edit")}
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleCopy}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-900 dark:text-white text-sm transition-colors"
+              variant="secondary"
+              className="h-auto px-4 py-2"
             >
               {copied ? <Check size={16} /> : <Copy size={16} />}
               {copied ? t("coverLetter.copied") : t("coverLetter.copy")}
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={onRegenerate}
               disabled={isRegenerating}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-900 dark:text-white text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              variant="secondary"
+              className="h-auto px-4 py-2"
             >
               <RefreshCw
                 size={16}
                 className={isRegenerating ? "animate-spin" : ""}
               />
               {t("coverLetter.regenerate")}
-            </button>
+            </Button>
           </div>
           {applicationUrl && (
-            <button
+            <Button
               onClick={handleApply}
-              className="flex items-center gap-2 px-6 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium transition-colors"
+              variant="external"
+              className="h-auto px-6 py-2.5"
             >
               <Send size={16} />
               {t("coverLetter.sendApplication")}
-            </button>
+            </Button>
           )}
         </div>
       </div>

@@ -22,7 +22,7 @@
   }
 
   .app-primary-button {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold transition-colors hover:bg-slate-700 dark:hover:bg-slate-100 disabled:pointer-events-none disabled:opacity-50 shadow-sm;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold transition-all hover:bg-slate-700 hover:shadow-md dark:hover:bg-slate-200 dark:hover:shadow-lg disabled:pointer-events-none disabled:opacity-50 shadow-sm;
   }
 
   .app-secondary-button {

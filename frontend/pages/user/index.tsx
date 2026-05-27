@@ -22,6 +22,7 @@ import {
   Save,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { Button } from "../../components/ui/button";
 
 const BACKEND = process.env.BACKEND_URL ?? "http://localhost:5000";
 
@@ -459,7 +460,7 @@ export default function UserPage({ user }: Props) {
                   <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                     {t("user.aboutMe")}
                   </h2>
-                  <button
+                  <Button
                     onClick={() => {
                       setEditedUser(
                         clientProfile ??
@@ -469,10 +470,11 @@ export default function UserPage({ user }: Props) {
                       setEditSection("bio");
                       setIsEditModalOpen(true);
                     }}
-                    className="text-sm font-semibold px-3 py-1 rounded-lg bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10"
+                    variant="secondary"
+                    className="h-auto px-3 py-1.5"
                   >
                     {t("user.edit")}
-                  </button>
+                  </Button>
                 </div>
               </div>
               <p className="text-gray-700 dark:text-white/70 leading-relaxed">
@@ -532,7 +534,7 @@ export default function UserPage({ user }: Props) {
                   <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                     {t("user.techStack")}
                   </h2>
-                  <button
+                  <Button
                     onClick={() => {
                       setEditedUser(
                         clientProfile ??
@@ -542,10 +544,11 @@ export default function UserPage({ user }: Props) {
                       setEditSection("skills");
                       setIsEditModalOpen(true);
                     }}
-                    className="text-sm font-semibold px-3 py-1 rounded-lg bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10"
+                    variant="secondary"
+                    className="h-auto px-3 py-1.5"
                   >
                     {t("user.edit")}
-                  </button>
+                  </Button>
                 </div>
               </div>
               <div className="flex gap-3 flex-wrap">
@@ -570,7 +573,7 @@ export default function UserPage({ user }: Props) {
                   <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                     {t("user.desiredRoles")}
                   </h2>
-                  <button
+                  <Button
                     onClick={() => {
                       setEditedUser(
                         clientProfile ??
@@ -580,10 +583,11 @@ export default function UserPage({ user }: Props) {
                       setEditSection("roles");
                       setIsEditModalOpen(true);
                     }}
-                    className="text-sm font-semibold px-3 py-1 rounded-lg bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10"
+                    variant="secondary"
+                    className="h-auto px-3 py-1.5"
                   >
                     {t("user.edit")}
-                  </button>
+                  </Button>
                 </div>
               </div>
               <div className="flex gap-3 flex-wrap">
@@ -675,12 +679,13 @@ export default function UserPage({ user }: Props) {
                             {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
                           </p>
                         </div>
-                        <button
+                        <Button
                           onClick={() => setUploadedFile(null)}
-                          className="mt-2 px-8 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold transition-colors shadow-lg"
+                          variant="secondary"
+                          className="mt-2 h-auto px-8 py-3 text-red-700 dark:text-red-400 border-red-300 dark:border-red-800/60 hover:bg-red-100 dark:hover:bg-red-900/40 hover:text-red-700 dark:hover:text-red-300"
                         >
                           {t("user.removeFile")}
-                        </button>
+                        </Button>
                       </>
                     ) : isUploading ? (
                       <>
@@ -728,12 +733,14 @@ export default function UserPage({ user }: Props) {
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
                 {t("user.editModalTitle")}
               </h2>
-              <button
+              <Button
                 onClick={() => setIsEditModalOpen(false)}
-                className="w-10 h-10 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 flex items-center justify-center transition-colors"
+                variant="ghost"
+                size="icon"
+                className="text-gray-500 dark:text-white/50"
               >
                 <X className="w-5 h-5 text-gray-500 dark:text-white/50" />
-              </button>
+              </Button>
             </div>
 
             {/* Modal Body */}

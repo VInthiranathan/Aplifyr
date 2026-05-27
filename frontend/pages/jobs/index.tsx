@@ -18,6 +18,7 @@ import { formatLocation } from "../../lib/utils";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import JobListCard from "../../components/JobListCard";
+import { Button } from "../../components/ui/button";
 import { useFavorites } from "../../lib/useFavorites";
 
 export const getStaticProps: GetStaticProps = async ({ locale }) => ({
@@ -535,12 +536,13 @@ export default function AllJobsPage() {
       )}
 
       <div className="mt-3">
-        <button
+        <Button
           onClick={() => setShowApiLog((s) => !s)}
-          className="px-3 py-1 rounded-md bg-gray-200 dark:bg-white/5 text-sm"
+          variant="secondary"
+          className="h-auto px-3 py-1.5"
         >
           {showApiLog ? t("jobs.hideApiLog") : t("jobs.showApiLog")}
-        </button>
+        </Button>
         <span className="text-sm text-slate-500 ml-2">
           ({t("jobs.apiLogDescription")})
         </span>

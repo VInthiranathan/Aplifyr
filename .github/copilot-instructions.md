@@ -92,13 +92,19 @@ npm run dev
 ### Buttons
 
 - Prefer the shared button system in `frontend/components/ui/button.tsx`.
-- Primary actions should use the app-styled primary treatment instead of generic blue buttons.
-- Secondary actions should use the app-styled neutral treatment instead of ad hoc gray buttons.
+- Standard app buttons should collapse into two main treatments only:
+  - primary for the main action in a view or card
+  - secondary for supporting and neutral actions
+- Primary actions should use the app-styled primary treatment instead of generic blue or purple buttons.
+- Secondary actions should use the app-styled neutral treatment instead of ad hoc gray, white-outline, or custom muted buttons.
 - Shared options now are:
   - `Button` default or `variant="primary"` for primary actions
   - `Button variant="secondary"` for secondary actions
+  - `Button variant="ghost"` for navbar-like icon or subtle utility actions
+  - `Button variant="external"` only for outbound/external-link actions such as opening original job ads or external apply flows
   - `app-primary-button` and `app-secondary-button` when a plain element or link must match the same system
-- Avoid reintroducing `bg-blue-600 hover:bg-blue-700` for standard actions unless the design explicitly calls for a special-case accent.
+- Avoid reintroducing `bg-blue-600 hover:bg-blue-700`, `bg-purple-600 hover:bg-purple-700`, or page-local button palettes for standard actions.
+- On job detail surfaces, prefer shared primary/secondary buttons and reserve the external variant for outbound links only.
 
 ### Job Lists
 

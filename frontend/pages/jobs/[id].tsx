@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Briefcase, MapPin, Wifi, Loader2, Bookmark } from "lucide-react";
 import { formatLocation } from "../../lib/utils";
 import CoverLetterModal from "../../components/CoverLetterModal";
+import { Button } from "../../components/ui/button";
 import { getSupabaseBrowserClient } from "../../lib/supabaseClient";
 import { useFavorites } from "../../lib/useFavorites";
 
@@ -235,9 +236,9 @@ export default function JobDetailPage() {
           <div className="mt-2 text-red-500 text-sm">{t("jobDetail.error", { message: fetchError })}</div>
         )}
         <div className="mt-4">
-          <Link href="/jobs" className="text-purple-600">
-            ← {t("jobDetail.backToJobs")}
-          </Link>
+          <Button asChild variant="secondary" className="h-auto px-4 py-2">
+            <Link href="/jobs">← {t("jobDetail.backToJobs")}</Link>
+          </Button>
         </div>
       </div>
     );
@@ -246,12 +247,13 @@ export default function JobDetailPage() {
   return (
     <div className="p-6">
       <div className="flex items-center gap-2 mb-4">
-        <button
+        <Button
           onClick={() => setShowDebug((s) => !s)}
-          className="px-3 py-1 rounded-md bg-gray-200 dark:bg-white/5 text-sm"
+          variant="secondary"
+          className="h-auto px-3 py-1.5"
         >
           {showDebug ? t("jobDetail.hideApiLog") : t("jobDetail.showApiLog")}
-        </button>
+        </Button>
         <div className="text-sm text-slate-500">
           ({t("jobDetail.apiLogDescription")})
         </div>
@@ -295,20 +297,18 @@ export default function JobDetailPage() {
           <div className="flex items-center justify-between">
             <h1 className="text-lg font-bold">{t("jobDetail.ad")}</h1>
             <div className="flex gap-2">
-              <a
-                href={`https://arbetsformedlingen.se/platsbanken/annonser/${id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-3 py-2 rounded-xl bg-white dark:bg-[#111] border text-sm"
-              >
-                {t("jobDetail.openOriginal")}
-              </a>
-              <Link
-                href="/jobs"
-                className="px-3 py-2 rounded-xl bg-white dark:bg-[#111] border text-sm"
-              >
-                {t("jobDetail.backToJobs")}
-              </Link>
+              <Button asChild variant="external" className="h-auto px-3 py-2">
+                <a
+                  href={`https://arbetsformedlingen.se/platsbanken/annonser/${id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {t("jobDetail.openOriginal")}
+                </a>
+              </Button>
+              <Button asChild variant="secondary" className="h-auto px-3 py-2">
+                <Link href="/jobs">{t("jobDetail.backToJobs")}</Link>
+              </Button>
             </div>
           </div>
 
@@ -336,7 +336,7 @@ export default function JobDetailPage() {
                   <h1 className="text-3xl font-semibold leading-tight">
                     {job.headline ?? job.title ?? t("jobDetail.defaultJobTitle")}
                   </h1>
-                  <button
+                  <Button
                     onClick={() => {
                       toggleFavorite({
                         id: job.id,
@@ -346,22 +346,23 @@ export default function JobDetailPage() {
                         matchGrade: job.matchGrade,
                       });
                     }}
-                    className={`flex-shrink-0 p-2 transition-colors ${
-                      isFavorite(job.id)
-                        ? "text-purple-500 dark:text-purple-400"
-                        : "text-slate-300 dark:text-white/20 hover:text-purple-500 dark:hover:text-purple-400"
-                    }`}
                     title={
                       isFavorite(job.id)
                         ? t("jobs.removeFavorite")
                         : t("jobs.addFavorite")
+                    }
+                    variant="ghost"
+                    size="icon"
+                    className={isFavorite(job.id)
+                      ? "text-purple-500 dark:text-purple-400 hover:text-purple-500 dark:hover:text-purple-400"
+                      : "text-slate-300 dark:text-white/20 hover:text-purple-500 dark:hover:text-purple-400"
                     }
                   >
                     <Bookmark
                       size={24}
                       fill={isFavorite(job.id) ? "currentColor" : "none"}
                     />
-                  </button>
+                  </Button>
                 </div>
                 <div className="text-sm text-slate-500 mt-1">
                   {job.employer?.name}
@@ -447,14 +448,15 @@ export default function JobDetailPage() {
 
                       if (externalUrl) {
                         return (
-                          <a
-                            href={externalUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-4 py-2 rounded-md bg-[#082c5b] hover:bg-[#063053] text-white text-sm text-center"
-                          >
-                            {t("jobDetail.applyExternal")}
-                          </a>
+                          <Button asChild variant="external" className="h-auto w-full px-4 py-2.5">
+                            <a
+                              href={externalUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              {t("jobDetail.applyExternal")}
+                            </a>
+                          </Button>
                         );
                       }
 
@@ -462,14 +464,15 @@ export default function JobDetailPage() {
                       return (
                         <>
                           {renderApplicationInstructions(job, t)}
-                          <a
-                            href={getAfUrl(job)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-4 py-2 rounded-md bg-[#082c5b] hover:bg-[#063053] text-white text-sm text-center"
-                          >
-                            {t("jobDetail.openAf")}
-                          </a>
+                          <Button asChild variant="external" className="h-auto w-full px-4 py-2.5">
+                            <a
+                              href={getAfUrl(job)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              {t("jobDetail.openAf")}
+                            </a>
+                          </Button>
                         </>
                       );
                     })()}
@@ -477,23 +480,23 @@ export default function JobDetailPage() {
                 </div>
 
                 <div className="mt-4">
-                  <button
+                  <Button
                     onClick={generate}
                     disabled={generating}
-                    className="w-full px-3 py-2 rounded-xl bg-purple-600 text-white text-sm"
+                    className="h-auto w-full px-4 py-2.5"
                   >
                     {generating ? (
-                      <Loader2 size={14} className="animate-spin" />
+                      <>
+                        <Loader2 size={14} className="animate-spin" />
+                        {t("jobDetail.generateCoverLetter")}
+                      </>
                     ) : (
                       t("jobDetail.generateCoverLetter")
                     )}
-                  </button>
-                  <Link
-                    href="/jobs"
-                    className="block text-center mt-2 px-3 py-2 rounded-xl bg-white dark:bg-[#111] border text-sm"
-                  >
-                    {t("jobDetail.backToJobs")}
-                  </Link>
+                  </Button>
+                  <Button asChild variant="secondary" className="mt-2 h-auto w-full px-4 py-2.5">
+                    <Link href="/jobs">{t("jobDetail.backToJobs")}</Link>
+                  </Button>
                 </div>
               </aside>
             </div>
