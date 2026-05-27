@@ -41,6 +41,7 @@ public class CoverLettersController : ControllerBase
 
         string userJson = "{}";
         string cvText = "";
+        string bioText = "";
 
         if (request.TryGetProperty("user", out var userProfile))
         {
@@ -55,6 +56,17 @@ public class CoverLettersController : ControllerBase
                 {
                     cvText = $"[CV file available at: {cvUrl}]";
                     Console.WriteLine($"[CoverLetters] CV URL found: {cvUrl}");
+                }
+            }
+
+            // Extract bio/profile description if present
+            if (userProfile.TryGetProperty("bio", out var bioProp))
+            {
+                var bio = bioProp.GetString();
+                if (!string.IsNullOrEmpty(bio))
+                {
+                    bioText = bio;
+                    Console.WriteLine($"[CoverLetters] Bio found: {bioText.Length} chars");
                 }
             }
         }
@@ -103,9 +115,18 @@ public class CoverLettersController : ControllerBase
             // Detect language from description
             string language = DetectLanguage(description);
             
+            // Build context sections for the prompt
+            string cvSection = !string.IsNullOrEmpty(cvText) 
+                ? $"CV Information:\n{cvText}\n(Use this for work experience, education, technical skills, and concrete achievements)\n\n" 
+                : "";
+            
+            string bioSection = !string.IsNullOrEmpty(bioText) 
+                ? $"Profile Bio/Description:\n{bioText}\n(Use this for personality, goals, interests, soft skills, and personal presentation)\n\n" 
+                : "";
+            
             var prompt = language == "sv" 
-                ? $"Skriv ett professionellt och personligt personligt brev (på svenska) för följande jobbannons:\n\nJobbtitel: {title}\nFöretag: {employer}\nPlats: {location}\n\nJobbbeskrivning:\n{description}\n\nAnvändarprofil:\n{userJson}\n\n{(!string.IsNullOrEmpty(cvText) ? $"CV Information:\n{cvText}\n\n" : "")}Instruktioner:\n- Skriv ett kortfattat men övertygande personligt brev (150-250 ord)\n- Koppla användarens erfarenheter och kompetenser till jobbets krav\n- Var specifik och undvik generiska fraser\n- Visa entusiasm och motivation\n- Avsluta professionellt med hälsning"
-                : $"Write a professional and personal cover letter (in English) for the following job posting:\n\nJob Title: {title}\nCompany: {employer}\nLocation: {location}\n\nJob Description:\n{description}\n\nUser Profile:\n{userJson}\n\n{(!string.IsNullOrEmpty(cvText) ? $"CV Information:\n{cvText}\n\n" : "")}Instructions:\n- Write a concise but compelling cover letter (150-250 words)\n- Connect the user's experience and skills to the job requirements\n- Be specific and avoid generic phrases\n- Show enthusiasm and motivation\n- End professionally with a greeting";
+                ? $"Skriv ett professionellt och personligt personligt brev (på svenska) för följande jobbannons:\n\nJobbtitel: {title}\nFöretag: {employer}\nPlats: {location}\n\nJobbbeskrivning:\n{description}\n\n{bioSection}{cvSection}Användarprofil:\n{userJson}\n\nInstruktioner:\n- Kombinera information från BÅDE profilbeskrivningen (bio) och CV:t för att skapa ett heltäckande personligt brev\n- Använd CV:t som huvudkälla för arbetslivserfarenhet, utbildning och tekniska färdigheter\n- Använd profilbeskrivningen för att visa personlighet, motivation, mål och mjuka färdigheter (soft skills)\n- Om samma information finns i båda källorna, prioritera konkreta fakta från CV:t men använd profilbion för att förbättra formuleringar\n- Undvik att upprepa exakt samma information två gånger\n- Skriv ett kortfattat men övertygande personligt brev (150-250 ord)\n- Koppla användarens erfarenheter och kompetenser till jobbets krav\n- Var specifik och undvik generiska fraser\n- Visa entusiasm och motivation baserat på information från profilen\n- Avsluta professionellt med hälsning"
+                : $"Write a professional and personal cover letter (in English) for the following job posting:\n\nJob Title: {title}\nCompany: {employer}\nLocation: {location}\n\nJob Description:\n{description}\n\n{bioSection}{cvSection}User Profile:\n{userJson}\n\nInstructions:\n- Combine information from BOTH the profile description (bio) and CV to create a comprehensive cover letter\n- Use the CV as the primary source for work experience, education, and technical skills\n- Use the profile description to show personality, motivation, goals, and soft skills\n- If the same information appears in both sources, prioritize concrete facts from the CV but use the bio to improve phrasing\n- Avoid repeating the exact same information twice\n- Write a concise but compelling cover letter (150-250 words)\n- Connect the user's experience and skills to the job requirements\n- Be specific and avoid generic phrases\n- Show enthusiasm and motivation based on information from the profile\n- End professionally with a greeting";
 
             string coverLetter = "";
             string errorMsg = "";
