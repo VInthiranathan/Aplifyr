@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
 using DotNetEnv;
 
 // Ladda .env-filen om den finns
@@ -37,9 +38,39 @@ else
 }
 
 builder.Services.AddControllers();
+
+var configuredOrigins = builder.Configuration
+    .GetSection("AllowedOrigins")
+    .Get<string[]>()
+    ?.Where(origin => !string.IsNullOrWhiteSpace(origin))
+    .Select(origin => origin.Trim())
+    .Distinct(StringComparer.OrdinalIgnoreCase)
+    .ToArray();
+
+if (configuredOrigins == null || configuredOrigins.Length == 0)
+{
+    var rawOrigins = builder.Configuration["AllowedOrigins"]
+        ?? builder.Configuration["CORS_ALLOWED_ORIGINS"];
+
+    configuredOrigins = (rawOrigins ?? string.Empty)
+        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Where(origin => !string.IsNullOrWhiteSpace(origin))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+}
+
+if (configuredOrigins == null || configuredOrigins.Length == 0)
+{
+    configuredOrigins = new[]
+    {
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    };
+}
+
 builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend", policy =>
-        policy.WithOrigins("http://localhost:3000", "http://127.0.0.1:3000")
+        policy.WithOrigins(configuredOrigins)
               .AllowAnyMethod()
               .AllowAnyHeader()));
 

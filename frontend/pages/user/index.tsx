@@ -7,10 +7,7 @@ import {
   parseCookieHeader,
   serializeCookieHeader,
 } from "@supabase/auth-helpers-nextjs";
-import {
-  isSupabaseConfigured,
-  getSupabaseBrowserClient,
-} from "../../lib/supabaseClient";
+import { isSupabaseConfigured } from "../../lib/supabaseClient";
 import {
   MapPin,
   Briefcase,
@@ -23,8 +20,6 @@ import {
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "../../components/ui/button";
-
-const BACKEND = process.env.BACKEND_URL ?? "http://localhost:5000";
 const CV_VIEW_ROUTE = "/api/cv";
 
 function hasStoredCv(profile: Record<string, any> | null | undefined) {
@@ -197,7 +192,6 @@ export default function UserPage({ user }: Props) {
     "profile" | "bio" | "skills" | "roles" | null
   >(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [profileImage, setProfileImage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [cvUrl, setCvUrl] = useState<string | null>(null);
@@ -205,7 +199,6 @@ export default function UserPage({ user }: Props) {
     user?.locationPreferences ?? [],
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const profileImageInputRef = useRef<HTMLInputElement>(null);
   const locationFilters = locationFilterKeys.map((key) => t(key));
 
   // client-side profile state: undefined = loading, null = no profile, User = loaded
@@ -264,22 +257,6 @@ export default function UserPage({ user }: Props) {
       })();
     }
   }, [user]);
-
-  const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (file.size <= 5 * 1024 * 1024) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setProfileImage(reader.result as string);
-        };
-        reader.readAsDataURL(file);
-        // TODO: Upload to backend
-      } else {
-        alert(t("user.fileSizeTooLarge"));
-      }
-    }
-  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -424,17 +401,9 @@ export default function UserPage({ user }: Props) {
           <div className="flex items-center gap-6">
             {/* Square Avatar */}
             <div className="relative flex-shrink-0">
-              {profileImage ? (
-                <img
-                  src={profileImage}
-                  alt={(clientProfile && clientProfile.name) || t("user.profileAlt")}
-                  className="w-24 h-24 rounded-2xl object-cover"
-                />
-              ) : (
-                <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white text-3xl font-bold">
-                  {(clientProfile && clientProfile.avatarInitials) || ""}
-                </div>
-              )}
+              <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white text-3xl font-bold">
+                {(clientProfile && clientProfile.avatarInitials) || ""}
+              </div>
             </div>
 
             {/* User Info */}
@@ -780,47 +749,17 @@ export default function UserPage({ user }: Props) {
                     <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-3">
                       {t("user.profilePicture")}
                     </label>
+                    <p className="mb-3 text-sm text-gray-600 dark:text-white/60">
+                      {t("user.profileImageUnavailable")}
+                    </p>
                     <div className="flex items-center gap-6">
                       {/* Avatar Preview */}
                       <div className="relative flex-shrink-0">
-                        {profileImage ? (
-                          <img
-                            src={profileImage}
-                            alt={t("user.profileAlt")}
-                            className="w-24 h-24 rounded-2xl object-cover"
-                          />
-                        ) : (
-                          <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white text-3xl font-bold">
-                            {(editedUser && editedUser.avatarInitials) ||
-                              (clientProfile && clientProfile.avatarInitials) ||
-                              ""}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Upload buttons */}
-                      <div className="flex flex-col gap-2">
-                        <input
-                          ref={profileImageInputRef}
-                          type="file"
-                          accept="image/*"
-                          onChange={handleProfileImageChange}
-                          className="hidden"
-                        />
-                        <button
-                          onClick={() => profileImageInputRef.current?.click()}
-                          className="app-primary-button px-4 py-2 text-sm"
-                        >
-                          {t("user.uploadImage")}
-                        </button>
-                        {profileImage && (
-                          <button
-                            onClick={() => setProfileImage(null)}
-                            className="app-secondary-button px-4 py-2 text-sm"
-                          >
-                            {t("user.useInitials")}
-                          </button>
-                        )}
+                        <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white text-3xl font-bold">
+                          {(editedUser && editedUser.avatarInitials) ||
+                            (clientProfile && clientProfile.avatarInitials) ||
+                            ""}
+                        </div>
                       </div>
                     </div>
                   </div>

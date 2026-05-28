@@ -8,14 +8,10 @@ import {
 } from "@supabase/auth-helpers-nextjs";
 import { useTranslation } from "next-i18next";
 import { isSupabaseConfigured } from "../lib/supabaseClient";
+import { getServerBackendUrl } from "../lib/backendUrl";
 import Link from "next/link";
 import JobListCard from "../components/JobListCard";
 import { useFavorites } from "../lib/useFavorites";
-
-const BACKEND =
-  process.env.BACKEND_URL ??
-  process.env.NEXT_PUBLIC_BACKEND_URL ??
-  "http://localhost:5000";
 
 interface Props {
   jobs: Job[];
@@ -27,6 +23,8 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
   req,
   res,
 }) => {
+  const backendUrl = getServerBackendUrl();
+
   if (isSupabaseConfigured) {
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -73,7 +71,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
   }
 
   try {
-    const res = await fetch(`${BACKEND}/api/jobs`);
+    const res = await fetch(`${backendUrl}/api/jobs`);
     if (!res.ok) throw new Error("backend error");
     const data: JobsData = await res.json();
     return {

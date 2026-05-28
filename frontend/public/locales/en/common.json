@@ -156,6 +156,7 @@
     "cvUploadHint": "Upload a PDF. We extract text on the server and use it when available for cover letters",
     "editModalTitle": "Edit Profile",
     "profilePicture": "Profile Picture",
+    "profileImageUnavailable": "Profile images are disabled until storage and profile persistence are implemented end to end. Your initials are shown instead.",
     "uploadImage": "Upload Image",
     "useInitials": "Use Initials",
     "name": "Name",

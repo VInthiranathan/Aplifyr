@@ -25,8 +25,8 @@ npm run dev
 ```
 
 - The backend must keep working for local development even when Supabase credentials are missing.
-- The frontend uses `BACKEND_URL` or `NEXT_PUBLIC_BACKEND_URL` for backend calls. Default fallback is `http://localhost:5000`.
-- Backend CORS currently allows `http://localhost:3000` and `http://127.0.0.1:3000`.
+- Frontend page/API code should use `frontend/lib/backendUrl.ts` to resolve backend URLs instead of reimplementing env fallback order inline.
+- The backend resolves allowed CORS origins from `AllowedOrigins` or `CORS_ALLOWED_ORIGINS`, with localhost defaults when neither is set.
 
 ## Backend Rules
 
@@ -36,12 +36,15 @@ npm run dev
 - `CoverLettersController` calls external LLM providers and depends on `GEMINI_API_KEY` and/or `GROQ_API_KEY`.
 - `UploadController` is a small upload/health surface.
 - `Program.cs` may optionally initialize Supabase, but startup must not hard-fail when Supabase env vars are absent or invalid.
+- Keep `Program.cs` CORS behavior configuration-driven. New deployment origins should be added via config/env, not hardcoded in source.
 - Keep backend changes conservative: preserve existing routes and response shapes unless the task explicitly requires an API change.
+- When request payload parsing degrades prompt quality or external-job filtering, prefer typed reads plus warning logs over silent `catch {}` blocks.
 
 ## Frontend Rules
 
 - Pages Router only. Do not introduce App Router files or patterns.
 - Shared API types belong in `frontend/types/api.ts`.
+- Shared runtime env resolution belongs in `frontend/lib/backendUrl.ts`.
 - Shared layout/navigation lives in `frontend/components/`.
 - Use `lucide-react` for icons.
 - Use `next-themes` for light/dark mode and preserve both theme variants for new UI.
@@ -49,13 +52,23 @@ npm run dev
 
 ## Backend URL Usage
 
-- Server-side page fetching should prefer `BACKEND_URL` and can fall back to `NEXT_PUBLIC_BACKEND_URL`.
-- Client-side fetching should use `NEXT_PUBLIC_BACKEND_URL`.
+- Server-side page fetching should call `getServerBackendUrl()` from `frontend/lib/backendUrl.ts`.
+- Client-side fetching should call `getPublicBackendUrl()` from `frontend/lib/backendUrl.ts`.
 - `frontend/next.config.js` also uses these env vars for `/api/:path*` rewrites.
-- When changing backend URLs, update all three surfaces together:
+- Keep env fallback order aligned across all three surfaces:
   - page data fetching
   - client fetches
   - rewrite destination
+
+## Debug UI
+
+- Raw API response panels must be gated behind development mode or `NEXT_PUBLIC_ENABLE_DEBUG_UI=true`.
+- Do not expose debug toggles on production-facing pages by default.
+
+## Profile Page
+
+- Profile images are currently initials-only. Do not ship image upload UI unless storage and profile persistence are implemented end to end.
+- CV upload is implemented and persisted; profile image upload is not.
 
 ## Internationalisation
 
@@ -162,9 +175,11 @@ dotnet run
 |---|---|
 | `BACKEND_URL` | Server-side backend base URL |
 | `NEXT_PUBLIC_BACKEND_URL` | Browser-visible backend base URL |
+| `NEXT_PUBLIC_ENABLE_DEBUG_UI` | Opt in to debug response panels outside development |
 | `NEXT_PUBLIC_SUPABASE_URL` | Frontend Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Frontend Supabase anon key |
 | `SUPABASE_URL` | Optional backend Supabase URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | Optional backend Supabase service-role key |
+| `CORS_ALLOWED_ORIGINS` | Optional comma-separated frontend origins allowed by backend CORS |
 | `GEMINI_API_KEY` | Cover-letter generation via Gemini |
 | `GROQ_API_KEY` | Cover-letter generation via Groq |

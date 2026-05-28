@@ -15,6 +15,7 @@ import {
   Bookmark,
 } from "lucide-react";
 import { formatLocation } from "../../lib/utils";
+import { getPublicBackendUrl, isDebugUiEnabled } from "../../lib/backendUrl";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import JobListCard from "../../components/JobListCard";
@@ -25,7 +26,8 @@ export const getStaticProps: GetStaticProps = async ({ locale }) => ({
   props: { ...(await serverSideTranslations(locale ?? "en", ["common"])) },
 });
 
-const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:5000";
+const BACKEND = getPublicBackendUrl();
+const DEBUG_UI_ENABLED = isDebugUiEnabled();
 
 interface Filters {
   q: string;
@@ -153,7 +155,9 @@ export default function AllJobsPage() {
       const text = await res.text();
       // Ignore stale responses
       if (reqId !== requestIdRef.current) return;
-      setApiRawResponse(`${requestUrl}\n\n${text}`);
+      if (DEBUG_UI_ENABLED) {
+        setApiRawResponse(`${requestUrl}\n\n${text}`);
+      }
       if (!res.ok) throw new Error(`${res.status}`);
       let data: AFSearchResult | any = null;
       try {
@@ -535,20 +539,22 @@ export default function AllJobsPage() {
         </div>
       )}
 
-      <div className="mt-3">
-        <Button
-          onClick={() => setShowApiLog((s) => !s)}
-          variant="secondary"
-          className="h-auto px-3 py-1.5"
-        >
-          {showApiLog ? t("jobs.hideApiLog") : t("jobs.showApiLog")}
-        </Button>
-        <span className="text-sm text-slate-500 ml-2">
-          ({t("jobs.apiLogDescription")})
-        </span>
-      </div>
+      {DEBUG_UI_ENABLED && (
+        <>
+          <div className="mt-3">
+            <Button
+              onClick={() => setShowApiLog((s) => !s)}
+              variant="secondary"
+              className="h-auto px-3 py-1.5"
+            >
+              {showApiLog ? t("jobs.hideApiLog") : t("jobs.showApiLog")}
+            </Button>
+            <span className="text-sm text-slate-500 ml-2">
+              ({t("jobs.apiLogDescription")})
+            </span>
+          </div>
 
-      {showApiLog && (
+          {showApiLog && (
         <div className="mt-3 space-y-3">
           {apiRawResponse && (
             <div>
@@ -565,6 +571,8 @@ export default function AllJobsPage() {
             </pre>
           </div>
         </div>
+          )}
+        </>
       )}
 
       {/* ── Error ── */}

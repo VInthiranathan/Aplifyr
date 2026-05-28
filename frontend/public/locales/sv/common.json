@@ -156,6 +156,7 @@
     "cvUploadHint": "Ladda upp en PDF. Vi extraherar text på servern och använder den när den finns tillgänglig för personliga brev",
     "editModalTitle": "Redigera profil",
     "profilePicture": "Profilbild",
+    "profileImageUnavailable": "Profilbilder är avstängda tills lagring och profilsparande är implementerade hela vägen. Dina initialer visas i stället.",
     "uploadImage": "Ladda upp bild",
     "useInitials": "Använd initialer",
     "name": "Namn",
