@@ -19,8 +19,8 @@ import { Button } from "./ui/button";
 const navItemDefs = [
   { key: "nav.userDetails", href: "/user", icon: User },
   { key: "nav.home", href: "/", icon: Home },
-  { key: "nav.allJobs", href: "/jobs", icon: Briefcase },
   { key: "nav.favorites", href: "/favorites", icon: Bookmark },
+  { key: "nav.allJobs", href: "/jobs", icon: Briefcase },
   { key: "nav.support", href: "/support", icon: HelpCircle },
 ];
 
