@@ -158,7 +158,6 @@ export default async function handler(
       .upsert(
         {
           id: user.id,
-          cv_url: null,
           cv_storage_path: fileName,
           cv_text: extractedText,
         },

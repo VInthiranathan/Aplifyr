@@ -60,7 +60,7 @@ export default async function handler(
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("cv_storage_path, cv_url")
+    .select("cv_storage_path")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -80,12 +80,6 @@ export default async function handler(
     }
 
     res.writeHead(302, { Location: signedUrlData.signedUrl });
-    res.end();
-    return;
-  }
-
-  if (profile?.cv_url) {
-    res.writeHead(302, { Location: profile.cv_url });
     res.end();
     return;
   }

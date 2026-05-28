@@ -91,7 +91,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         location_preferences: normalizeStringArray(body.locationPreferences),
         tech_stack: normalizeStringArray(body.tags),
         roles: normalizeStringArray(body.roles),
-        cv_url: body.cv_url ?? null,
       }
 
       const { data: updated, error } = await supabase

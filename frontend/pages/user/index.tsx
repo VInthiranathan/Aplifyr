@@ -28,7 +28,7 @@ const BACKEND = process.env.BACKEND_URL ?? "http://localhost:5000";
 const CV_VIEW_ROUTE = "/api/cv";
 
 function hasStoredCv(profile: Record<string, any> | null | undefined) {
-  return Boolean(profile?.cv_storage_path || profile?.cv_url);
+  return Boolean(profile?.cv_storage_path);
 }
 
 function isPdfFile(file: File) {
