@@ -8,7 +8,7 @@
 4. Klicka **New bucket**
 5. Fyll i:
    - **Name:** `cvs`
-   - **Public bucket:** ✓ (markerad)
+  - **Public bucket:** avmarkerad
 6. Klicka **Create bucket**
 
 ## Steg 2: Konfigurera Bucket Policies
@@ -31,13 +31,16 @@ WITH CHECK (
 );
 ```
 
-### Policy 2: Låt alla läsa CV:n (publika)
+### Policy 2: Låt användare läsa sina egna CV:n
 
 ```sql
-CREATE POLICY "CVs are publicly readable"
+CREATE POLICY "Users can read their own CVs"
 ON storage.objects FOR SELECT
-TO public
-USING (bucket_id = 'cvs');
+TO authenticated
+USING (
+  bucket_id = 'cvs' AND
+  auth.uid()::text = (storage.foldername(name))[1]
+);
 ```
 
 ### Policy 3: Låt användare uppdatera sina egna CV:n
@@ -67,8 +70,8 @@ USING (
 ## Steg 3: Verifiera konfigurationen
 
 1. Testa att ladda upp ett CV från användarprofilen i appen
-2. Kontrollera att CV-URL:en sparas i `profiles`-tabellen
-3. Verifiera att CV:t är tillgängligt via den publika URL:en
+2. Kontrollera att `cv_storage_path` och `cv_text` sparas i `profiles`-tabellen
+3. Verifiera att CV:t kan öppnas via appens autentiserade `/api/cv`-endpoint
 
 ## Filstruktur i Bucket
 
@@ -93,12 +96,13 @@ Detta säkerställer att varje användares CV:n är separerade och att användar
 - Verifiera att användaren är autentiserad
 - Kontrollera att `bucket_id` är exakt `'cvs'`
 
-### CV-URL fungerar inte
+### CV går inte att öppna i appen
 
-- Kontrollera att bucketen är markerad som **Public**
-- Verifiera att SELECT-policyn tillåter publikt läsning
+- Kontrollera att bucketen **inte** är publik
+- Verifiera att SELECT-policyn tillåter autentiserade användare att läsa sina egna filer
 
-### CV sparas inte i databasen
+### CV sparas inte i databasen eller används inte i personliga brev
 
-- Kontrollera att `profiles`-tabellen har en `cv_url`-kolumn av typen `text`
+- Kontrollera att `profiles`-tabellen har kolumnerna `cv_storage_path` och `cv_text` av typen `text`
 - Verifiera att backend kan läsa och skriva till profiles-tabellen
+- Kontrollera att PDF-filen innehåller markerbar text och inte bara bilder

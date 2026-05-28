@@ -25,6 +25,17 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "../../components/ui/button";
 
 const BACKEND = process.env.BACKEND_URL ?? "http://localhost:5000";
+const CV_VIEW_ROUTE = "/api/cv";
+
+function hasStoredCv(profile: Record<string, any> | null | undefined) {
+  return Boolean(profile?.cv_storage_path || profile?.cv_url);
+}
+
+function isPdfFile(file: File) {
+  return (
+    file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
+  );
+}
 
 interface Props {
   user: User | null;
@@ -218,7 +229,7 @@ export default function UserPage({ user }: Props) {
             setClientProfile(mapped);
             setEditedUser(mapped);
             setSelectedLocations(mapped.locationPreferences);
-            setCvUrl(data.profile.cv_url || null);
+            setCvUrl(hasStoredCv(data.profile) ? CV_VIEW_ROUTE : null);
           } else {
             // no profile yet — allow user to create one via UI
             setClientProfile(null);
@@ -243,8 +254,8 @@ export default function UserPage({ user }: Props) {
           });
           if (res.ok) {
             const data = await res.json();
-            if (data.profile && data.profile.cv_url) {
-              setCvUrl(data.profile.cv_url);
+            if (data.profile) {
+              setCvUrl(hasStoredCv(data.profile) ? CV_VIEW_ROUTE : null);
             }
           }
         } catch (e) {
@@ -273,13 +284,18 @@ export default function UserPage({ user }: Props) {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      if (file.size <= 5 * 1024 * 1024) {
-        // 5MB
-        setUploadedFile(file);
-        await uploadCV(file);
-      } else {
+      if (file.size > 5 * 1024 * 1024) {
         alert(t("user.fileSizeTooLarge"));
+        return;
       }
+
+      if (!isPdfFile(file)) {
+        alert(t("user.cvPdfOnly"));
+        return;
+      }
+
+      setUploadedFile(file);
+      await uploadCV(file);
     }
   };
 
@@ -327,12 +343,18 @@ export default function UserPage({ user }: Props) {
 
       if (res.ok) {
         const data = await res.json();
-        setCvUrl(data.cv_url);
+        setCvUrl(data.cv_view_url || CV_VIEW_ROUTE);
         alert(t("user.cvUploadedSuccess"));
       } else {
         const err = await res.json().catch(() => ({}));
         console.error("CV upload failed", err);
-        alert(t("user.cvUploadFailed"));
+        if (err.code === "cv_pdf_only") {
+          alert(t("user.cvPdfOnly"));
+        } else if (err.code === "cv_parse_failed") {
+          alert(t("user.cvParseFailed"));
+        } else {
+          alert(t("user.cvUploadFailed"));
+        }
       }
     } catch (error) {
       console.error("CV upload error:", error);
@@ -348,12 +370,18 @@ export default function UserPage({ user }: Props) {
 
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
-      if (file.size <= 5 * 1024 * 1024) {
-        setUploadedFile(file);
-        await uploadCV(file);
-      } else {
+      if (file.size > 5 * 1024 * 1024) {
         alert(t("user.fileSizeTooLarge"));
+        return;
       }
+
+      if (!isPdfFile(file)) {
+        alert(t("user.cvPdfOnly"));
+        return;
+      }
+
+      setUploadedFile(file);
+      await uploadCV(file);
     }
   };
 
@@ -619,7 +647,7 @@ export default function UserPage({ user }: Props) {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf,.doc,.docx"
+                accept=".pdf"
                 onChange={handleFileChange}
                 className="hidden"
                 disabled={isUploading}
@@ -702,7 +730,7 @@ export default function UserPage({ user }: Props) {
                             {t("user.uploadYourCv")}
                           </p>
                           <p className="text-sm text-gray-500 dark:text-white/50">
-                            PDF, DOC, DOCX • Max 5MB
+                            PDF only • Max 5MB
                           </p>
                         </div>
                         <button

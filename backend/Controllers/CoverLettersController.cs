@@ -8,12 +8,6 @@ namespace Examensarbete.Api.Controllers;
 public class CoverLettersController : ControllerBase
 {
     private static readonly HttpClient _http = new();
-    private readonly IWebHostEnvironment _env;
-
-    public CoverLettersController(IWebHostEnvironment env)
-    {
-        _env = env;
-    }
 
     [HttpPost("generate-all")]
     public async Task<IActionResult> GenerateAll([FromBody] JsonElement request)
@@ -48,14 +42,14 @@ public class CoverLettersController : ControllerBase
             userJson = JsonSerializer.Serialize(userProfile, new JsonSerializerOptions { WriteIndented = true });
             Console.WriteLine($"[CoverLetters] User profile provided: {userJson.Length} chars");
             
-            // Extract CV URL if present
-            if (userProfile.TryGetProperty("cv_url", out var cvUrlProp))
+            // Extract parsed CV text if present
+            if (userProfile.TryGetProperty("cv_text", out var cvTextProp))
             {
-                var cvUrl = cvUrlProp.GetString();
-                if (!string.IsNullOrEmpty(cvUrl))
+                var parsedCvText = cvTextProp.GetString();
+                if (!string.IsNullOrWhiteSpace(parsedCvText))
                 {
-                    cvText = $"[CV file available at: {cvUrl}]";
-                    Console.WriteLine($"[CoverLetters] CV URL found: {cvUrl}");
+                    cvText = TruncateForPrompt(parsedCvText, 6000);
+                    Console.WriteLine($"[CoverLetters] Parsed CV text found: {cvText.Length} chars");
                 }
             }
 
@@ -114,19 +108,23 @@ public class CoverLettersController : ControllerBase
 
             // Detect language from description
             string language = DetectLanguage(description);
+            bool hasCvText = !string.IsNullOrEmpty(cvText);
+            bool hasBioText = !string.IsNullOrEmpty(bioText);
             
             // Build context sections for the prompt
-            string cvSection = !string.IsNullOrEmpty(cvText) 
-                ? $"CV Information:\n{cvText}\n(Use this for work experience, education, technical skills, and concrete achievements)\n\n" 
+            string cvSection = hasCvText 
+                ? $"Extracted CV Text:\n{cvText}\n(Use this for work experience, education, technical skills, and concrete achievements)\n\n" 
                 : "";
             
-            string bioSection = !string.IsNullOrEmpty(bioText) 
+            string bioSection = hasBioText 
                 ? $"Profile Bio/Description:\n{bioText}\n(Use this for personality, goals, interests, soft skills, and personal presentation)\n\n" 
                 : "";
+
+            var promptInstructions = BuildPromptInstructions(language, hasBioText, hasCvText);
             
             var prompt = language == "sv" 
-                ? $"Skriv ett professionellt och personligt personligt brev (på svenska) för följande jobbannons:\n\nJobbtitel: {title}\nFöretag: {employer}\nPlats: {location}\n\nJobbbeskrivning:\n{description}\n\n{bioSection}{cvSection}Användarprofil:\n{userJson}\n\nInstruktioner:\n- Kombinera information från BÅDE profilbeskrivningen (bio) och CV:t för att skapa ett heltäckande personligt brev\n- Använd CV:t som huvudkälla för arbetslivserfarenhet, utbildning och tekniska färdigheter\n- Använd profilbeskrivningen för att visa personlighet, motivation, mål och mjuka färdigheter (soft skills)\n- Om samma information finns i båda källorna, prioritera konkreta fakta från CV:t men använd profilbion för att förbättra formuleringar\n- Undvik att upprepa exakt samma information två gånger\n- Skriv ett kortfattat men övertygande personligt brev (150-250 ord)\n- Koppla användarens erfarenheter och kompetenser till jobbets krav\n- Var specifik och undvik generiska fraser\n- Visa entusiasm och motivation baserat på information från profilen\n- Avsluta professionellt med hälsning"
-                : $"Write a professional and personal cover letter (in English) for the following job posting:\n\nJob Title: {title}\nCompany: {employer}\nLocation: {location}\n\nJob Description:\n{description}\n\n{bioSection}{cvSection}User Profile:\n{userJson}\n\nInstructions:\n- Combine information from BOTH the profile description (bio) and CV to create a comprehensive cover letter\n- Use the CV as the primary source for work experience, education, and technical skills\n- Use the profile description to show personality, motivation, goals, and soft skills\n- If the same information appears in both sources, prioritize concrete facts from the CV but use the bio to improve phrasing\n- Avoid repeating the exact same information twice\n- Write a concise but compelling cover letter (150-250 words)\n- Connect the user's experience and skills to the job requirements\n- Be specific and avoid generic phrases\n- Show enthusiasm and motivation based on information from the profile\n- End professionally with a greeting";
+                ? $"Skriv ett professionellt och personligt personligt brev (på svenska) för följande jobbannons:\n\nJobbtitel: {title}\nFöretag: {employer}\nPlats: {location}\n\nJobbbeskrivning:\n{description}\n\n{bioSection}{cvSection}Användarprofil:\n{userJson}\n\nInstruktioner:\n{promptInstructions}"
+                : $"Write a professional and personal cover letter (in English) for the following job posting:\n\nJob Title: {title}\nCompany: {employer}\nLocation: {location}\n\nJob Description:\n{description}\n\n{bioSection}{cvSection}User Profile:\n{userJson}\n\nInstructions:\n{promptInstructions}";
 
             string coverLetter = "";
             string errorMsg = "";
@@ -182,6 +180,84 @@ public class CoverLettersController : ControllerBase
         var swedishCount = swedishWords.Count(w => lowerText.Contains(w));
         
         return swedishCount >= 3 ? "sv" : "en";
+    }
+
+    private static string TruncateForPrompt(string text, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return "";
+        if (text.Length <= maxLength) return text;
+
+        return text[..maxLength] + "\n...[truncated]";
+    }
+
+    private static string BuildPromptInstructions(string language, bool hasBio, bool hasCv)
+    {
+        var instructions = new List<string>();
+
+        if (language == "sv")
+        {
+            if (hasBio && hasCv)
+            {
+                instructions.Add("Kombinera information från både profilbeskrivningen och den extraherade CV-texten för att skapa ett heltäckande personligt brev");
+                instructions.Add("Använd den extraherade CV-texten som huvudkälla för arbetslivserfarenhet, utbildning, tekniska färdigheter och konkreta prestationer");
+                instructions.Add("Använd profilbeskrivningen för att visa personlighet, motivation, mål och mjuka färdigheter");
+                instructions.Add("Om samma information finns i båda källorna, prioritera konkreta fakta från CV-texten men använd profilbion för att förbättra formuleringar");
+            }
+            else if (hasCv)
+            {
+                instructions.Add("Använd den extraherade CV-texten som huvudkälla för arbetslivserfarenhet, utbildning, tekniska färdigheter och konkreta prestationer");
+                instructions.Add("Använd användarprofilen som stöd för sammanhang och presentation där det hjälper brevet");
+            }
+            else if (hasBio)
+            {
+                instructions.Add("Använd profilbeskrivningen som huvudkälla för personlighet, motivation, mål och relevanta mjuka färdigheter");
+                instructions.Add("Använd användarprofilen som stöd för relevanta erfarenheter, roller och teknikstack");
+            }
+            else
+            {
+                instructions.Add("Använd jobbannonsen och användarprofilen för att skriva ett relevant och trovärdigt personligt brev");
+            }
+
+            instructions.Add("Undvik att upprepa exakt samma information två gånger");
+            instructions.Add("Skriv ett kortfattat men övertygande personligt brev (150-250 ord)");
+            instructions.Add("Koppla användarens erfarenheter och kompetenser till jobbets krav");
+            instructions.Add("Var specifik och undvik generiska fraser");
+            instructions.Add("Visa entusiasm och motivation baserat på informationen som faktiskt finns tillgänglig");
+            instructions.Add("Avsluta professionellt med hälsning");
+        }
+        else
+        {
+            if (hasBio && hasCv)
+            {
+                instructions.Add("Combine information from both the profile description and the extracted CV text to create a comprehensive cover letter");
+                instructions.Add("Use the extracted CV text as the primary source for work experience, education, technical skills, and concrete achievements");
+                instructions.Add("Use the profile description to show personality, motivation, goals, and soft skills");
+                instructions.Add("If the same information appears in both sources, prioritize concrete facts from the CV text but use the bio to improve phrasing");
+            }
+            else if (hasCv)
+            {
+                instructions.Add("Use the extracted CV text as the primary source for work experience, education, technical skills, and concrete achievements");
+                instructions.Add("Use the user profile as supporting context where it improves the letter");
+            }
+            else if (hasBio)
+            {
+                instructions.Add("Use the profile description as the primary source for personality, motivation, goals, and relevant soft skills");
+                instructions.Add("Use the user profile as supporting context for relevant experience, roles, and technology stack");
+            }
+            else
+            {
+                instructions.Add("Use the job description and the user profile to write a relevant and credible cover letter");
+            }
+
+            instructions.Add("Avoid repeating the exact same information twice");
+            instructions.Add("Write a concise but compelling cover letter (150-250 words)");
+            instructions.Add("Connect the user's experience and skills to the job requirements");
+            instructions.Add("Be specific and avoid generic phrases");
+            instructions.Add("Show enthusiasm and motivation based on the information that is actually available");
+            instructions.Add("End professionally with a greeting");
+        }
+
+        return "- " + string.Join("\n- ", instructions);
     }
 
     private async Task<string> TryGenerateWithGemini(string apiKey, string prompt, string language)

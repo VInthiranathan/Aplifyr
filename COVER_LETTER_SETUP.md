@@ -198,15 +198,27 @@ Genererar personligt brev för en eller flera jobbannons.
 **Request:**
 
 ```json
-[
-  {
-    "headline": "Junior Utvecklare",
-    "employer": { "name": "Tech AB" },
-    "description": { "text": "Vi söker..." },
-    "workplace_address": { "municipality": "Stockholm" }
+{
+  "jobs": [
+    {
+      "headline": "Junior Utvecklare",
+      "employer": { "name": "Tech AB" },
+      "description": { "text": "Vi söker..." },
+      "workplace_address": { "municipality": "Stockholm" }
+    }
+  ],
+  "user": {
+    "name": "Anna Andersson",
+    "title": "Fullstack Developer",
+    "bio": "Kort profiltext...",
+    "tech_stack": ["C#", "React"],
+    "roles": ["Frontend Developer"],
+    "cv_text": "Extraherad text från användarens PDF-CV"
   }
-]
+}
 ```
+
+`cv_text` genereras server-side när användaren laddar upp ett PDF-CV. Om ingen läsbar PDF-text finns tillgänglig använder funktionen bara jobbannonsen och övrig profilinformation.
 
 **Response:**
 
