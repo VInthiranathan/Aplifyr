@@ -101,10 +101,10 @@ export default async function handler(
       data: { publicUrl },
     } = supabase.storage.from("cvs").getPublicUrl(fileName);
 
-    // Update profile with CV URL
+    // Update profile with CV storage path
     const { error: updateError } = await supabase
       .from("profiles")
-      .update({ cv_url: publicUrl })
+      .update({ cv_storage_path: publicUrl })
       .eq("id", user.id);
 
     if (updateError) {

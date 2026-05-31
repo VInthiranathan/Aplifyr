@@ -155,7 +155,7 @@ export default function JobDetailPage() {
                 bio: profileData.profile.bio,
                 tech_stack: profileData.profile.tech_stack,
                 roles: profileData.profile.roles,
-                cv_url: profileData.profile.cv_url,
+                cv_url: profileData.profile.cv_storage_path,
               };
             }
           }

@@ -5,6 +5,7 @@ import { appWithTranslation } from 'next-i18next'
 import { ThemeProvider } from 'next-themes'
 import { useRouter } from 'next/router'
 import { useMemo } from 'react'
+import { MatchSessionProvider } from '../lib/matchSessionContext'
 
 const nextI18NextConfig = require('../next-i18next.config')
 
@@ -23,13 +24,15 @@ function App({ Component, pageProps }: AppProps) {
 
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
-      {isPublicFullScreenRoute ? (
-        <Component {...pageProps} />
-      ) : (
-        <Layout>
+      <MatchSessionProvider>
+        {isPublicFullScreenRoute ? (
           <Component {...pageProps} />
-        </Layout>
-      )}
+        ) : (
+          <Layout>
+            <Component {...pageProps} />
+          </Layout>
+        )}
+      </MatchSessionProvider>
     </ThemeProvider>
   )
 }
