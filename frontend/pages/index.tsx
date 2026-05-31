@@ -16,7 +16,7 @@ import { isSupabaseConfigured } from "../lib/supabaseClient";
 import Link from "next/link";
 import JobListCard from "../components/JobListCard";
 import { useFavorites } from "../lib/useFavorites";
-import { MapPin, Wifi, Briefcase, Bookmark, RefreshCw } from "lucide-react";
+import { MapPin, Wifi, Briefcase, Bookmark, RefreshCw, Eye } from "lucide-react";
 import { formatLocation } from "../lib/utils";
 import { useMatchSession } from "../lib/matchSessionContext";
 import { useState, useEffect } from "react";
@@ -141,11 +141,12 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
     "roles" | "title_fallback" | "none" | null
   >(_snap?.desiredRolesSource ?? null);
 
-  // ── Visible count + AF page ───────────────────────────────────────────────
+  // ── Visible count + seed (used by Load Different to shuffle the cached pool) ──
   const [visibleCount, setVisibleCount] = useState(_snap?.visibleCount ?? HOME_INITIAL_COUNT);
-  const [jobPage, setJobPage] = useState(_snap?.jobPage ?? 0);
+  const [seed, setSeed] = useState(_snap?.seed ?? 0);
+  const [fetchComplete, setFetchComplete] = useState(_snap?.fetchComplete ?? false);
 
-  // ── Fetch matches after mount (and whenever visibleCount / jobPage changes) ──
+  // ── Fetch matches after mount (and whenever visibleCount / seed changes) ──
   useEffect(() => {
     // Only refetch when we need more jobs than we already have loaded.
     if (matched.length >= visibleCount) return;
@@ -159,7 +160,7 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
         const backendBase =
           process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:5000";
         const res = await fetch(
-          `${backendBase}/api/externaljobs/match?limit=${visibleCount}&afOffset=${jobPage * 100}`,
+          `${backendBase}/api/externaljobs/match?limit=${visibleCount}&seed=${seed}`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -170,20 +171,15 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
         if (!res.ok) throw new Error(`backend ${res.status}`);
         const data: MatchedJobsResponse = await res.json();
 
-        // If this AF page returned nothing and we're not on page 0, silently wrap back.
-        if (data.matched.length === 0 && jobPage > 0) {
-          setJobPage(0);
-          setMatched([]);
-          return; // jobPage change triggers a re-fetch of page 0
-        }
-
         setMatched(data.matched);
         setDesiredRolesSource(data.profileUsed.desiredRolesSource);
+        setFetchComplete(data.stats.fetchComplete);
         updateSession({
           matched: data.matched,
           desiredRolesSource: data.profileUsed.desiredRolesSource,
           visibleCount,
-          jobPage,
+          seed,
+          fetchComplete: data.stats.fetchComplete,
           matchReqHash: currentHash,
         });
       } catch (err: unknown) {
@@ -199,7 +195,7 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
     loadMatches();
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleCount, jobPage]);
+  }, [visibleCount, seed]);
 
   const total =
     progression.applied + progression.readyToApply + progression.readyToGenerate || 1;
@@ -211,22 +207,51 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
   const gradeB = desiredRolesSource !== null ? matched.filter((j) => j.matchGrade === "B").length : null;
   const gradeC = desiredRolesSource !== null ? matched.filter((j) => j.matchGrade === "C").length : null;
 
-  const MAX_JOB_PAGES = 10;
-
   const handleLoadDifferent = () => {
-    const newPage = (jobPage + 1) % MAX_JOB_PAGES;
-    setJobPage(newPage);
+    // Generate a non-zero seed so the backend shuffles within grade buckets.
+    // seed=0 means "default sorted order"; non-zero values produce a distinct subset.
+    const newSeed = Math.floor(Math.random() * 999999) + 1;
+    setSeed(newSeed);
     setMatched([]);
     setDesiredRolesSource(null);
     setVisibleCount(HOME_INITIAL_COUNT);
     updateSession({
-      jobPage: newPage,
+      seed: newSeed,
       matched: [],
       desiredRolesSource: null,
       visibleCount: HOME_INITIAL_COUNT,
       matchReqHash: currentHash,
+      // fetchComplete intentionally NOT reset — the background pool keeps growing
     });
   };
+
+  // ── Background poll — grows the cached job pool page-by-page ─────────────
+  // Fires every 5 s until the backend signals fetchComplete=true.
+  // Skips when the tab is backgrounded to conserve AF API quota.
+  useEffect(() => {
+    if (fetchComplete || desiredRolesSource === null || desiredRolesSource === "none") return;
+    const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:5000";
+    const timer = setInterval(async () => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      try {
+        const res = await fetch(`${backendBase}/api/externaljobs/match/continue`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(matchReq),
+        });
+        if (!res.ok) return;
+        const result = await res.json() as { fetchComplete: boolean };
+        if (result.fetchComplete) {
+          setFetchComplete(true);
+          updateSession({ fetchComplete: true });
+        }
+      } catch {
+        // silently ignore — will retry on the next tick
+      }
+    }, 5000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchComplete, desiredRolesSource]);
 
   const locationTierLabel: Record<string, string> = {
     same_municipality:  t("home.tierSameMunicipality"),
@@ -394,6 +419,12 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
             {t("home.matchedJobs")}
           </h2>
           <div className="flex items-center gap-3">
+            {!fetchComplete && matched.length > 0 && (
+              <span className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-white/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-white/30 animate-pulse" />
+                {t("home.findingMoreMatches")}
+              </span>
+            )}
             {desiredRolesSource !== null && !matchLoading && matched.length > 0 && (
               <button
                 onClick={handleLoadDifferent}
@@ -563,34 +594,43 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
                   </>
                 }
                 aside={
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      toggleFavorite({
-                        id: job.id,
-                        title: job.headline,
-                        company: job.employer?.name ?? "",
-                        location: formatLocation(job.workplace_address),
-                        matchGrade: job.matchGrade,
-                      });
-                    }}
-                    className={`flex-shrink-0 transition-colors p-2 ${
-                      isFavorite(job.id)
-                        ? "text-purple-500 dark:text-purple-400"
-                        : "text-slate-300 dark:text-white/20 hover:text-purple-500 dark:hover:text-purple-400"
-                    }`}
-                    title={
-                      isFavorite(job.id)
-                        ? t("home.removeFavorite")
-                        : t("home.addFavorite")
-                    }
-                  >
-                    <Bookmark
-                      size={18}
-                      fill={isFavorite(job.id) ? "currentColor" : "none"}
-                    />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/jobs/${job.id}`}
+                      className="app-secondary-button px-3 py-2 text-sm"
+                      title={t("home.viewJob")}
+                    >
+                      <Eye size={15} />
+                    </Link>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        toggleFavorite({
+                          id: job.id,
+                          title: job.headline,
+                          company: job.employer?.name ?? "",
+                          location: formatLocation(job.workplace_address),
+                          matchGrade: job.matchGrade,
+                        });
+                      }}
+                      className={`flex-shrink-0 transition-colors p-2 ${
+                        isFavorite(job.id)
+                          ? "text-purple-500 dark:text-purple-400"
+                          : "text-slate-300 dark:text-white/20 hover:text-purple-500 dark:hover:text-purple-400"
+                      }`}
+                      title={
+                        isFavorite(job.id)
+                          ? t("home.removeFavorite")
+                          : t("home.addFavorite")
+                      }
+                    >
+                      <Bookmark
+                        size={18}
+                        fill={isFavorite(job.id) ? "currentColor" : "none"}
+                      />
+                    </button>
+                  </div>
                 }
                 footer={
                   showDebug && job.matchDebug ? (

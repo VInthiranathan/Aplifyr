@@ -48,7 +48,9 @@
     "tierRemote": "Remote",
     "tierCountry": "Open to all Sweden",
     "tierNoPreference": "No location set",
-    "tierOutOfRegion": "Outside region"
+    "tierOutOfRegion": "Outside region",
+    "findingMoreMatches": "Finding more matches...",
+    "viewJob": "View job details"
   },
   "favorites": {
     "loading": "Loading favorites...",

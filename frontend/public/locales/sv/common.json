@@ -48,7 +48,9 @@
     "tierRemote": "Remote",
     "tierCountry": "Öppet för hela Sverige",
     "tierNoPreference": "Ingen platsinställning",
-    "tierOutOfRegion": "Utanför region"
+    "tierOutOfRegion": "Utanför region",
+    "findingMoreMatches": "Söker fler matchningar...",
+    "viewJob": "Visa jobbdetaljer"
   },
   "favorites": {
     "loading": "Laddar favoriter...",

@@ -39,6 +39,18 @@ public class ExternalJobsController : ControllerBase
     // ── Tech boost ────────────────────────────────────────────────────────────
     private const int TECH_BOOST_MATCH = 1;
 
+    // ── Background-fetch cache entry ──────────────────────────────────────────
+    // Stores the growing scored pool for a given profile. The Continue endpoint
+    // merges new pages into Jobs until FetchComplete is true.
+    private sealed class MatchCacheEntry
+    {
+        public List<(int GradeOrder, string Id, string Json)> Jobs { get; } = new();
+        public int NextOffset { get; set; }
+        public int TotalAfJobs { get; set; }
+        // TotalAfJobs > 0 guard prevents false-complete on a zero-result query.
+        public bool FetchComplete => TotalAfJobs > 0 && NextOffset >= TotalAfJobs;
+    }
+
     // ── Grade thresholds ─────────────────────────────────────────────────────
     private const int GRADE_A_MIN_SCORE = 3; // totalScore >= GRADE_A_MIN_SCORE → "A"
     private const int GRADE_B_SCORE     = 2; // totalScore == GRADE_B_SCORE     → "B"
@@ -748,7 +760,7 @@ public class ExternalJobsController : ControllerBase
     public async Task<IActionResult> Match(
         [FromBody] MatchProfileRequest? profile,
         [FromQuery] int limit = DEFAULT_MATCH_RESPONSE_LIMIT,
-        [FromQuery] int afOffset = 0)
+        [FromQuery] int seed = 0)
     {
         if (profile == null) return BadRequest(new { error = "profile required" });
 
@@ -836,16 +848,25 @@ public class ExternalJobsController : ControllerBase
         var effectiveLimit = limit > 0 ? limit : DEFAULT_MATCH_RESPONSE_LIMIT;
         var cacheKey = BuildMatchCacheKey(
             normalizedDesiredRoles, normalizedUserTags,
-            normalizedUserMunicipalities, userRegionCodes, normalizedLocationPrefs,
-            afOffset);
+            normalizedUserMunicipalities, userRegionCodes, normalizedLocationPrefs);
 
         // Fast path: serve from in-memory cache when the same normalised profile was
-        // requested recently (TTL = 5 min). Avoids an AF round-trip on every Home
-        // revisit or "View more" expansion.
-        if (_cache.TryGetValue(cacheKey, out List<string>? cachedSortedJobs) && cachedSortedJobs != null)
+        // requested recently (TTL = 15 min). The seed only affects presentation order,
+        // not the cached data, so it is intentionally excluded from the cache key.
+        if (_cache.TryGetValue(cacheKey, out MatchCacheEntry? cachedEntry) && cachedEntry != null)
         {
-            var cachedSlice = cachedSortedJobs.Take(effectiveLimit).ToList();
-            var cachedJson = BuildMatchResponseJson(cachedSlice, cachedSortedJobs.Count, effectiveLimit, desiredRolesSource, profile, activeRoles);
+            // On a "Load Different" click (seed != 0) proactively fetch the next AF page
+            // before slicing so the user sees genuinely new jobs, not just a reorder of
+            // the same ~100-job pool that was loaded on first visit.
+            if (seed != 0 && !cachedEntry.FetchComplete)
+            {
+                var searchTermForMerge = string.Join(" ", activeRoles);
+                await MergeNextAfPage(cachedEntry, cacheKey, searchTermForMerge, normalizedDesiredRoles,
+                    normalizedUserMunicipalities, userRegionCodes, normalizedLocationPrefs, normalizedUserTags);
+            }
+            var cachedSlice = SliceJobs(cachedEntry.Jobs, seed, effectiveLimit);
+            var cachedJson = BuildMatchResponseJson(cachedSlice, cachedEntry.Jobs.Count, effectiveLimit,
+                cachedEntry.FetchComplete, cachedEntry.TotalAfJobs, desiredRolesSource, profile, activeRoles);
             return Content(cachedJson, "application/json");
         }
 
@@ -854,7 +875,7 @@ public class ExternalJobsController : ControllerBase
         var qs = System.Web.HttpUtility.ParseQueryString(string.Empty);
         qs["q"] = searchTerm;
         qs["limit"] = MATCH_UPSTREAM_FETCH_LIMIT.ToString();
-        qs["offset"] = Math.Max(0, afOffset).ToString();
+        qs["offset"] = "0";
 
         string rawContent;
         try
@@ -867,7 +888,9 @@ public class ExternalJobsController : ControllerBase
             return StatusCode(502, new { error = "Could not reach Arbetsförmedlingen API", detail = ex.Message });
         }
 
-        var matchResults = new List<(int GradeOrder, int TotalScore, string Json)>();
+        var matchResults = new List<(int GradeOrder, int TotalScore, string Id, string Json)>();
+        int totalAfJobs = 0;
+        int hitsReturned = 0;
 
         try
         {
@@ -875,8 +898,16 @@ public class ExternalJobsController : ControllerBase
             if (!doc.RootElement.TryGetProperty("hits", out var hitsEl) || hitsEl.ValueKind != JsonValueKind.Array)
                 return Ok(BuildEmptyMatchResponse(desiredRolesSource, profile, activeRoles));
 
+            // Read the total number of AF results so we know when background fetching is done.
+            totalAfJobs = doc.RootElement.TryGetProperty("total", out var totEl)
+                && totEl.TryGetProperty("value", out var totVal)
+                ? totVal.GetInt32() : 0;
+            hitsReturned = hitsEl.GetArrayLength();
+
             foreach (var hit in hitsEl.EnumerateArray())
             {
+                var jobId = hit.TryGetProperty("id", out var idEl) ? idEl.GetString() ?? "" : "";
+
                 var (roleMatched, matchedOn, matchedValue) = CheckRoleInclusion(hit, normalizedDesiredRoles);
                 if (!roleMatched) continue;
 
@@ -908,7 +939,7 @@ public class ExternalJobsController : ControllerBase
                     totalScore, matchedOn, matchedValue, reasons);
 
                 var gradeOrder = grade == "A" ? 0 : grade == "B" ? 1 : 2;
-                matchResults.Add((gradeOrder, totalScore, jobJson));
+                matchResults.Add((gradeOrder, totalScore, jobId, jobJson));
             }
         }
         catch (Exception ex)
@@ -917,21 +948,99 @@ public class ExternalJobsController : ControllerBase
         }
 
         // Sort the full result set and cache it so subsequent requests for the same
-        // profile (e.g., "View more" on Home) are served without an AF round-trip.
-        var fullSortedJsonJobs = matchResults
-            .OrderBy(r => r.GradeOrder)
-            .ThenByDescending(r => r.TotalScore)
-            .Select(r => r.Json)
-            .ToList();
+        // profile are served without an AF round-trip. The Continue endpoint will
+        // grow this pool in the background until all AF results are fetched.
+        var entry = new MatchCacheEntry { TotalAfJobs = totalAfJobs, NextOffset = hitsReturned };
+        foreach (var r in matchResults.OrderBy(r => r.GradeOrder).ThenByDescending(r => r.TotalScore))
+            entry.Jobs.Add((r.GradeOrder, r.Id, r.Json));
 
-        _cache.Set(cacheKey, fullSortedJsonJobs, new MemoryCacheEntryOptions
+        _cache.Set(cacheKey, entry, new MemoryCacheEntryOptions
         {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15)
         });
 
-        var sortedJsonJobs = fullSortedJsonJobs.Take(effectiveLimit).ToList();
-        var responseJson = BuildMatchResponseJson(sortedJsonJobs, matchResults.Count, effectiveLimit, desiredRolesSource, profile, activeRoles);
+        var sortedJsonJobs = SliceJobs(entry.Jobs, seed, effectiveLimit);
+        var responseJson = BuildMatchResponseJson(sortedJsonJobs, entry.Jobs.Count, effectiveLimit,
+            entry.FetchComplete, entry.TotalAfJobs, desiredRolesSource, profile, activeRoles);
         return Content(responseJson, "application/json");
+    }
+
+    // ─────────────────────────── Background continue endpoint ───────────────────────────
+    // Called by the frontend every ~5 s to fetch the next 100 AF results for the same
+    // profile and merge them into the cached pool. Stops once FetchComplete is true.
+
+    [HttpPost("match/continue")]
+    public async Task<IActionResult> MatchContinue([FromBody] MatchProfileRequest? profile)
+    {
+        if (profile == null) return BadRequest(new { error = "profile required" });
+
+        // ── Profile normalization (same logic as Match) ──────────────────────
+        var desiredRoles = (profile.Roles ?? Array.Empty<string>())
+            .Where(r => !string.IsNullOrWhiteSpace(r))
+            .Select(r => r.Trim())
+            .ToArray();
+
+        IReadOnlyList<string> activeRoles;
+        if (desiredRoles.Length > 0)
+            activeRoles = desiredRoles;
+        else if (!string.IsNullOrWhiteSpace(profile.Title))
+            activeRoles = new[] { profile.Title!.Trim() };
+        else
+            return Ok(new { fetchComplete = true, totalCached = 0, addedCount = 0, totalAfJobs = 0 });
+
+        var normalizedDesiredRoles = activeRoles.Select(NormalizeRoleInput).ToList();
+
+        var normalizedUserTags = (profile.Tags ?? Array.Empty<string>())
+            .Where(t => !string.IsNullOrWhiteSpace(t))
+            .Select(t => NormalizeTech(t.Trim()))
+            .Where(t => t.Length >= 2)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var normalizedLocationPrefs = NormalizeLocationPreferences(
+            profile.LocationPreferences ?? Array.Empty<string>());
+
+        var normalizedUserMunicipalities = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var userRegionCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        if (!string.IsNullOrWhiteSpace(profile.Location))
+        {
+            var locLower = profile.Location!.Trim().ToLowerInvariant();
+            if (_municipalityToRegion.TryGetValue(locLower, out var resolvedRegionName))
+            {
+                normalizedUserMunicipalities.Add(locLower);
+                if (_regionCodes.TryGetValue(resolvedRegionName, out var regionCode))
+                    userRegionCodes.Add(regionCode);
+            }
+            else if (_regionCodes.TryGetValue(profile.Location!.Trim(), out var directRegionCode))
+            {
+                userRegionCodes.Add(directRegionCode);
+            }
+        }
+
+        // ── Cache lookup ──────────────────────────────────────────────────────
+        var cacheKey = BuildMatchCacheKey(
+            normalizedDesiredRoles, normalizedUserTags,
+            normalizedUserMunicipalities, userRegionCodes, normalizedLocationPrefs);
+
+        if (!_cache.TryGetValue(cacheKey, out MatchCacheEntry? entry) || entry == null)
+            return Ok(new { fetchComplete = true, totalCached = 0, addedCount = 0, totalAfJobs = 0 });
+
+        if (entry.FetchComplete)
+            return Ok(new { fetchComplete = true, totalCached = entry.Jobs.Count, addedCount = 0, totalAfJobs = entry.TotalAfJobs });
+
+        var searchTerm = string.Join(" ", activeRoles);
+        int addedCount = await MergeNextAfPage(entry, cacheKey, searchTerm,
+            normalizedDesiredRoles, normalizedUserMunicipalities, userRegionCodes,
+            normalizedLocationPrefs, normalizedUserTags);
+
+        return Ok(new
+        {
+            fetchComplete = entry.FetchComplete,
+            totalCached = entry.Jobs.Count,
+            addedCount,
+            totalAfJobs = entry.TotalAfJobs
+        });
     }
 
     // ─────────────────────── Matching helpers ───────────────────────
@@ -941,15 +1050,133 @@ public class ExternalJobsController : ControllerBase
         IReadOnlyList<string> normalizedTags,
         HashSet<string> normalizedMunicipalities,
         HashSet<string> regionCodes,
-        HashSet<string> locationPrefs,
-        int afOffset = 0)
+        HashSet<string> locationPrefs)
     {
         var roles  = string.Join("|", normalizedRoles.Order());
         var tags   = string.Join("|", normalizedTags.Order());
         var munis  = string.Join("|", normalizedMunicipalities.Order());
         var regs   = string.Join("|", regionCodes.Order());
         var prefs  = string.Join("|", locationPrefs.Order());
-        return $"match:r={roles};t={tags};m={munis};rg={regs};p={prefs};o={afOffset}";
+        return $"match:r={roles};t={tags};m={munis};rg={regs};p={prefs}";
+    }
+
+    /// <summary>
+    /// Returns up to <paramref name="limit"/> job JSON strings from <paramref name="sorted"/>.
+    /// seed == 0 → original sorted order (best grades first, then score).
+    /// seed != 0 → shuffle within each grade bucket using a seeded RNG so callers
+    ///             see a different subset without changing the A → B → C quality ordering.
+    /// </summary>
+    private static List<string> SliceJobs(
+        List<(int GradeOrder, string Id, string Json)> sorted, int seed, int limit)
+    {
+        if (seed == 0)
+            return sorted.Select(j => j.Json).Take(limit).ToList();
+
+        var rng = new Random(seed);
+        return sorted
+            .GroupBy(j => j.GradeOrder)
+            .OrderBy(g => g.Key)
+            .SelectMany(g => g.OrderBy(_ => rng.Next()))
+            .Select(j => j.Json)
+            .Take(limit)
+            .ToList();
+    }
+
+    // Fetches the next AF page (100 jobs at entry.NextOffset), scores each hit,
+    // deduplicates against the existing pool, merges, re-sorts A→B→C, advances
+    // entry.NextOffset, and refreshes the cache entry. Returns the number of new
+    // jobs added. Network / parse failures are swallowed so callers always get
+    // a valid (possibly unchanged) pool back.
+    private async Task<int> MergeNextAfPage(
+        MatchCacheEntry entry,
+        string cacheKey,
+        string searchTerm,
+        IReadOnlyList<string> normalizedDesiredRoles,
+        HashSet<string> normalizedUserMunicipalities,
+        HashSet<string> userRegionCodes,
+        HashSet<string> normalizedLocationPrefs,
+        IReadOnlyList<string> normalizedUserTags)
+    {
+        if (entry.FetchComplete) return 0;
+
+        var qs = System.Web.HttpUtility.ParseQueryString(string.Empty);
+        qs["q"] = searchTerm;
+        qs["limit"] = "100";
+        qs["offset"] = entry.NextOffset.ToString();
+
+        string rawContent;
+        try
+        {
+            var afResp = await _http.GetAsync($"{AF_BASE}/{AF_SEARCH_PATH}?{qs}");
+            rawContent = await afResp.Content.ReadAsStringAsync();
+        }
+        catch
+        {
+            return 0; // Network failure — caller continues with existing pool
+        }
+
+        int hitsReturned = 0;
+        int addedCount = 0;
+        var existingIds = new HashSet<string>(entry.Jobs.Select(j => j.Id));
+
+        try
+        {
+            using var doc = JsonDocument.Parse(rawContent);
+            if (doc.RootElement.TryGetProperty("hits", out var hitsEl) && hitsEl.ValueKind == JsonValueKind.Array)
+            {
+                hitsReturned = hitsEl.GetArrayLength();
+                foreach (var hit in hitsEl.EnumerateArray())
+                {
+                    var jobId = hit.TryGetProperty("id", out var idEl) ? idEl.GetString() ?? "" : "";
+                    if (existingIds.Contains(jobId)) continue;
+
+                    var (roleMatched, matchedOn, matchedValue) = CheckRoleInclusion(hit, normalizedDesiredRoles);
+                    if (!roleMatched) continue;
+
+                    var (locationScore, locationTier) = ScoreLocation(hit, normalizedUserMunicipalities, userRegionCodes, normalizedLocationPrefs);
+                    var (techBoost, matchedTechTerms) = ScoreTechBoost(hit, normalizedUserTags);
+                    var totalScore = locationScore + techBoost;
+                    var grade = AssignGrade(totalScore);
+
+                    var reasons = new List<string>
+                    {
+                        $"role:{matchedOn} → '{matchedValue}'",
+                        $"location:{locationTier} → +{locationScore}",
+                        $"score:{locationScore}+{techBoost}={totalScore} → grade={grade}",
+                    };
+
+                    var jobJson = BuildJobResultJson(
+                        hit.GetRawText(), grade,
+                        locationScore, locationTier,
+                        techBoost, matchedTechTerms,
+                        totalScore, matchedOn, matchedValue, reasons);
+
+                    var gradeOrder = grade == "A" ? 0 : grade == "B" ? 1 : 2;
+                    entry.Jobs.Add((gradeOrder, jobId, jobJson));
+                    addedCount++;
+                }
+            }
+        }
+        catch
+        {
+            // Partial parse failure — commit whatever was processed before the error
+        }
+
+        // Re-sort to keep A → B → C ordering intact after the merge.
+        var sorted = entry.Jobs.OrderBy(j => j.GradeOrder).ToList();
+        entry.Jobs.Clear();
+        entry.Jobs.AddRange(sorted);
+
+        // Safety net: if AF returned 0 hits, advance past this position so callers
+        // don't re-fetch the same empty offset on the next call.
+        entry.NextOffset += hitsReturned > 0 ? hitsReturned : entry.TotalAfJobs;
+
+        _cache.Set(cacheKey, entry, new MemoryCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15)
+        });
+
+        return addedCount;
     }
 
     private static (bool matched, string matchedOn, string matchedValue) CheckRoleInclusion(
@@ -1254,6 +1481,7 @@ public class ExternalJobsController : ControllerBase
 
     private static string BuildMatchResponseJson(
         List<string> jobJsons, int totalMatched, int limitApplied,
+        bool fetchComplete, int totalAfJobs,
         string desiredRolesSource,
         MatchProfileRequest profile, IReadOnlyList<string> activeRoles)
     {
@@ -1276,6 +1504,8 @@ public class ExternalJobsController : ControllerBase
         writer.WriteNumber("returned", jobJsons.Count);
         writer.WriteNumber("totalMatched", totalMatched);
         writer.WriteNumber("limit", limitApplied);
+        writer.WriteBoolean("fetchComplete", fetchComplete);
+        writer.WriteNumber("totalAfJobs", totalAfJobs);
         writer.WriteEndObject();
 
         WriteThresholds(writer);

@@ -102,6 +102,8 @@ export interface MatchedJobsResponse {
     returned: number;
     totalMatched: number;
     limit: number;
+    fetchComplete: boolean;
+    totalAfJobs: number;
   };
   /**
    * Grade band descriptions + location/tech scoring reference table.

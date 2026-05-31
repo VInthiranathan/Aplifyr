@@ -6,7 +6,8 @@ export interface MatchSession {
   matched: MatchedJob[];
   visibleCount: number;
   desiredRolesSource: "roles" | "title_fallback" | "none" | null;
-  jobPage: number;
+  seed: number;
+  fetchComplete: boolean;
   matchReqHash: string;
 }
 
@@ -20,7 +21,8 @@ const INITIAL_SESSION: MatchSession = {
   matched: [],
   visibleCount: 30,
   desiredRolesSource: null,
-  jobPage: 0,
+  seed: 0,
+  fetchComplete: false,
   matchReqHash: "",
 };
 
