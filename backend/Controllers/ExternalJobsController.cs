@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Text.Json;
 
@@ -11,10 +12,12 @@ public class ExternalJobsController : ControllerBase
 {
     private static readonly HttpClient _http = new();
     private readonly IMemoryCache _cache;
+    private readonly ILogger<ExternalJobsController> _logger;
 
-    public ExternalJobsController(IMemoryCache cache)
+    public ExternalJobsController(IMemoryCache cache, ILogger<ExternalJobsController> logger)
     {
         _cache = cache;
+        _logger = logger;
     }
 
     private const string AF_BASE = "https://jobsearch.api.jobtechdev.se";
@@ -366,8 +369,14 @@ public class ExternalJobsController : ControllerBase
                 // so once we have them the region filter becomes redundant.
                 qs.Remove("region");
             }
-            catch
+            catch (HttpRequestException ex)
             {
+                _logger.LogWarning(ex, "Municipality resolution failed for filters {Filters} with regions {Regions}", municipalityFilters, resolvedRegionCodes);
+                return Content(JsonSerializer.Serialize(new { total = new { value = 0 }, hits = Array.Empty<object>() }), "application/json");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Municipality resolution failed for filters {Filters} with regions {Regions}", municipalityFilters, resolvedRegionCodes);
                 return Content(JsonSerializer.Serialize(new { total = new { value = 0 }, hits = Array.Empty<object>() }), "application/json");
             }
         }
@@ -487,6 +496,7 @@ public class ExternalJobsController : ControllerBase
         }
         catch (Exception ex)
         {
+            _logger.LogWarning(ex, "Occupation municipality resolution failed for filters {Filters} with regions {Regions}", municipalityFilters, resolvedRegionCodes);
             return StatusCode(502, new { error = "Could not reach Arbetsförmedlingen API", detail = ex.Message });
         }
     }
@@ -655,13 +665,13 @@ public class ExternalJobsController : ControllerBase
         var directUrl = $"{AF_BASE}/{System.Web.HttpUtility.UrlEncode(id)}";
         try
         {
-            Console.WriteLine($"ExternalJobsController.GetById: fetching direct {directUrl}");
+            _logger.LogInformation("ExternalJobsController.GetById: fetching direct {DirectUrl}", directUrl);
             // Use the /ad/{id} endpoint for direct fetches
             var adUrl = $"{AF_BASE}/{AF_AD_PATH}/{System.Web.HttpUtility.UrlEncode(id)}";
-            Console.WriteLine($"ExternalJobsController.GetById: trying ad endpoint {adUrl}");
+            _logger.LogInformation("ExternalJobsController.GetById: trying ad endpoint {AdUrl}", adUrl);
             var response = await _http.GetAsync(adUrl);
             var content  = await response.Content.ReadAsStringAsync();
-            Console.WriteLine($"ExternalJobsController.GetById: direct status={response.StatusCode}");
+            _logger.LogInformation("ExternalJobsController.GetById: direct status={StatusCode}", response.StatusCode);
 
             // If the remote responded with HTTP 404, prefer fallback search immediately
             if (response.StatusCode == HttpStatusCode.NotFound)
@@ -680,22 +690,28 @@ public class ExternalJobsController : ControllerBase
                         return Content(searchContent, "application/json");
                     }
                 }
-                catch { /* not json or parse failed, continue to html fallback */ }
+                catch (JsonException ex)
+                {
+                    _logger.LogDebug(ex, "ExternalJobsController.GetById: could not parse fallback search response for {Id}", id);
+                }
 
                 try
                 {
                     var publicUrl = $"https://arbetsformedlingen.se/platsbanken/annonser/{System.Web.HttpUtility.UrlEncode(id)}";
-                    Console.WriteLine($"ExternalJobsController.GetById: attempting public HTML fetch {publicUrl}");
+                    _logger.LogInformation("ExternalJobsController.GetById: attempting public HTML fetch {PublicUrl}", publicUrl);
                     var req = new HttpRequestMessage(HttpMethod.Get, publicUrl);
                     req.Headers.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
                     req.Headers.Accept.ParseAdd("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
                     var publicRes = await _http.SendAsync(req);
                     var publicHtml = await publicRes.Content.ReadAsStringAsync();
-                    Console.WriteLine($"ExternalJobsController.GetById: public fetch status={publicRes.StatusCode}, len={publicHtml?.Length ?? 0}");
+                    _logger.LogInformation("ExternalJobsController.GetById: public fetch status={StatusCode}, len={Length}", publicRes.StatusCode, publicHtml?.Length ?? 0);
                     var json = JsonSerializer.Serialize(new { html = publicHtml });
                     return Content(json, "application/json");
                 }
-                catch (Exception exPublic) { Console.WriteLine($"ExternalJobsController.GetById: public fetch failed: {exPublic.Message}"); }
+                catch (Exception exPublic)
+                {
+                    _logger.LogWarning(exPublic, "ExternalJobsController.GetById: public fetch failed for {Id}", id);
+                }
 
                 return Content(searchContent, "application/json");
             }
@@ -723,28 +739,37 @@ public class ExternalJobsController : ControllerBase
                             return Content(searchContent, "application/json");
                         }
                     }
-                    catch { /* not json or parse failed, continue to html fallback */ }
+                    catch (JsonException ex)
+                    {
+                        _logger.LogDebug(ex, "ExternalJobsController.GetById: could not parse search response for {Id}", id);
+                    }
 
                     // Fallback: try fetching the public ad page HTML and return as JSON { html: "..." }
                     try
                     {
                         var publicUrl = $"https://arbetsformedlingen.se/platsbanken/annonser/{System.Web.HttpUtility.UrlEncode(id)}";
-                        Console.WriteLine($"ExternalJobsController.GetById: attempting public HTML fetch {publicUrl}");
+                        _logger.LogInformation("ExternalJobsController.GetById: attempting public HTML fetch {PublicUrl}", publicUrl);
                         var req = new HttpRequestMessage(HttpMethod.Get, publicUrl);
                         req.Headers.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
                         req.Headers.Accept.ParseAdd("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
                         var publicRes = await _http.SendAsync(req);
                         var publicHtml = await publicRes.Content.ReadAsStringAsync();
-                        Console.WriteLine($"ExternalJobsController.GetById: public fetch status={publicRes.StatusCode}, len={publicHtml?.Length ?? 0}");
+                        _logger.LogInformation("ExternalJobsController.GetById: public fetch status={StatusCode}, len={Length}", publicRes.StatusCode, publicHtml?.Length ?? 0);
                         var json = JsonSerializer.Serialize(new { html = publicHtml });
                         return Content(json, "application/json");
                     }
-                    catch (Exception exPublic) { Console.WriteLine($"ExternalJobsController.GetById: public fetch failed: {exPublic.Message}"); }
+                    catch (Exception exPublic)
+                    {
+                        _logger.LogWarning(exPublic, "ExternalJobsController.GetById: public fetch failed for {Id}", id);
+                    }
 
                     return Content(searchContent, "application/json");
                 }
             }
-            catch { /* ignore parse errors and return original content */ }
+            catch (JsonException ex)
+            {
+                _logger.LogDebug(ex, "ExternalJobsController.GetById: could not parse direct response for {Id}", id);
+            }
 
             return Content(content, "application/json");
         }

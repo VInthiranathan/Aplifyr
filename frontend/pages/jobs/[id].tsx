@@ -5,13 +5,15 @@ import { useTranslation } from "next-i18next";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Briefcase, MapPin, Wifi, Loader2, Bookmark } from "lucide-react";
+import { getPublicBackendUrl, isDebugUiEnabled } from "../../lib/backendUrl";
 import { formatLocation } from "../../lib/utils";
 import CoverLetterModal from "../../components/CoverLetterModal";
 import { Button } from "../../components/ui/button";
 import { getSupabaseBrowserClient } from "../../lib/supabaseClient";
 import { useFavorites } from "../../lib/useFavorites";
 
-const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:5000";
+const BACKEND = getPublicBackendUrl();
+const DEBUG_UI_ENABLED = isDebugUiEnabled();
 
 function decodeJob(encoded?: string) {
   if (!encoded) return null;
@@ -64,7 +66,9 @@ export default function JobDetailPage() {
       try {
         const res = await fetch(`${BACKEND}/api/externaljobs/${id}`);
         const text = await res.text();
-        setRawResponse(text);
+        if (DEBUG_UI_ENABLED) {
+          setRawResponse(text);
+        }
         if (!res.ok) {
           setFetchError(`Status ${res.status}: ${text}`);
           console.error("Job fetch failed", res.status, text);
@@ -155,7 +159,7 @@ export default function JobDetailPage() {
                 bio: profileData.profile.bio,
                 tech_stack: profileData.profile.tech_stack,
                 roles: profileData.profile.roles,
-                cv_url: profileData.profile.cv_storage_path,
+                cv_text: profileData.profile.cv_text,
               };
             }
           }
@@ -246,19 +250,21 @@ export default function JobDetailPage() {
 
   return (
     <div className="p-6">
-      <div className="flex items-center gap-2 mb-4">
-        <Button
-          onClick={() => setShowDebug((s) => !s)}
-          variant="secondary"
-          className="h-auto px-3 py-1.5"
-        >
-          {showDebug ? t("jobDetail.hideApiLog") : t("jobDetail.showApiLog")}
-        </Button>
-        <div className="text-sm text-slate-500">
-          ({t("jobDetail.apiLogDescription")})
-        </div>
-      </div>
-      {showDebug && (
+      {DEBUG_UI_ENABLED && (
+        <>
+          <div className="flex items-center gap-2 mb-4">
+            <Button
+              onClick={() => setShowDebug((s) => !s)}
+              variant="secondary"
+              className="h-auto px-3 py-1.5"
+            >
+              {showDebug ? t("jobDetail.hideApiLog") : t("jobDetail.showApiLog")}
+            </Button>
+            <div className="text-sm text-slate-500">
+              ({t("jobDetail.apiLogDescription")})
+            </div>
+          </div>
+          {showDebug && (
         <div className="mb-4">
           {rawResponse && (
             <div className="mb-2">
@@ -291,6 +297,8 @@ export default function JobDetailPage() {
             </div>
           )}
         </div>
+          )}
+        </>
       )}
       {jobHtml ? (
         <div className="space-y-4">

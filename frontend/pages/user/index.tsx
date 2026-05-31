@@ -7,10 +7,7 @@ import {
   parseCookieHeader,
   serializeCookieHeader,
 } from "@supabase/auth-helpers-nextjs";
-import {
-  isSupabaseConfigured,
-  getSupabaseBrowserClient,
-} from "../../lib/supabaseClient";
+import { isSupabaseConfigured } from "../../lib/supabaseClient";
 import {
   MapPin,
   Briefcase,
@@ -23,8 +20,17 @@ import {
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "../../components/ui/button";
+const CV_VIEW_ROUTE = "/api/cv";
 
-const BACKEND = process.env.BACKEND_URL ?? "http://localhost:5000";
+function hasStoredCv(profile: Record<string, any> | null | undefined) {
+  return Boolean(profile?.cv_storage_path);
+}
+
+function isPdfFile(file: File) {
+  return (
+    file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
+  );
+}
 
 interface Props {
   user: User | null;
@@ -201,7 +207,6 @@ export default function UserPage({ user }: Props) {
     "profile" | "bio" | "skills" | "roles" | null
   >(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [profileImage, setProfileImage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [cvUrl, setCvUrl] = useState<string | null>(null);
@@ -209,7 +214,6 @@ export default function UserPage({ user }: Props) {
     user?.locationPreferences ?? [],
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const profileImageInputRef = useRef<HTMLInputElement>(null);
   const locationFilterItems = locationFilterKeys.map((key) => ({
     value: key.replace("user.", ""),  // e.g. "remote", "region", "country"
     label: t(key),
@@ -236,7 +240,7 @@ export default function UserPage({ user }: Props) {
             setClientProfile(mapped);
             setEditedUser(mapped);
             setSelectedLocations(mapped.locationPreferences);
-            setCvUrl(data.profile.cv_storage_path || null);
+            setCvUrl(hasStoredCv(data.profile) ? CV_VIEW_ROUTE : null);
           } else {
             // no profile yet — allow user to create one via UI
             setClientProfile(null);
@@ -261,8 +265,8 @@ export default function UserPage({ user }: Props) {
           });
           if (res.ok) {
             const data = await res.json();
-            if (data.profile && data.profile.cv_storage_path) {
-              setCvUrl(data.profile.cv_storage_path);
+            if (data.profile) {
+              setCvUrl(hasStoredCv(data.profile) ? CV_VIEW_ROUTE : null);
             }
           }
         } catch (e) {
@@ -272,32 +276,21 @@ export default function UserPage({ user }: Props) {
     }
   }, [user]);
 
-  const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (file.size <= 5 * 1024 * 1024) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setProfileImage(reader.result as string);
-        };
-        reader.readAsDataURL(file);
-        // TODO: Upload to backend
-      } else {
-        alert(t("user.fileSizeTooLarge"));
-      }
-    }
-  };
-
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      if (file.size <= 5 * 1024 * 1024) {
-        // 5MB
-        setUploadedFile(file);
-        await uploadCV(file);
-      } else {
+      if (file.size > 5 * 1024 * 1024) {
         alert(t("user.fileSizeTooLarge"));
+        return;
       }
+
+      if (!isPdfFile(file)) {
+        alert(t("user.cvPdfOnly"));
+        return;
+      }
+
+      setUploadedFile(file);
+      await uploadCV(file);
     }
   };
 
@@ -345,12 +338,18 @@ export default function UserPage({ user }: Props) {
 
       if (res.ok) {
         const data = await res.json();
-        setCvUrl(data.cv_url);
+        setCvUrl(data.cv_view_url || CV_VIEW_ROUTE);
         alert(t("user.cvUploadedSuccess"));
       } else {
         const err = await res.json().catch(() => ({}));
         console.error("CV upload failed", err);
-        alert(t("user.cvUploadFailed"));
+        if (err.code === "cv_pdf_only") {
+          alert(t("user.cvPdfOnly"));
+        } else if (err.code === "cv_parse_failed") {
+          alert(t("user.cvParseFailed"));
+        } else {
+          alert(t("user.cvUploadFailed"));
+        }
       }
     } catch (error) {
       console.error("CV upload error:", error);
@@ -366,12 +365,18 @@ export default function UserPage({ user }: Props) {
 
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
-      if (file.size <= 5 * 1024 * 1024) {
-        setUploadedFile(file);
-        await uploadCV(file);
-      } else {
+      if (file.size > 5 * 1024 * 1024) {
         alert(t("user.fileSizeTooLarge"));
+        return;
       }
+
+      if (!isPdfFile(file)) {
+        alert(t("user.cvPdfOnly"));
+        return;
+      }
+
+      setUploadedFile(file);
+      await uploadCV(file);
     }
   };
 
@@ -414,17 +419,9 @@ export default function UserPage({ user }: Props) {
           <div className="flex items-center gap-6">
             {/* Square Avatar */}
             <div className="relative flex-shrink-0">
-              {profileImage ? (
-                <img
-                  src={profileImage}
-                  alt={(clientProfile && clientProfile.name) || t("user.profileAlt")}
-                  className="w-24 h-24 rounded-2xl object-cover"
-                />
-              ) : (
-                <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white text-3xl font-bold">
-                  {(clientProfile && clientProfile.avatarInitials) || ""}
-                </div>
-              )}
+              <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white text-3xl font-bold">
+                {(clientProfile && clientProfile.avatarInitials) || ""}
+              </div>
             </div>
 
             {/* User Info */}
@@ -641,7 +638,7 @@ export default function UserPage({ user }: Props) {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf,.doc,.docx"
+                accept=".pdf"
                 onChange={handleFileChange}
                 className="hidden"
                 disabled={isUploading}
@@ -724,7 +721,7 @@ export default function UserPage({ user }: Props) {
                             {t("user.uploadYourCv")}
                           </p>
                           <p className="text-sm text-gray-500 dark:text-white/50">
-                            PDF, DOC, DOCX • Max 5MB
+                            PDF only • Max 5MB
                           </p>
                         </div>
                         <button
@@ -774,47 +771,17 @@ export default function UserPage({ user }: Props) {
                     <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-3">
                       {t("user.profilePicture")}
                     </label>
+                    <p className="mb-3 text-sm text-gray-600 dark:text-white/60">
+                      {t("user.profileImageUnavailable")}
+                    </p>
                     <div className="flex items-center gap-6">
                       {/* Avatar Preview */}
                       <div className="relative flex-shrink-0">
-                        {profileImage ? (
-                          <img
-                            src={profileImage}
-                            alt={t("user.profileAlt")}
-                            className="w-24 h-24 rounded-2xl object-cover"
-                          />
-                        ) : (
-                          <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white text-3xl font-bold">
-                            {(editedUser && editedUser.avatarInitials) ||
-                              (clientProfile && clientProfile.avatarInitials) ||
-                              ""}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Upload buttons */}
-                      <div className="flex flex-col gap-2">
-                        <input
-                          ref={profileImageInputRef}
-                          type="file"
-                          accept="image/*"
-                          onChange={handleProfileImageChange}
-                          className="hidden"
-                        />
-                        <button
-                          onClick={() => profileImageInputRef.current?.click()}
-                          className="app-primary-button px-4 py-2 text-sm"
-                        >
-                          {t("user.uploadImage")}
-                        </button>
-                        {profileImage && (
-                          <button
-                            onClick={() => setProfileImage(null)}
-                            className="app-secondary-button px-4 py-2 text-sm"
-                          >
-                            {t("user.useInitials")}
-                          </button>
-                        )}
+                        <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white text-3xl font-bold">
+                          {(editedUser && editedUser.avatarInitials) ||
+                            (clientProfile && clientProfile.avatarInitials) ||
+                            ""}
+                        </div>
                       </div>
                     </div>
                   </div>

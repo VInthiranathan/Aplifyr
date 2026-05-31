@@ -7,6 +7,33 @@ import {
 import formidable from "formidable";
 import fs from "fs";
 
+function isPdfUpload(file: formidable.File) {
+  const mimeType = file.mimetype?.toLowerCase() ?? "";
+  const fileName = file.originalFilename?.toLowerCase() ?? "";
+
+  return mimeType === "application/pdf" || fileName.endsWith(".pdf");
+}
+
+function normalizePdfText(text: string) {
+  return text
+    .replace(/\r\n/g, "\n")
+    .replace(/[^\S\n]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+async function extractPdfText(fileBuffer: Buffer) {
+  const { PDFParse } = await import("pdf-parse");
+  const parser = new PDFParse({ data: fileBuffer });
+
+  try {
+    const parsed = await parser.getText();
+    return normalizePdfText(parsed.text ?? "");
+  } finally {
+    await parser.destroy();
+  }
+}
+
 // Disable default body parser
 export const config = {
   api: {
@@ -67,10 +94,12 @@ export default async function handler(
     return res.status(401).json({ error: "Not authenticated" });
   }
 
+  let tempFilePath: string | null = null;
+
   try {
     const form = formidable({ maxFileSize: 5 * 1024 * 1024 }); // 5MB max
 
-    const [fields, files] = await form.parse(req);
+    const [, files] = await form.parse(req);
 
     const fileArray = files.file;
     if (!fileArray || fileArray.length === 0) {
@@ -78,13 +107,41 @@ export default async function handler(
     }
 
     const file = fileArray[0];
+    tempFilePath = file.filepath;
+
+    if (!isPdfUpload(file)) {
+      return res.status(400).json({
+        error: "Only PDF files are supported for CV uploads",
+        code: "cv_pdf_only",
+      });
+    }
+
     const fileName = `${user.id}/cv-${Date.now()}.pdf`;
 
     // Read file content
     const fileBuffer = fs.readFileSync(file.filepath);
+    const extractedText = await extractPdfText(fileBuffer);
+
+    if (!extractedText) {
+      return res.status(422).json({
+        error: "Could not extract text from the uploaded PDF",
+        code: "cv_parse_failed",
+      });
+    }
+
+    const { data: existingProfile, error: existingProfileError } = await supabase
+      .from("profiles")
+      .select("cv_storage_path")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (existingProfileError) {
+      console.error("Profile fetch error:", existingProfileError);
+      return res.status(500).json({ error: existingProfileError.message });
+    }
 
     // Upload to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from("cvs")
       .upload(fileName, fileBuffer, {
         contentType: file.mimetype || "application/pdf",
@@ -96,29 +153,43 @@ export default async function handler(
       return res.status(500).json({ error: uploadError.message });
     }
 
-    // Get public URL
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from("cvs").getPublicUrl(fileName);
-
-    // Update profile with CV storage path
     const { error: updateError } = await supabase
       .from("profiles")
-      .update({ cv_storage_path: publicUrl })
-      .eq("id", user.id);
+      .upsert(
+        {
+          id: user.id,
+          cv_storage_path: fileName,
+          cv_text: extractedText,
+        },
+        { onConflict: "id" },
+      );
 
     if (updateError) {
       console.error("Profile update error:", updateError);
       return res.status(500).json({ error: updateError.message });
     }
 
-    // Clean up temp file
-    fs.unlinkSync(file.filepath);
+    if (
+      existingProfile?.cv_storage_path &&
+      existingProfile.cv_storage_path !== fileName
+    ) {
+      const { error: removeError } = await supabase.storage
+        .from("cvs")
+        .remove([existingProfile.cv_storage_path]);
 
-    return res.status(200).json({ cv_url: publicUrl });
+      if (removeError) {
+        console.warn("Old CV cleanup error:", removeError);
+      }
+    }
+
+    return res.status(200).json({ cv_view_url: "/api/cv" });
   } catch (e) {
     console.error("Upload handler error:", e);
     const message = e instanceof Error ? e.message : String(e);
     return res.status(500).json({ error: message });
+  } finally {
+    if (tempFilePath && fs.existsSync(tempFilePath)) {
+      fs.unlinkSync(tempFilePath);
+    }
   }
 }
