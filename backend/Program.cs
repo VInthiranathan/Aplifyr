@@ -37,6 +37,7 @@ else
     Console.WriteLine("[Startup] Supabase credentials not configured. Running with local JSON/API-only features.");
 }
 
+builder.Services.AddMemoryCache();
 builder.Services.AddControllers();
 
 var configuredOrigins = builder.Configuration

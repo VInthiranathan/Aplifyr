@@ -147,12 +147,27 @@ const emptyUser: User = {
   avatarInitials: "",
 };
 
+const CANONICAL_LOCATION_PREFS = new Set([
+  "onlyMyLocation",
+  "nearbyLocation",
+  "region",
+  "country",
+  "remote",
+]);
+
 const mapProfileToUser = (profile: Record<string, any>): User => ({
   id: profile.id,
   name: profile.full_name ?? "",
   title: profile.title ?? "",
   location: profile.location ?? "",
-  locationPreferences: profile.location_preferences ?? [],
+  locationPreferences: Array.from(
+    new Set(
+      (profile.location_preferences ?? [])
+        .filter((v: unknown): v is string => typeof v === "string")
+        .map((v: string) => v.trim())
+        .filter((v: string) => CANONICAL_LOCATION_PREFS.has(v)),
+    ),
+  ),
   bio: profile.bio ?? "",
   tags: profile.tech_stack ?? [],
   roles: profile.roles ?? [],
@@ -199,7 +214,10 @@ export default function UserPage({ user }: Props) {
     user?.locationPreferences ?? [],
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const locationFilters = locationFilterKeys.map((key) => t(key));
+  const locationFilterItems = locationFilterKeys.map((key) => ({
+    value: key.replace("user.", ""),  // e.g. "remote", "region", "country"
+    label: t(key),
+  }));
 
   // client-side profile state: undefined = loading, null = no profile, User = loaded
   const [clientProfile, setClientProfile] = useState<User | null | undefined>(
@@ -490,19 +508,19 @@ export default function UserPage({ user }: Props) {
                 </h2>
               </div>
               <div className="flex gap-3 flex-wrap">
-                {locationFilters.map((f) => {
-                  const isSelected = selectedLocations.includes(f);
+                {locationFilterItems.map((f) => {
+                  const isSelected = selectedLocations.includes(f.value);
                   return (
                     <button
-                      key={f}
-                      onClick={() => toggleLocation(f)}
+                      key={f.value}
+                      onClick={() => toggleLocation(f.value)}
                       className={`px-5 py-2.5 rounded-full border font-medium transition-all ${
                         isSelected
                           ? "bg-purple-100 dark:bg-purple-500/20 border-purple-500 dark:border-purple-500/50 text-purple-700 dark:text-purple-300"
                           : "border-gray-200 dark:border-white/10 text-gray-700 dark:text-white/70 hover:bg-gray-50 dark:hover:bg-white/5"
                       }`}
                     >
-                      {f}
+                      {f.label}
                       {isSelected && (
                         <span className="ml-2 text-purple-600 dark:text-purple-400">
                           ✓
@@ -515,7 +533,11 @@ export default function UserPage({ user }: Props) {
               {selectedLocations.length > 0 && (
                 <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10">
                   <p className="text-sm text-gray-600 dark:text-white/60">
-                    {t("user.selected", { value: selectedLocations.join(", ") })}
+                    {t("user.selected", {
+                      value: selectedLocations
+                        .map((v) => locationFilterItems.find((f) => f.value === v)?.label ?? v)
+                        .join(", "),
+                    })}
                   </p>
                 </div>
               )}

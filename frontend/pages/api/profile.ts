@@ -14,6 +14,7 @@ function normalizeStringArray(value: unknown) {
     .filter((entry): entry is string => typeof entry === 'string')
     .map((entry) => entry.trim())
     .filter(Boolean)
+    .filter((v, i, arr) => arr.indexOf(v) === i)
 }
 
 function appendSetCookie(res: NextApiResponse, values: string[]) {
