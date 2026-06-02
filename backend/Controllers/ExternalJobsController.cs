@@ -24,6 +24,7 @@ public class ExternalJobsController : ControllerBase
     private const string AF_SEARCH_PATH = "search";
     private const string AF_AD_PATH = "ad";
     private const int AF_STATS_LIMIT = 30;
+    private const string MATCH_QUERY_STRATEGY_VERSION = "2";
 
     // ── Match defaults ────────────────────────────────────────────────────────
     // Change DEFAULT_MATCH_RESPONSE_LIMIT to adjust how many matched jobs
@@ -48,6 +49,7 @@ public class ExternalJobsController : ControllerBase
     private sealed class MatchCacheEntry
     {
         public List<(int GradeOrder, string Id, string Json)> Jobs { get; } = new();
+        public string SearchTerm { get; set; } = string.Empty;
         public int NextOffset { get; set; }
         public int TotalAfJobs { get; set; }
         // TotalAfJobs > 0 guard prevents false-complete on a zero-result query.
@@ -291,6 +293,12 @@ public class ExternalJobsController : ControllerBase
         ["analyst"] = "analytiker", ["analytiker"] = "analyst",
         ["architect"] = "arkitekt", ["arkitekt"] = "architect",
     };
+
+    private static readonly string[] _compactRoleSearchSuffixes = _roleSynonyms.Keys
+        .Where(key => key.Length >= 4)
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderByDescending(key => key.Length)
+        .ToArray();
 
     [HttpGet]
     public async Task<IActionResult> Search(
@@ -871,6 +879,7 @@ public class ExternalJobsController : ControllerBase
         }
 
         var effectiveLimit = limit > 0 ? limit : DEFAULT_MATCH_RESPONSE_LIMIT;
+        var primarySearchTerm = string.Join(" ", activeRoles);
         var cacheKey = BuildMatchCacheKey(
             normalizedDesiredRoles, normalizedUserTags,
             normalizedUserMunicipalities, userRegionCodes, normalizedLocationPrefs);
@@ -885,7 +894,9 @@ public class ExternalJobsController : ControllerBase
             // the same ~100-job pool that was loaded on first visit.
             if (seed != 0 && !cachedEntry.FetchComplete)
             {
-                var searchTermForMerge = string.Join(" ", activeRoles);
+                var searchTermForMerge = string.IsNullOrWhiteSpace(cachedEntry.SearchTerm)
+                    ? primarySearchTerm
+                    : cachedEntry.SearchTerm;
                 await MergeNextAfPage(cachedEntry, cacheKey, searchTermForMerge, normalizedDesiredRoles,
                     normalizedUserMunicipalities, userRegionCodes, normalizedLocationPrefs, normalizedUserTags);
             }
@@ -895,18 +906,11 @@ public class ExternalJobsController : ControllerBase
             return Content(cachedJson, "application/json");
         }
 
-        // Fetch jobs from AF using active roles as the query
-        var searchTerm = string.Join(" ", activeRoles);
-        var qs = System.Web.HttpUtility.ParseQueryString(string.Empty);
-        qs["q"] = searchTerm;
-        qs["limit"] = MATCH_UPSTREAM_FETCH_LIMIT.ToString();
-        qs["offset"] = "0";
-
         string rawContent;
+        string searchTerm;
         try
         {
-            var afResp = await _http.GetAsync($"{AF_BASE}/{AF_SEARCH_PATH}?{qs}");
-            rawContent = await afResp.Content.ReadAsStringAsync();
+            (searchTerm, rawContent) = await FetchInitialMatchPageAsync(activeRoles);
         }
         catch (Exception ex)
         {
@@ -975,7 +979,12 @@ public class ExternalJobsController : ControllerBase
         // Sort the full result set and cache it so subsequent requests for the same
         // profile are served without an AF round-trip. The Continue endpoint will
         // grow this pool in the background until all AF results are fetched.
-        var entry = new MatchCacheEntry { TotalAfJobs = totalAfJobs, NextOffset = hitsReturned };
+        var entry = new MatchCacheEntry
+        {
+            SearchTerm = searchTerm,
+            TotalAfJobs = totalAfJobs,
+            NextOffset = hitsReturned
+        };
         foreach (var r in matchResults.OrderBy(r => r.GradeOrder).ThenByDescending(r => r.TotalScore))
             entry.Jobs.Add((r.GradeOrder, r.Id, r.Json));
 
@@ -1054,8 +1063,11 @@ public class ExternalJobsController : ControllerBase
         if (entry.FetchComplete)
             return Ok(new { fetchComplete = true, totalCached = entry.Jobs.Count, addedCount = 0, totalAfJobs = entry.TotalAfJobs });
 
-        var searchTerm = string.Join(" ", activeRoles);
-        int addedCount = await MergeNextAfPage(entry, cacheKey, searchTerm,
+        var primarySearchTerm = string.Join(" ", activeRoles);
+        var searchTermForMerge = string.IsNullOrWhiteSpace(entry.SearchTerm)
+            ? primarySearchTerm
+            : entry.SearchTerm;
+        int addedCount = await MergeNextAfPage(entry, cacheKey, searchTermForMerge,
             normalizedDesiredRoles, normalizedUserMunicipalities, userRegionCodes,
             normalizedLocationPrefs, normalizedUserTags);
 
@@ -1082,8 +1094,86 @@ public class ExternalJobsController : ControllerBase
         var munis  = string.Join("|", normalizedMunicipalities.Order());
         var regs   = string.Join("|", regionCodes.Order());
         var prefs  = string.Join("|", locationPrefs.Order());
-        return $"match:r={roles};t={tags};m={munis};rg={regs};p={prefs}";
+        return $"match:v={MATCH_QUERY_STRATEGY_VERSION};r={roles};t={tags};m={munis};rg={regs};p={prefs}";
     }
+
+    private async Task<(string SearchTerm, string RawContent)> FetchInitialMatchPageAsync(IReadOnlyList<string> activeRoles)
+    {
+        string? firstRawContent = null;
+        string? firstSearchTerm = null;
+
+        foreach (var candidate in BuildSearchTermCandidates(activeRoles))
+        {
+            var rawContent = await FetchAfSearchPageRawAsync(candidate, 0, MATCH_UPSTREAM_FETCH_LIMIT);
+
+            firstSearchTerm ??= candidate;
+            firstRawContent ??= rawContent;
+
+            if (SearchResponseHasHits(rawContent))
+                return (candidate, rawContent);
+        }
+
+        return (firstSearchTerm ?? string.Join(" ", activeRoles), firstRawContent ?? string.Empty);
+    }
+
+    private async Task<string> FetchAfSearchPageRawAsync(string searchTerm, int offset, int limit)
+    {
+        var qs = System.Web.HttpUtility.ParseQueryString(string.Empty);
+        qs["q"] = searchTerm;
+        qs["limit"] = limit.ToString();
+        qs["offset"] = offset.ToString();
+
+        var afResp = await _http.GetAsync($"{AF_BASE}/{AF_SEARCH_PATH}?{qs}");
+        return await afResp.Content.ReadAsStringAsync();
+    }
+
+    private static bool SearchResponseHasHits(string rawContent)
+    {
+        if (string.IsNullOrWhiteSpace(rawContent))
+            return false;
+
+        using var doc = JsonDocument.Parse(rawContent);
+        return doc.RootElement.TryGetProperty("hits", out var hitsEl)
+            && hitsEl.ValueKind == JsonValueKind.Array
+            && hitsEl.GetArrayLength() > 0;
+    }
+
+    private static IReadOnlyList<string> BuildSearchTermCandidates(IReadOnlyList<string> activeRoles)
+    {
+        var primary = string.Join(" ", activeRoles);
+        var expanded = string.Join(" ", activeRoles.Select(ExpandCompactRoleForSearch));
+
+        return string.Equals(primary, expanded, StringComparison.OrdinalIgnoreCase)
+            ? new[] { primary }
+            : new[] { primary, expanded };
+    }
+
+    private static string ExpandCompactRoleForSearch(string role)
+    {
+        var trimmedRole = role.Trim();
+        if (trimmedRole.Length == 0 || ContainsRoleSeparator(trimmedRole))
+            return trimmedRole;
+
+        var compactRole = NormalizeRoleCompact(trimmedRole);
+        foreach (var suffix in _compactRoleSearchSuffixes)
+        {
+            if (compactRole.Length <= suffix.Length + 2)
+                continue;
+            if (!compactRole.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var prefix = compactRole[..^suffix.Length];
+            if (prefix.Length < 3)
+                continue;
+
+            return $"{prefix} {suffix}";
+        }
+
+        return trimmedRole;
+    }
+
+    private static bool ContainsRoleSeparator(string value) =>
+        value.Any(c => char.IsWhiteSpace(c) || c is '-' or '_' or '/' or '\\' or '.');
 
     /// <summary>
     /// Returns up to <paramref name="limit"/> job JSON strings from <paramref name="sorted"/>.
@@ -1124,16 +1214,10 @@ public class ExternalJobsController : ControllerBase
     {
         if (entry.FetchComplete) return 0;
 
-        var qs = System.Web.HttpUtility.ParseQueryString(string.Empty);
-        qs["q"] = searchTerm;
-        qs["limit"] = "100";
-        qs["offset"] = entry.NextOffset.ToString();
-
         string rawContent;
         try
         {
-            var afResp = await _http.GetAsync($"{AF_BASE}/{AF_SEARCH_PATH}?{qs}");
-            rawContent = await afResp.Content.ReadAsStringAsync();
+            rawContent = await FetchAfSearchPageRawAsync(searchTerm, entry.NextOffset, 100);
         }
         catch
         {
@@ -1207,15 +1291,21 @@ public class ExternalJobsController : ControllerBase
     private static (bool matched, string matchedOn, string matchedValue) CheckRoleInclusion(
         JsonElement job, IReadOnlyList<string> normalizedDesiredRoles)
     {
+        // Pre-compute compact forms once per call so each field check reuses them.
+        var compactDesiredRoles = normalizedDesiredRoles
+            .Select(NormalizeRoleCompact)
+            .ToArray();
+
         // Check occupation.label (highest priority)
         if (job.TryGetProperty("occupation", out var occ) && occ.ValueKind != JsonValueKind.Null &&
             occ.TryGetProperty("label", out var ol) && ol.ValueKind == JsonValueKind.String)
         {
             var label = ol.GetString()!;
             var normLabel = NormalizeRoleInput(label);
-            foreach (var role in normalizedDesiredRoles)
+            var compactLabel = NormalizeRoleCompact(normLabel);
+            for (int i = 0; i < normalizedDesiredRoles.Count; i++)
             {
-                if (RoleTokensMatchText(role, normLabel))
+                if (RoleMatchesField(normalizedDesiredRoles[i], compactDesiredRoles[i], normLabel, compactLabel))
                     return (true, "occupation.label", label);
             }
         }
@@ -1226,9 +1316,10 @@ public class ExternalJobsController : ControllerBase
         {
             var label = ogl.GetString()!;
             var normLabel = NormalizeRoleInput(label);
-            foreach (var role in normalizedDesiredRoles)
+            var compactLabel = NormalizeRoleCompact(normLabel);
+            for (int i = 0; i < normalizedDesiredRoles.Count; i++)
             {
-                if (RoleTokensMatchText(role, normLabel))
+                if (RoleMatchesField(normalizedDesiredRoles[i], compactDesiredRoles[i], normLabel, compactLabel))
                     return (true, "occupation_group.label", label);
             }
         }
@@ -1238,9 +1329,10 @@ public class ExternalJobsController : ControllerBase
         {
             var headline = hl.GetString()!;
             var normHeadline = NormalizeRoleInput(headline);
-            foreach (var role in normalizedDesiredRoles)
+            var compactHeadline = NormalizeRoleCompact(normHeadline);
+            for (int i = 0; i < normalizedDesiredRoles.Count; i++)
             {
-                if (RoleTokensMatchText(role, normHeadline))
+                if (RoleMatchesField(normalizedDesiredRoles[i], compactDesiredRoles[i], normHeadline, compactHeadline))
                 {
                     var display = headline.Length > 80 ? headline[..80] + "…" : headline;
                     return (true, "headline", display);
@@ -1257,10 +1349,7 @@ public class ExternalJobsController : ControllerBase
     /// </summary>
     private static bool RoleTokensMatchText(string normalizedRole, string normalizedText)
     {
-        var tokens = normalizedRole
-            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-            .Where(t => t.Length >= 3) // skip very short filler words
-            .ToArray();
+        var tokens = TokenizeRoleForMatching(normalizedRole);
 
         if (tokens.Length == 0) return false;
 
@@ -1275,6 +1364,27 @@ public class ExternalJobsController : ControllerBase
         }
 
         return false;
+    }
+
+    private static string[] TokenizeRoleForMatching(string normalizedRole)
+    {
+        var tokens = normalizedRole
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(t => t.Length >= 3)
+            .ToList();
+
+        var expandedRole = ExpandCompactRoleForSearch(normalizedRole);
+        if (!string.Equals(expandedRole, normalizedRole, StringComparison.OrdinalIgnoreCase))
+        {
+            tokens.AddRange(
+                expandedRole
+                    .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                    .Where(t => t.Length >= 3));
+        }
+
+        return tokens
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private static HashSet<string> NormalizeLocationPreferences(IEnumerable<string> prefs)
@@ -1429,6 +1539,30 @@ public class ExternalJobsController : ControllerBase
 
     private static string NormalizeRoleInput(string input) =>
         input.Trim().ToLowerInvariant().Replace("-", "");
+
+    // Compact form: lowercase and keep only letters and digits — separators removed.
+    // Used alongside NormalizeRoleInput to match separator variants like
+    // "systemdeveloper", "system developer", "system-developer" against each other.
+    private static string NormalizeRoleCompact(string input)
+    {
+        var sb = new System.Text.StringBuilder(input.Length);
+        foreach (var c in input.ToLowerInvariant())
+            if (char.IsLetterOrDigit(c)) sb.Append(c);
+        return sb.ToString();
+    }
+
+    // Two-pass field matcher: compact match first (separator-insensitive),
+    // then token/synonym fallback on readable forms.
+    // Guard: compact role must be at least 4 chars to avoid false positives on short tokens.
+    private static bool RoleMatchesField(
+        string readableRole, string compactRole,
+        string readableField, string compactField)
+    {
+        if (compactRole.Length >= 4 &&
+            compactField.Contains(compactRole, StringComparison.OrdinalIgnoreCase))
+            return true;
+        return RoleTokensMatchText(readableRole, readableField);
+    }
 
     private static string NormalizeTech(string token)
     {
