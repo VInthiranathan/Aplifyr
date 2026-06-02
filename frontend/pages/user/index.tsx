@@ -409,27 +409,27 @@ export default function UserPage({ user }: Props) {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0d0d0d]">
-      {/* Banner */}
-      <div className="h-48 bg-gradient-to-r from-orange-300 via-purple-500 to-purple-700" />
+      {/* Banner — shorter on mobile */}
+      <div className="h-28 sm:h-48 bg-gradient-to-r from-orange-300 via-purple-500 to-purple-700" />
 
       {/* Main container */}
-      <div className="max-w-7xl mx-auto px-8 -mt-24 pb-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 -mt-16 sm:-mt-24 pb-10">
         {/* Profile Card */}
-        <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-8 border border-gray-200 dark:border-white/5 shadow-xl mb-8">
-          <div className="flex items-center gap-6">
+        <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-4 sm:p-8 border border-gray-200 dark:border-white/5 shadow-xl mb-8">
+          <div className="flex flex-wrap items-center gap-4 sm:gap-6">
             {/* Square Avatar */}
             <div className="relative flex-shrink-0">
-              <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white text-3xl font-bold">
+              <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white text-2xl sm:text-3xl font-bold">
                 {(clientProfile && clientProfile.avatarInitials) || ""}
               </div>
             </div>
 
             {/* User Info */}
-            <div className="flex-1">
-              <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-3">
                 {clientProfile?.name ?? ""}
               </h1>
-              <div className="flex items-center gap-4 text-gray-600 dark:text-white/60">
+              <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-gray-600 dark:text-white/60">
                 <div className="flex items-center gap-2">
                   <Briefcase className="w-4 h-4" />
                   <span>{(clientProfile && clientProfile.title) || ""}</span>
@@ -442,7 +442,7 @@ export default function UserPage({ user }: Props) {
               </div>
             </div>
 
-            {/* Edit Profile Button - edits name/title/location only */}
+            {/* Edit Profile Button */}
             <button
               onClick={() => {
                 setEditedUser(
@@ -453,7 +453,7 @@ export default function UserPage({ user }: Props) {
                 setEditSection("profile");
                 setIsEditModalOpen(true);
               }}
-              className="app-primary-button px-6 py-3"
+              className="app-primary-button px-4 sm:px-6 py-2.5 sm:py-3 w-full sm:w-auto"
             >
               <Edit className="w-4 h-4" />
               {t("user.editProfile")}

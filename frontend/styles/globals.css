@@ -22,7 +22,7 @@
   }
 
   .app-page-shell {
-    @apply p-6 space-y-8;
+    @apply p-4 sm:p-6 space-y-6 sm:space-y-8;
   }
 
   .app-page-header {

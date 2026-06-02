@@ -145,6 +145,8 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
   const [visibleCount, setVisibleCount] = useState(_snap?.visibleCount ?? HOME_INITIAL_COUNT);
   const [seed, setSeed] = useState(_snap?.seed ?? 0);
   const [fetchComplete, setFetchComplete] = useState(_snap?.fetchComplete ?? false);
+  // Grade badge tap-to-reveal state (for touch devices)
+  const [openGradeId, setOpenGradeId] = useState<string | null>(null);
 
   // ── Fetch matches after mount (and whenever visibleCount / seed changes) ──
   useEffect(() => {
@@ -253,6 +255,14 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchComplete, desiredRolesSource]);
 
+  // Close grade tooltip when clicking anywhere outside
+  useEffect(() => {
+    if (!openGradeId) return;
+    const close = () => setOpenGradeId(null);
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, [openGradeId]);
+
   const locationTierLabel: Record<string, string> = {
     same_municipality:  t("home.tierSameMunicipality"),
     same_region:        t("home.tierSameRegion"),
@@ -354,8 +364,8 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
         {/* Grade Match Cards */}
         <div className="lg:col-span-3 grid grid-cols-3 gap-6">
           {/* A Grade */}
-          <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-8 border border-gray-200 dark:border-white/5 shadow-sm hover:shadow-md dark:shadow-none transition-all hover:scale-[1.02] group">
-            <div className="flex items-center justify-center mb-6">
+          <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-4 sm:p-8 border border-gray-200 dark:border-white/5 shadow-sm hover:shadow-md dark:shadow-none transition-all hover:scale-[1.02] group">
+            <div className="flex items-center justify-center mb-4 sm:mb-6">
               <div className="px-4 py-2 rounded-full bg-green-100 dark:bg-green-500/20 group-hover:scale-110 transition-transform">
                 <span className="text-sm font-bold text-green-600 dark:text-green-400 uppercase tracking-wider">
                   A
@@ -363,7 +373,7 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
               </div>
             </div>
             <div>
-              <p className="text-5xl font-bold text-gray-900 dark:text-white mb-2">
+              <p className="text-3xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-2">
                 {gradeA ?? <span className="text-gray-300 dark:text-white/20">—</span>}
               </p>
               <p className="text-sm text-gray-500 dark:text-white/50">
@@ -373,8 +383,8 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
           </div>
 
           {/* B Grade */}
-          <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-8 border border-gray-200 dark:border-white/5 shadow-sm hover:shadow-md dark:shadow-none transition-all hover:scale-[1.02] group">
-            <div className="flex items-center justify-center mb-6">
+          <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-4 sm:p-8 border border-gray-200 dark:border-white/5 shadow-sm hover:shadow-md dark:shadow-none transition-all hover:scale-[1.02] group">
+            <div className="flex items-center justify-center mb-4 sm:mb-6">
               <div className="px-4 py-2 rounded-full bg-yellow-100 dark:bg-yellow-500/20 group-hover:scale-110 transition-transform">
                 <span className="text-sm font-bold text-yellow-600 dark:text-yellow-400 uppercase tracking-wider">
                   B
@@ -382,7 +392,7 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
               </div>
             </div>
             <div>
-              <p className="text-5xl font-bold text-gray-900 dark:text-white mb-2">
+              <p className="text-3xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-2">
                 {gradeB ?? <span className="text-gray-300 dark:text-white/20">—</span>}
               </p>
               <p className="text-sm text-gray-500 dark:text-white/50">
@@ -392,8 +402,8 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
           </div>
 
           {/* C Grade */}
-          <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-8 border border-gray-200 dark:border-white/5 shadow-sm hover:shadow-md dark:shadow-none transition-all hover:scale-[1.02] group">
-            <div className="flex items-center justify-center mb-6">
+          <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-4 sm:p-8 border border-gray-200 dark:border-white/5 shadow-sm hover:shadow-md dark:shadow-none transition-all hover:scale-[1.02] group">
+            <div className="flex items-center justify-center mb-4 sm:mb-6">
               <div className="px-4 py-2 rounded-full bg-red-100 dark:bg-red-500/20 group-hover:scale-110 transition-transform">
                 <span className="text-sm font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">
                   C
@@ -401,7 +411,7 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
               </div>
             </div>
             <div>
-              <p className="text-5xl font-bold text-gray-900 dark:text-white mb-2">
+              <p className="text-3xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-2">
                 {gradeC ?? <span className="text-gray-300 dark:text-white/20">—</span>}
               </p>
               <p className="text-sm text-gray-500 dark:text-white/50">
@@ -528,7 +538,11 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
                 badges={
                   <div className="relative group/grade flex-shrink-0">
                     <span
-                      className={`text-xs font-bold px-3 py-1 rounded-full cursor-default ${
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenGradeId(openGradeId === job.id ? null : job.id);
+                      }}
+                      className={`text-xs font-bold px-3 py-1 rounded-full cursor-pointer ${
                         job.matchGrade === "A"
                           ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-300 dark:border-green-800/50"
                           : job.matchGrade === "B"
@@ -538,13 +552,13 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
                     >
                       {job.matchGrade} {t("home.match")}
                     </span>
-                    {/* Score tooltip */}
+                    {/* Score tooltip — visible on hover (desktop) or tap (mobile) */}
                     <div
-                      className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20
-                        opacity-0 group-hover/grade:opacity-100 pointer-events-none
-                        transition-opacity duration-150
+                      className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20
+                        pointer-events-none transition-opacity duration-150
                         bg-gray-900 dark:bg-[#111] text-white text-xs rounded-xl p-3
-                        shadow-xl border border-white/10 whitespace-nowrap"
+                        shadow-xl border border-white/10 whitespace-nowrap
+                        ${openGradeId === job.id ? 'opacity-100' : 'opacity-0 group-hover/grade:opacity-100'}`}
                     >
                       <div className="font-semibold text-white/90 mb-1.5">
                         {t("home.gradeScoreLabel")}: {job.matchDebug.totalScore}

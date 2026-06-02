@@ -56,10 +56,10 @@ export default function CoverLetterModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-3xl bg-gray-50 dark:bg-[#0d0d0d] border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4">
+      <div className="relative w-full sm:max-w-3xl bg-gray-50 dark:bg-[#0d0d0d] border border-gray-200 dark:border-white/10 rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[92dvh] flex flex-col">
         {/* Header */}
-        <div className="flex items-start justify-between p-6 border-b border-gray-200 dark:border-white/10">
+        <div className="flex items-start justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-white/10">
           <div>
             <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
               {t("coverLetter.title")}
@@ -79,7 +79,7 @@ export default function CoverLetterModal({
         </div>
 
         {/* Content */}
-        <div className="p-6 max-h-[60vh] overflow-y-auto">
+        <div className="p-4 sm:p-6 max-h-[55vh] overflow-y-auto flex-1">
           {isEditing ? (
             <textarea
               value={editedLetter}
@@ -97,7 +97,7 @@ export default function CoverLetterModal({
         </div>
 
         {/* Footer Actions */}
-        <div className="flex flex-wrap items-center justify-between gap-3 p-6 border-t border-gray-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a]">
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4 sm:p-6 border-t border-gray-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a]">
           <div className="flex flex-wrap gap-2">
             <Button
               onClick={() => setIsEditing(!isEditing)}

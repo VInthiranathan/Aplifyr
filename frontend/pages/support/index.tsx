@@ -50,7 +50,7 @@ export default function SupportPage() {
   }
 
   return (
-    <div className="p-6 space-y-8 max-w-3xl">
+    <div className="app-page-shell max-w-3xl">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('support.title')}</h1>

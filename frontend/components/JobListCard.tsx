@@ -31,7 +31,7 @@ export default function JobListCard({
         {leading ? <div className="flex-shrink-0">{leading}</div> : null}
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 mb-3 flex-wrap">
                 {title}
@@ -49,7 +49,11 @@ export default function JobListCard({
               {tags ? <div className="flex flex-wrap gap-2">{tags}</div> : null}
             </div>
 
-            {aside ? <div className="flex flex-col items-end gap-3 flex-shrink-0">{aside}</div> : null}
+            {aside ? (
+              <div className="flex flex-row sm:flex-col items-center sm:items-end gap-3 sm:flex-shrink-0">
+                {aside}
+              </div>
+            ) : null}
           </div>
 
           {footer ? <div className="mt-3 pt-3 border-t border-gray-200 dark:border-white/5">{footer}</div> : null}

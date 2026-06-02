@@ -5,7 +5,8 @@
     "allJobs": "All Jobs",
     "favorites": "Favorites",
     "support": "Support",
-    "guest": "User"
+    "guest": "User",
+    "settings": "Settings"
   },
   "theme": {
     "dark": "Dark",

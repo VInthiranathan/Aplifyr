@@ -84,30 +84,33 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="flex flex-col h-screen w-48 bg-white dark:bg-[#111] text-slate-800 dark:text-white border-r border-slate-200 dark:border-white/10 flex-shrink-0">
+    <aside className="flex flex-col h-screen w-14 lg:w-48 bg-white dark:bg-[#111] text-slate-800 dark:text-white border-r border-slate-200 dark:border-white/10 flex-shrink-0">
       {/* top branding */}
-      <div className="mt-5 px-4">
+      <div className="mt-5 px-3 lg:px-4">
         <Link
           href="/"
           className="text-xl font-bold tracking-[0.2em] transition-colors duration-200 cursor-default text-slate-900 dark:text-white hover:text-sky-500 dark:hover:text-[rgba(0,140,255,1)]"
           style={{ fontFamily: "'Roboto', sans-serif" }}
         >
-          Aplifyr
+          {/* Full brand on desktop, initial only on tablet icon rail */}
+          <span className="hidden lg:inline">Aplifyr</span>
+          <span className="lg:hidden">A</span>
         </Link>
       </div>
+
       {/* language + theme toggles */}
-      <div className="flex items-center gap-2 px-1 mt-2">
-        {/* language toggle */}
+      <div className="flex items-center gap-1 px-1 mt-2">
+        {/* language toggle — desktop only */}
         <Button
           onClick={toggleLanguage}
           variant="secondary"
           size="sm"
-          className="flex-1 h-auto rounded-lg py-1.5 text-xs"
+          className="hidden lg:flex flex-1 h-auto rounded-lg py-1.5 text-xs"
         >
           {locale === "en" ? "SV" : "EN"}
         </Button>
 
-        {/* theme toggle */}
+        {/* theme toggle — always visible */}
         {mounted && (
           <Button
             onClick={() => setTheme(isDark ? "light" : "dark")}
@@ -134,9 +137,11 @@ export default function Sidebar() {
                   ? "bg-slate-100 dark:bg-white/10 text-slate-900 dark:text-white font-medium"
                   : "text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5"
               }`}
+              title={t(key)}
             >
               <Icon size={16} />
-              {t(key)}
+              {/* Label hidden on tablet icon-rail, visible on desktop */}
+              <span className="hidden lg:block">{t(key)}</span>
             </Link>
           );
         })}
@@ -148,11 +153,13 @@ export default function Sidebar() {
         <Link
           href="/user"
           className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+          title={displayName ?? t("nav.guest")}
         >
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-purple-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
             {initials || "U"}
           </div>
-          <div className="leading-tight">
+          {/* Name + subtitle hidden on tablet icon-rail */}
+          <div className="leading-tight hidden lg:block">
             <p className="text-sm text-slate-800 dark:text-white font-medium">
               {displayName ?? t("nav.guest")}
             </p>
@@ -167,9 +174,10 @@ export default function Sidebar() {
           onClick={() => (window.location.href = "/api/auth/signout")}
           variant="ghost"
           className="justify-start rounded-lg px-3 py-2 text-sm"
+          title={t("auth.signOut")}
         >
           <LogOut size={16} />
-          {t("auth.signOut")}
+          <span className="hidden lg:block">{t("auth.signOut")}</span>
         </Button>
       </div>
     </aside>

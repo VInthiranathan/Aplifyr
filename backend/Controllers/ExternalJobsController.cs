@@ -58,7 +58,7 @@ public class ExternalJobsController : ControllerBase
 
     // ── Grade thresholds ─────────────────────────────────────────────────────
     private const int GRADE_A_MIN_SCORE = 3; // totalScore >= GRADE_A_MIN_SCORE → "A"
-    private const int GRADE_B_SCORE     = 2; // totalScore == GRADE_B_SCORE     → "B"
+    private const int GRADE_B_SCORE     = 1; // totalScore == GRADE_B_SCORE     → "B"
     //                                           anything below GRADE_B_SCORE   → "C"
 
     // Static mapping of Swedish region display names → 2-digit SCB/AF codes.

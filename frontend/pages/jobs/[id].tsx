@@ -228,7 +228,7 @@ export default function JobDetailPage() {
 
   if (!job && !jobHtml) {
     return (
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         {fetching ? (
           <p className="text-sm text-slate-400">{t("jobDetail.loading")}</p>
         ) : (
@@ -249,7 +249,7 @@ export default function JobDetailPage() {
   }
 
   return (
-    <div className="p-6">
+      <div className="p-4 sm:p-6">
       {DEBUG_UI_ENABLED && (
         <>
           <div className="flex items-center gap-2 mb-4">
@@ -327,8 +327,8 @@ export default function JobDetailPage() {
       ) : (
         <>
           <div className="max-w-6xl mx-auto">
-            <div className="flex items-start gap-4">
-              <div className="w-16 h-16 rounded-lg bg-slate-100 dark:bg-white/5 flex items-center justify-center">
+            <div className="flex flex-wrap items-start gap-4">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg bg-slate-100 dark:bg-white/5 flex items-center justify-center flex-shrink-0">
                 {job.logo_url ? (
                   <img
                     src={job.logo_url}
@@ -341,7 +341,7 @@ export default function JobDetailPage() {
               </div>
               <div className="flex-1">
                 <div className="flex items-start justify-between gap-4">
-                  <h1 className="text-3xl font-semibold leading-tight">
+                  <h1 className="text-2xl sm:text-3xl font-semibold leading-tight">
                     {job.headline ?? job.title ?? t("jobDetail.defaultJobTitle")}
                   </h1>
                   <Button
