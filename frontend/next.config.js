@@ -1,7 +1,14 @@
 const { i18n } = require('./next-i18next.config')
 
-const backendBaseUrl =
-  process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000'
+function ensureProtocol(url) {
+  if (!url) return url
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  return `https://${url}`
+}
+
+const backendBaseUrl = ensureProtocol(
+  process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000',
+)
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
