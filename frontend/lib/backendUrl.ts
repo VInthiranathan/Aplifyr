@@ -1,4 +1,4 @@
-const DEFAULT_BACKEND_URL = "http://localhost:5000";
+const DEFAULT_BACKEND_URL = "";
 
 function normalizeBackendUrl(value: string | null | undefined) {
   const trimmed = value?.trim();

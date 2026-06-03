@@ -159,8 +159,7 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
       setMatchLoading(true);
       setMatchError(null);
       try {
-        const backendBase =
-          process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:5000";
+        const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL ?? "";
         const res = await fetch(
           `${backendBase}/api/externaljobs/match?limit=${visibleCount}&seed=${seed}`,
           {
@@ -232,7 +231,7 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
   // Skips when the tab is backgrounded to conserve AF API quota.
   useEffect(() => {
     if (fetchComplete || desiredRolesSource === null || desiredRolesSource === "none") return;
-    const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:5000";
+    const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL ?? "";
     const timer = setInterval(async () => {
       if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
       try {

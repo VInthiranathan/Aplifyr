@@ -5,7 +5,7 @@ import { useTranslation } from "next-i18next";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Briefcase, MapPin, Wifi, Loader2, Bookmark } from "lucide-react";
-import { getPublicBackendUrl, isDebugUiEnabled } from "../../lib/backendUrl";
+import { getPublicBackendUrl } from "../../lib/backendUrl";
 import { formatLocation } from "../../lib/utils";
 import CoverLetterModal from "../../components/CoverLetterModal";
 import { Button } from "../../components/ui/button";
@@ -13,7 +13,6 @@ import { getSupabaseBrowserClient } from "../../lib/supabaseClient";
 import { useFavorites } from "../../lib/useFavorites";
 
 const BACKEND = getPublicBackendUrl();
-const DEBUG_UI_ENABLED = isDebugUiEnabled();
 
 function decodeJob(encoded?: string) {
   if (!encoded) return null;
@@ -40,11 +39,11 @@ export default function JobDetailPage() {
   const [job, setJob] = useState<any | null>(null);
   const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [rawResponse, setRawResponse] = useState<any | null>(null);
+  // raw API response logging removed
   const [jobHtml, setJobHtml] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [letter, setLetter] = useState<string | null>(null);
-  const [showDebug, setShowDebug] = useState(false);
+  // debug toggle removed
   const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
@@ -62,13 +61,9 @@ export default function JobDetailPage() {
     const fetchJob = async () => {
       setFetching(true);
       setFetchError(null);
-      setRawResponse(null);
       try {
         const res = await fetch(`${BACKEND}/api/externaljobs/${id}`);
         const text = await res.text();
-        if (DEBUG_UI_ENABLED) {
-          setRawResponse(text);
-        }
         if (!res.ok) {
           setFetchError(`Status ${res.status}: ${text}`);
           console.error("Job fetch failed", res.status, text);
@@ -250,56 +245,7 @@ export default function JobDetailPage() {
 
   return (
       <div className="p-4 sm:p-6">
-      {DEBUG_UI_ENABLED && (
-        <>
-          <div className="flex items-center gap-2 mb-4">
-            <Button
-              onClick={() => setShowDebug((s) => !s)}
-              variant="secondary"
-              className="h-auto px-3 py-1.5"
-            >
-              {showDebug ? t("jobDetail.hideApiLog") : t("jobDetail.showApiLog")}
-            </Button>
-            <div className="text-sm text-slate-500">
-              ({t("jobDetail.apiLogDescription")})
-            </div>
-          </div>
-          {showDebug && (
-        <div className="mb-4">
-          {rawResponse && (
-            <div className="mb-2">
-              <div className="text-xs font-medium mb-1">
-                {t("jobDetail.rawApiResponse")}
-              </div>
-              <pre className="max-h-72 overflow-auto text-xs bg-slate-100 dark:bg-[#0b0b0b] p-3 rounded">
-                {rawResponse}
-              </pre>
-            </div>
-          )}
-          {job && (
-            <div>
-              <div className="text-xs font-medium mb-1">
-                {t("jobDetail.parsedJob")}
-              </div>
-              <pre className="max-h-72 overflow-auto text-xs bg-slate-100 dark:bg-[#0b0b0b] p-3 rounded">
-                {JSON.stringify(job, null, 2)}
-              </pre>
-            </div>
-          )}
-          {jobHtml && (
-            <div className="mt-2">
-              <div className="text-xs font-medium mb-1">
-                {t("jobDetail.htmlFallback")}
-              </div>
-              <pre className="max-h-72 overflow-auto text-xs bg-slate-100 dark:bg-[#0b0b0b] p-3 rounded">
-                {jobHtml}
-              </pre>
-            </div>
-          )}
-        </div>
-          )}
-        </>
-      )}
+      {/* Debug UI removed */}
       {jobHtml ? (
         <div className="space-y-4">
           <div className="flex items-center justify-between">

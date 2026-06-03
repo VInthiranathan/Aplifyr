@@ -15,7 +15,7 @@ import {
   Bookmark,
 } from "lucide-react";
 import { formatLocation } from "../../lib/utils";
-import { getPublicBackendUrl, isDebugUiEnabled } from "../../lib/backendUrl";
+import { getPublicBackendUrl } from "../../lib/backendUrl";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import JobListCard from "../../components/JobListCard";
@@ -27,7 +27,6 @@ export const getStaticProps: GetStaticProps = async ({ locale }) => ({
 });
 
 const BACKEND = getPublicBackendUrl();
-const DEBUG_UI_ENABLED = isDebugUiEnabled();
 
 interface Filters {
   q: string;
@@ -86,8 +85,6 @@ export default function AllJobsPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [apiRawResponse, setApiRawResponse] = useState<string | null>(null);
-  const [showApiLog, setShowApiLog] = useState(false);
   const [offset, setOffset] = useState(0);
   const LIMIT = 20;
 
@@ -155,9 +152,6 @@ export default function AllJobsPage() {
       const text = await res.text();
       // Ignore stale responses
       if (reqId !== requestIdRef.current) return;
-      if (DEBUG_UI_ENABLED) {
-        setApiRawResponse(`${requestUrl}\n\n${text}`);
-      }
       if (!res.ok) throw new Error(`${res.status}`);
       let data: AFSearchResult | any = null;
       try {
@@ -539,41 +533,7 @@ export default function AllJobsPage() {
         </div>
       )}
 
-      {DEBUG_UI_ENABLED && (
-        <>
-          <div className="mt-3">
-            <Button
-              onClick={() => setShowApiLog((s) => !s)}
-              variant="secondary"
-              className="h-auto px-3 py-1.5"
-            >
-              {showApiLog ? t("jobs.hideApiLog") : t("jobs.showApiLog")}
-            </Button>
-            <span className="text-sm text-slate-500 ml-2">
-              ({t("jobs.apiLogDescription")})
-            </span>
-          </div>
-
-          {showApiLog && (
-        <div className="mt-3 space-y-3">
-          {apiRawResponse && (
-            <div>
-              <div className="text-xs font-medium mb-1">{t("jobs.rawApiResponse")}</div>
-              <pre className="max-h-64 overflow-auto text-xs bg-slate-100 dark:bg-[#0b0b0b] p-3 rounded">
-                {apiRawResponse}
-              </pre>
-            </div>
-          )}
-          <div>
-            <div className="text-xs font-medium mb-1">{t("jobs.parsedJobs")}</div>
-            <pre className="max-h-72 overflow-auto text-xs bg-slate-100 dark:bg-[#0b0b0b] p-3 rounded">
-              {JSON.stringify(jobs.slice(0, 10), null, 2)}
-            </pre>
-          </div>
-        </div>
-          )}
-        </>
-      )}
+      {/* API log removed for production UI */}
 
       {/* ── Error ── */}
       {error && !loading && (

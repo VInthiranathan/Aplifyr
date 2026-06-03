@@ -7,7 +7,7 @@ function ensureProtocol(url) {
 }
 
 const backendBaseUrl = ensureProtocol(
-  process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000',
+  process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || '',
 )
 
 /** @type {import('next').NextConfig} */
