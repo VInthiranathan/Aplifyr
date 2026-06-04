@@ -58,7 +58,11 @@ jobs:
       - name: Resolve Azure resource group
         shell: bash
         run: |
-          RG=$(az webapp show --name aplifyr-b --query resourceGroup -o tsv)
+          RG=$(az webapp list --query "[?name=='aplifyr-b'].resourceGroup | [0]" -o tsv)
+          if [ -z "$RG" ]; then
+            echo "Could not resolve resource group for webapp aplifyr-b"
+            exit 1
+          fi
           echo "RESOURCE_GROUP=$RG" >> "$GITHUB_ENV"
 
       - name: Configure backend app settings
