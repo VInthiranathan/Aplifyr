@@ -55,6 +55,20 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_8E7149C29C4144859AC53B70A0BF960F }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_967D132BCA9240F3B7F543C802757225 }}
 
+      - name: Resolve Azure resource group
+        shell: bash
+        run: |
+          RG=$(az webapp show --name aplifyr-b --query resourceGroup -o tsv)
+          echo "RESOURCE_GROUP=$RG" >> "$GITHUB_ENV"
+
+      - name: Configure backend app settings
+        shell: bash
+        run: |
+          az webapp config appsettings set \
+            --name aplifyr-b \
+            --resource-group "$RESOURCE_GROUP" \
+            --settings CORS_ALLOWED_ORIGINS="${{ secrets.CORS_ALLOWED_ORIGINS }}"
+
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3

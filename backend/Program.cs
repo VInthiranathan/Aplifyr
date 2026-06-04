@@ -44,7 +44,8 @@ var configuredOrigins = builder.Configuration
     .GetSection("AllowedOrigins")
     .Get<string[]>()
     ?.Where(origin => !string.IsNullOrWhiteSpace(origin))
-    .Select(origin => origin.Trim())
+    .Select(origin => origin.Trim().Trim('"', '\'', '[', ']'))
+    .Where(origin => !string.IsNullOrWhiteSpace(origin))
     .Distinct(StringComparer.OrdinalIgnoreCase)
     .ToArray();
 
@@ -55,6 +56,8 @@ if (configuredOrigins == null || configuredOrigins.Length == 0)
 
     configuredOrigins = (rawOrigins ?? string.Empty)
         .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Where(origin => !string.IsNullOrWhiteSpace(origin))
+        .Select(origin => origin.Trim().Trim('"', '\'', '[', ']'))
         .Where(origin => !string.IsNullOrWhiteSpace(origin))
         .Distinct(StringComparer.OrdinalIgnoreCase)
         .ToArray();
