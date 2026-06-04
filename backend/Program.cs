@@ -66,6 +66,7 @@ if (configuredOrigins == null || configuredOrigins.Length == 0)
     {
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "https://nice-ground-071fe1e03.7.azurestaticapps.net",
     };
 }
 
