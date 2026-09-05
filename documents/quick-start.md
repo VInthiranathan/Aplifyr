@@ -2,7 +2,7 @@
 
 ## Scope
 
-This guide covers local development for the runnable app inside `Examensarbete/`.
+This guide covers local development for the runnable app inside `Aplifyr/`.
 
 ## Prerequisites
 
@@ -15,7 +15,7 @@ This guide covers local development for the runnable app inside `Examensarbete/`
 
 ## Install Dependencies
 
-From `Examensarbete/`:
+From `Aplifyr/`:
 
 ```powershell
 npm install
@@ -79,7 +79,7 @@ The repository already contains the required SQL migrations in `supabase/migrati
 
 ### Option A: Supabase CLI
 
-From `Examensarbete/`:
+From `Aplifyr/`:
 
 ```powershell
 supabase db push
@@ -99,7 +99,7 @@ Follow `documents/supabase-storage-setup.md` before testing CV upload.
 
 ## Start the App
 
-From `Examensarbete/`:
+From `Aplifyr/`:
 
 ```powershell
 npm run dev
@@ -133,7 +133,7 @@ npm run build
 
 ## Local Development Notes
 
-- backend CORS is currently hardcoded to localhost origins only
+- backend CORS is configuration-driven and can use `CORS_ALLOWED_ORIGINS`
 - the dashboard home page reads local JSON data from `backend/Data/jobs.json`
 - the profile page depends on Supabase auth and the `profiles` table
 - CV upload supports PDF only and rejects files larger than 5 MB
