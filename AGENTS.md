@@ -16,7 +16,8 @@ Treat the backend and frontend as independently runnable. Do not assume one can 
 - Do not switch branches unless explicitly requested.
 - Never make changes directly to `main` unless the user explicitly asks for it.
 - Work on the branch provided by the current task/environment.
-- Do not amend, rewrite, or force-push existing commits unless explicitly requested.
+- Do not amend, rewrite, rebase, reset, or force-push existing commits unless explicitly requested.
+- Keep commits and changes focused on the requested task.
 - Before finishing, inspect the final diff and make sure unrelated files were not changed.
 
 ## Project Identity
@@ -33,8 +34,8 @@ Before making significant changes, read the relevant project documentation:
 - `documents/quick-start.md` — local setup and development workflow
 - `documents/database-schema.md` — database structure when working with data/Supabase
 
-`AGENTS.md` contains the high-level rules that must always be followed.
-The documents above contain the detailed implementation guidance.
+`AGENTS.md` contains the rules that must always be followed.
+The documents above provide supporting project context when relevant.
 
 ## Local Development
 
@@ -170,6 +171,17 @@ npm run dev
   - aside actions and match badge placement
   - footer spacing and dividers when present
 
+## Safe File Editing
+
+- Read the complete relevant file before replacing or substantially rewriting it.
+- Prefer small, targeted edits over reconstructing existing files.
+- Preserve existing business logic unless the requested task explicitly changes it.
+- Do not truncate large controllers, configuration files, translation files, lockfiles, or generated metadata files.
+- Do not delete existing functionality merely because it appears unrelated to the current task.
+- Do not replace a large file from memory or from a partial excerpt when the full source can be read.
+- Pay particular attention when modifying large or logic-heavy files such as `backend/Controllers/ExternalJobsController.cs`.
+- Preserve unrelated formatting and behavior where practical so diffs stay reviewable.
+
 ## Safe Change Expectations
 
 - Prefer root-cause fixes over view-only patches.
@@ -178,22 +190,64 @@ npm run dev
 - Remove dead code when it is clearly unused, but do not delete debugging surfaces that are still part of an active workflow without checking nearby usage.
 - When changing filtering or external-job behavior, validate that pagination and filter query params still line up with `ExternalJobsController`.
 
+## Secrets and Environment Files
+
+Never commit secrets or credentials.
+
+Do not commit:
+
+- `.env` files containing real credentials
+- API keys
+- access tokens
+- Supabase service-role keys
+- private credentials or certificates
+
+- Use environment variables and `.env.example` files for configuration examples.
+- Never hardcode production credentials or deployment URLs in source code.
+- Keep server-only secrets out of `NEXT_PUBLIC_*` variables.
+- Do not print secret values in logs, test output, screenshots, commit messages, or task summaries.
+
 ## Validation
 
-Use the narrowest relevant validation after edits:
+Run the narrowest relevant validation after edits, and use executable validation rather than diff-only review.
+
+### Backend
 
 ```powershell
-# frontend
-cd frontend
-npm run build
-
-# backend
-cd backend
-dotnet run
+dotnet restore backend/Aplifyr.Api.csproj
+dotnet build backend/Aplifyr.Api.csproj --configuration Release
 ```
 
-- Prefer executable validation over diff-only review.
+### Frontend
+
+```powershell
+cd frontend
+npm ci
+npm run build
+```
+
+### Docker
+
+When backend deployment or Docker configuration changes:
+
+```powershell
+docker build -f backend/Dockerfile .
+```
+
+- If only a narrow area changed and a faster targeted check exists, run it first, but still run the relevant production build before declaring the task complete when practical.
 - If the backend build is blocked by a stale running process locking `bin/Debug`, stop that process and rerun validation rather than weakening the check.
+- Fix validation failures caused by your changes before reporting the task as complete.
+- If validation cannot be run because a required tool or external service is unavailable, state that clearly instead of claiming success.
+
+## Completion Checklist
+
+Before reporting a task as complete:
+
+1. Review every changed file.
+2. Confirm no unrelated files or behavior changed accidentally.
+3. Run the relevant validation/build commands.
+4. Check the final diff for unintended deletions, truncation, secrets, or generated noise.
+5. Report what changed and which validation checks passed or could not be run.
 
 ## Environment Variables
 
