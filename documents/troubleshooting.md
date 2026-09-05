@@ -9,7 +9,7 @@ Check:
 
 Note:
 
-- the backend CORS policy currently allows localhost origins only
+- the backend CORS policy can be configured through `CORS_ALLOWED_ORIGINS`
 
 ## "Supabase not configured"
 
@@ -82,7 +82,7 @@ Known limitation:
 Validated on May 28, 2026:
 
 ```powershell
-Set-Location .\Examensarbete\backend
+Set-Location .\Aplifyr\backend
 dotnet build
 
 Set-Location ..\frontend
