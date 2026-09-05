@@ -10,38 +10,7 @@ on:
       - main
       - render/backend-dockerfile
 
-permissions:
-  contents: write
-
 jobs:
-  rename-metadata:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/render/backend-dockerfile'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Rename frontend lock metadata
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          path = Path('frontend/package-lock.json')
-          text = path.read_text(encoding='utf-8')
-          text = text.replace('"examensarbete-frontend"', '"aplifyr-frontend"')
-          path.write_text(text, encoding='utf-8')
-          PY
-      - name: Commit metadata rename if needed
-        shell: bash
-        run: |
-          if git diff --quiet -- frontend/package-lock.json; then
-            echo "Lock metadata already uses Aplifyr."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add frontend/package-lock.json
-          git commit -m "Rename frontend lock metadata to Aplifyr"
-          git push
-
   backend:
     runs-on: ubuntu-latest
     steps:
