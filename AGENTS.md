@@ -10,6 +10,32 @@ This workspace contains a two-service application:
 
 Treat the backend and frontend as independently runnable. Do not assume one can be replaced by the other.
 
+## Git and Branch Safety
+
+- Do not create new branches unless explicitly requested by the user.
+- Do not switch branches unless explicitly requested.
+- Never make changes directly to `main` unless the user explicitly asks for it.
+- Work on the branch provided by the current task/environment.
+- Do not amend, rewrite, or force-push existing commits unless explicitly requested.
+- Before finishing, inspect the final diff and make sure unrelated files were not changed.
+
+## Project Identity
+
+- The project name is **Aplifyr**.
+- Always refer to the application, solution, API, and product as Aplifyr.
+- Do not reintroduce the previous project name in code, configuration, package metadata, namespaces, or UI.
+- The word "examensarbete" may remain in thesis/report text when it refers to the academic thesis itself rather than the product name.
+
+## Source of Truth
+
+Before making significant changes, read the relevant project documentation:
+- `documents/project-overview.md` — project architecture and purpose
+- `documents/quick-start.md` — local setup and development workflow
+- `documents/database-schema.md` — database structure when working with data/Supabase
+
+`AGENTS.md` contains the high-level rules that must always be followed.
+The documents above contain the detailed implementation guidance.
+
 ## Local Development
 
 ```powershell
