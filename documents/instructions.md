@@ -4,7 +4,7 @@
 
 This workspace contains a two-service application:
 
-- `backend/` — .NET 10 Web API (`Examensarbete.Api`) on `http://localhost:5000`
+- `backend/` — .NET 10 Web API (`Aplifyr.Api`) on `http://localhost:5000`
 - `frontend/` — Next.js 16 Pages Router app on `http://localhost:3000`
 - `supabase/` — Supabase config and migrations for frontend-auth/profile features
 
