@@ -20,6 +20,9 @@ import {
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "../../components/ui/button";
+import CareerHistory from "../../components/CareerHistory";
+const profileTabs = ['overview', 'work', 'education'] as const;
+type ProfileTab = typeof profileTabs[number];
 const CV_VIEW_ROUTE = "/api/cv";
 
 function hasStoredCv(profile: Record<string, any> | null | undefined) {
@@ -201,6 +204,12 @@ const saveProfile = async (nextUser: User) => {
 
 export default function UserPage({ user }: Props) {
   const { t } = useTranslation("common");
+  const [activeTab, setActiveTab] = useState<ProfileTab>('overview');
+  const [visitedTabs, setVisitedTabs] = useState<ProfileTab[]>(['overview']);
+  const selectTab = (tab: ProfileTab) => {
+    setActiveTab(tab);
+    setVisitedTabs(previous => previous.includes(tab) ? previous : [...previous, tab]);
+  };
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editedUser, setEditedUser] = useState<User | null>(user);
   const [editSection, setEditSection] = useState<
@@ -461,6 +470,33 @@ export default function UserPage({ user }: Props) {
           </div>
         </div>
 
+        <div role="tablist" aria-label={t('career.tabs.label')} className="mb-6 flex gap-2 overflow-x-auto rounded-2xl border border-gray-200 bg-white p-2 dark:border-white/5 dark:bg-[#1a1a1a]">
+          {profileTabs.map((tab, index) => (
+            <button key={tab} id={`profile-tab-${tab}`} type="button" role="tab"
+              aria-selected={activeTab === tab} aria-controls={`profile-panel-${tab}`}
+              tabIndex={activeTab === tab ? 0 : -1}
+              className={`shrink-0 rounded-xl px-4 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 ${activeTab === tab ? 'bg-purple-100 text-purple-900 dark:bg-purple-500/20 dark:text-purple-200' : 'app-hover-standard text-gray-600 dark:text-white/60'}`}
+              onClick={() => selectTab(tab)}
+              onKeyDown={event => {
+                const nextIndex = event.key === 'ArrowRight' ? (index + 1) % profileTabs.length
+                  : event.key === 'ArrowLeft' ? (index + profileTabs.length - 1) % profileTabs.length
+                  : event.key === 'Home' ? 0 : event.key === 'End' ? profileTabs.length - 1 : null;
+                if (nextIndex === null) return;
+                event.preventDefault();
+                const next = profileTabs[nextIndex];
+                selectTab(next);
+                document.getElementById(`profile-tab-${next}`)?.focus();
+              }}>
+              {t(`career.tabs.${tab}`)}
+            </button>
+          ))}
+        </div>
+        {(['work', 'education'] as const).map(kind => (
+          <section key={kind} id={`profile-panel-${kind}`} role="tabpanel" aria-labelledby={`profile-tab-${kind}`} hidden={activeTab !== kind} tabIndex={0}>
+            {visitedTabs.includes(kind) && <CareerHistory kind={kind} />}
+          </section>
+        ))}
+        <section id="profile-panel-overview" role="tabpanel" aria-labelledby="profile-tab-overview" hidden={activeTab !== 'overview'} tabIndex={0}>
         {/* Two column layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left column - Main content */}
@@ -741,6 +777,7 @@ export default function UserPage({ user }: Props) {
             </div>
           </div>
         </div>
+        </section>
       </div>
 
       {/* Edit Profile Modal */}
