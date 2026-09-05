@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using DotNetEnv;
 
-// Ladda .env-filen om den finns
+// Load .env when present
 try
 {
     Env.Load();
@@ -82,5 +82,5 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 app.UseCors("AllowFrontend");
 app.MapControllers();
-app.MapGet("/", () => Results.Ok(new { status = "OK", service = "Examensarbete.Api" }));
+app.MapGet("/", () => Results.Ok(new { status = "OK", service = "Aplifyr.Api" }));
 app.Run();
