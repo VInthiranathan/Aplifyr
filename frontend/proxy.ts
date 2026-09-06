@@ -3,7 +3,6 @@ import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/auth-helpers-nextjs'
 
 const PUBLIC_PATHS = ['/auth']
-const ALLOWED_AUTH_PATHS = ['/auth/forgot-password', '/auth/reset-password']
 
 function isPublicPath(pathname: string) {
   if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return true
@@ -14,7 +13,7 @@ function isPublicPath(pathname: string) {
   // Public assets + translations (public/ is served from root)
   if (pathname.startsWith('/locales')) return true
 
-  // Backend rewrite proxy
+  // API routes handle their own authentication.
   if (pathname.startsWith('/api')) return true
 
   // Common single-file assets
@@ -29,22 +28,18 @@ function isPublicPath(pathname: string) {
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
 
+  // Login, password recovery, static files and API routes must never depend on
+  // an outbound Supabase auth request just to become reachable. This also keeps
+  // /auth usable when Supabase has a temporary network interruption.
+  if (isPublicPath(pathname)) {
+    return NextResponse.next()
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   // If Supabase isn't configured yet, don't block local dev.
   if (!supabaseUrl || !supabaseAnonKey) {
-    return NextResponse.next()
-  }
-
-  const isAuthPath = pathname === '/auth' || pathname.startsWith('/auth/')
-  const allowLoggedInAuthPath = ALLOWED_AUTH_PATHS.some(
-    (path) => pathname === path || pathname.startsWith(`${path}/`),
-  )
-
-  // Allow static/public paths through without checks (except /auth which we may
-  // redirect away from if already authenticated).
-  if (!isAuthPath && isPublicPath(pathname)) {
     return NextResponse.next()
   }
 
@@ -63,30 +58,25 @@ export async function proxy(req: NextRequest) {
     },
   })
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  try {
+    // getClaims validates the JWT and avoids the unconditional Auth server
+    // round-trip performed by getUser(). We only need the authenticated subject
+    // here to decide whether a protected page may be opened.
+    const { data, error } = await supabase.auth.getClaims()
+    const userId = data?.claims?.sub
 
-  if (user && isAuthPath && !allowLoggedInAuthPath) {
-    const redirectUrl = req.nextUrl.clone()
-    redirectUrl.pathname = '/'
-    redirectUrl.search = ''
-    return NextResponse.redirect(redirectUrl)
+    if (!error && userId) {
+      return res
+    }
+  } catch (error) {
+    // Do not let a temporary ECONNRESET crash the Next request pipeline.
+    console.error('[auth proxy] Failed to validate session', error)
   }
 
-  // Important: logged-out users must be able to reach /auth.
-  if (!user && isAuthPath) {
-    return res
-  }
-
-  if (!user) {
-    const redirectUrl = req.nextUrl.clone()
-    redirectUrl.pathname = '/auth'
-    redirectUrl.search = ''
-    return NextResponse.redirect(redirectUrl)
-  }
-
-  return res
+  const redirectUrl = req.nextUrl.clone()
+  redirectUrl.pathname = '/auth'
+  redirectUrl.search = ''
+  return NextResponse.redirect(redirectUrl)
 }
 
 export const config = {

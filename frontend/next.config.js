@@ -6,8 +6,11 @@ function ensureProtocol(url) {
   return `https://${url}`
 }
 
+const configuredBackendUrl =
+  process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || ''
+
 const backendBaseUrl = ensureProtocol(
-  process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || '',
+  configuredBackendUrl || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000'),
 )
 
 /** @type {import('next').NextConfig} */
@@ -18,6 +21,8 @@ const nextConfig = {
     root: __dirname,
   },
   async rewrites() {
+    if (!backendBaseUrl) return []
+
     return [
       {
         source: '/api/:path*',
