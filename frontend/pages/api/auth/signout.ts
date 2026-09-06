@@ -20,7 +20,8 @@ function appendSetCookie(res: NextApiResponse, values: string[]) {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET' && req.method !== 'POST') {
     res.setHeader('Allow', ['GET', 'POST'])
-    return res.status(405).json({ error: 'Method not allowed' })
+    res.status(405).json({ error: 'Method not allowed' })
+    return
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -29,7 +30,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // If Supabase isn't configured, just redirect to /auth.
   if (!supabaseUrl || !supabaseAnonKey) {
     res.writeHead(302, { Location: '/auth' })
-    return res.end()
+    res.end()
+    return
   }
 
   const cookieHeader = req.headers.cookie ?? ''
@@ -71,5 +73,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   appendSetCookie(res, expired)
 
   res.writeHead(302, { Location: '/auth' })
-  return res.end()
+  res.end()
 }
