@@ -13,6 +13,7 @@ import {
 } from "@supabase/auth-helpers-nextjs";
 import { useTranslation } from "next-i18next";
 import { isSupabaseConfigured } from "../lib/supabaseClient";
+import { getPublicBackendUrl } from "../lib/backendUrl";
 import Link from "next/link";
 import JobListCard from "../components/JobListCard";
 import { useFavorites } from "../lib/useFavorites";
@@ -23,6 +24,7 @@ import { useState, useEffect } from "react";
 
 const HOME_INITIAL_COUNT = 30;
 const HOME_VIEW_MORE_STEP = 15;
+const BACKEND = getPublicBackendUrl();
 
 interface Props {
   matchReq: MatchProfileRequest;
@@ -71,11 +73,35 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
       },
     );
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    if (!user) {
+      if (!user) {
+        return {
+          redirect: {
+            destination: "/auth",
+            permanent: false,
+          },
+        };
+      }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("title, location, location_preferences, tech_stack, roles")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      matchReq = {
+        roles: profile?.roles ?? [],
+        title: profile?.title ?? undefined,
+        tags: profile?.tech_stack ?? [],
+        location: profile?.location ?? undefined,
+        locationPreferences: profile?.location_preferences ?? [],
+      };
+    } catch (error) {
+      console.error("[home] Failed to load Supabase session/profile", error);
       return {
         redirect: {
           destination: "/auth",
@@ -83,20 +109,6 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
         },
       };
     }
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("title, location, location_preferences, tech_stack, roles")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    matchReq = {
-      roles: profile?.roles ?? [],
-      title: profile?.title ?? undefined,
-      tags: profile?.tech_stack ?? [],
-      location: profile?.location ?? undefined,
-      locationPreferences: profile?.location_preferences ?? [],
-    };
   }
 
   return {
@@ -159,9 +171,8 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
       setMatchLoading(true);
       setMatchError(null);
       try {
-        const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL ?? "";
         const res = await fetch(
-          `${backendBase}/api/externaljobs/match?limit=${visibleCount}&seed=${seed}`,
+          `${BACKEND}/api/externaljobs/match?limit=${visibleCount}&seed=${seed}`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -221,469 +232,107 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
       matched: [],
       desiredRolesSource: null,
       visibleCount: HOME_INITIAL_COUNT,
+      fetchComplete: false,
       matchReqHash: currentHash,
-      // fetchComplete intentionally NOT reset — the background pool keeps growing
     });
   };
 
-  // ── Background poll — grows the cached job pool page-by-page ─────────────
-  // Fires every 5 s until the backend signals fetchComplete=true.
-  // Skips when the tab is backgrounded to conserve AF API quota.
-  useEffect(() => {
-    if (fetchComplete || desiredRolesSource === null || desiredRolesSource === "none") return;
-    const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL ?? "";
-    const timer = setInterval(async () => {
-      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
-      try {
-        const res = await fetch(`${backendBase}/api/externaljobs/match/continue`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(matchReq),
-        });
-        if (!res.ok) return;
-        const result = await res.json() as { fetchComplete: boolean };
-        if (result.fetchComplete) {
-          setFetchComplete(true);
-          updateSession({ fetchComplete: true });
-        }
-      } catch {
-        // silently ignore — will retry on the next tick
-      }
-    }, 5000);
-    return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchComplete, desiredRolesSource]);
-
-  // Close grade tooltip when clicking anywhere outside
-  useEffect(() => {
-    if (!openGradeId) return;
-    const close = () => setOpenGradeId(null);
-    document.addEventListener("click", close);
-    return () => document.removeEventListener("click", close);
-  }, [openGradeId]);
-
-  const locationTierLabel: Record<string, string> = {
-    same_municipality:  t("home.tierSameMunicipality"),
-    same_region:        t("home.tierSameRegion"),
-    same_region_nearby: t("home.tierNearbyArea"),
-    same_region_strict: t("home.tierSameRegionStrict"),
-    remote:             t("home.tierRemote"),
-    country:            t("home.tierCountry"),
-    no_preference:      t("home.tierNoPreference"),
-    out_of_region:      t("home.tierOutOfRegion"),
-  };
-
   return (
-    <div className="app-page-shell">
-      {/* Header Section */}
-      <div className="app-page-header">
-        <h1 className="app-page-title">{t("home.title")}</h1>
-        <p className="app-page-subtitle">{t("home.subtitle")}</p>
-      </div>
+    <main className="min-h-screen bg-gray-50 px-4 py-8 text-gray-900 dark:bg-[#0d0d0d] dark:text-white sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl space-y-8">
+        <section className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+          <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-white/5 dark:bg-[#161616] sm:p-8">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-purple-600 dark:text-purple-400">{t("home.overview")}</p>
+                <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">{t("home.heading")}</h1>
+              </div>
+              <Link href="/user" className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium hover:bg-gray-50 dark:border-white/10 dark:hover:bg-white/5">
+                {t("home.editProfile")}
+              </Link>
+            </div>
 
-      {/* Stats Grid - Progression + Grades */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Progression Card */}
-        <div className="lg:col-span-1 bg-gradient-to-br from-orange-300 via-purple-500 to-purple-700 rounded-3xl p-8 shadow-lg hover:shadow-xl transition-shadow">
-          <h3 className="text-sm font-semibold text-white/90 uppercase tracking-wider mb-6">
-            {t("home.progression")}
-          </h3>
+            <div className="mt-8 grid gap-4 sm:grid-cols-3">
+              <div className="rounded-2xl bg-gray-50 p-4 dark:bg-white/5">
+                <p className="text-xs uppercase tracking-widest text-gray-500 dark:text-white/50">{t("home.applied")}</p>
+                <p className="mt-2 text-2xl font-bold">{progression.applied}</p>
+              </div>
+              <div className="rounded-2xl bg-gray-50 p-4 dark:bg-white/5">
+                <p className="text-xs uppercase tracking-widest text-gray-500 dark:text-white/50">{t("home.readyToApply")}</p>
+                <p className="mt-2 text-2xl font-bold">{progression.readyToApply}</p>
+              </div>
+              <div className="rounded-2xl bg-gray-50 p-4 dark:bg-white/5">
+                <p className="text-xs uppercase tracking-widest text-gray-500 dark:text-white/50">{t("home.readyToGenerate")}</p>
+                <p className="mt-2 text-2xl font-bold">{progression.readyToGenerate}</p>
+              </div>
+            </div>
 
-          <div className="flex justify-center mb-8">
-            <div className="relative w-32 h-32">
-              <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-                <circle
-                  cx="18"
-                  cy="18"
-                  r="15.9"
-                  fill="none"
-                  stroke="rgba(255,255,255,0.2)"
-                  strokeWidth="2.5"
-                />
-                <circle
-                  cx="18"
-                  cy="18"
-                  r="15.9"
-                  fill="none"
-                  stroke="rgba(255,255,255,0.5)"
-                  strokeWidth="2.5"
-                  strokeDasharray={`${readyPct} ${100 - readyPct}`}
-                  strokeLinecap="round"
-                />
-                <circle
-                  cx="18"
-                  cy="18"
-                  r="15.9"
-                  fill="none"
-                  stroke="white"
-                  strokeWidth="2.5"
-                  strokeDasharray={`${appliedPct} ${100 - appliedPct}`}
-                  strokeLinecap="round"
-                />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-2xl font-bold text-white">
-                  {progression.applied}
-                </span>
+            <div className="mt-8">
+              <div className="mb-3 flex items-center justify-between text-sm text-gray-500 dark:text-white/50">
+                <span>{t("home.progress")}</span>
+                <span>{Math.round(readyPct)}%</span>
+              </div>
+              <div className="h-3 overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
+                <div className="h-full bg-purple-600 transition-all" style={{ width: `${Math.max(appliedPct, readyPct)}%` }} />
               </div>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="w-3 h-3 rounded-full bg-white" />
-                <span className="text-sm text-white/90">{t("home.applied")}</span>
-              </div>
-              <span className="text-sm font-semibold text-white">
-                {progression.applied}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="w-3 h-3 rounded-full bg-white/50" />
-                <span className="text-sm text-white/90">{t("home.readyToApply")}</span>
-              </div>
-              <span className="text-sm font-semibold text-white">
-                {progression.readyToApply}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="w-3 h-3 rounded-full bg-white/20" />
-                <span className="text-sm text-white/90">{t("home.readyToGenerate")}</span>
-              </div>
-              <span className="text-sm font-semibold text-white">
-                {progression.readyToGenerate}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Grade Match Cards */}
-        <div className="lg:col-span-3 grid grid-cols-3 gap-6">
-          {/* A Grade */}
-          <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-4 sm:p-8 border border-gray-200 dark:border-white/5 shadow-sm hover:shadow-md dark:shadow-none transition-all hover:scale-[1.02] group">
-            <div className="flex items-center justify-center mb-4 sm:mb-6">
-              <div className="px-4 py-2 rounded-full bg-green-100 dark:bg-green-500/20 group-hover:scale-110 transition-transform">
-                <span className="text-sm font-bold text-green-600 dark:text-green-400 uppercase tracking-wider">
-                  A
-                </span>
-              </div>
-            </div>
-            <div>
-              <p className="text-3xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-2">
-                {gradeA ?? <span className="text-gray-300 dark:text-white/20">—</span>}
-              </p>
-              <p className="text-sm text-gray-500 dark:text-white/50">
-                {t("home.matches")}
-              </p>
-            </div>
-          </div>
-
-          {/* B Grade */}
-          <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-4 sm:p-8 border border-gray-200 dark:border-white/5 shadow-sm hover:shadow-md dark:shadow-none transition-all hover:scale-[1.02] group">
-            <div className="flex items-center justify-center mb-4 sm:mb-6">
-              <div className="px-4 py-2 rounded-full bg-yellow-100 dark:bg-yellow-500/20 group-hover:scale-110 transition-transform">
-                <span className="text-sm font-bold text-yellow-600 dark:text-yellow-400 uppercase tracking-wider">
-                  B
-                </span>
-              </div>
-            </div>
-            <div>
-              <p className="text-3xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-2">
-                {gradeB ?? <span className="text-gray-300 dark:text-white/20">—</span>}
-              </p>
-              <p className="text-sm text-gray-500 dark:text-white/50">
-                {t("home.matches")}
-              </p>
-            </div>
-          </div>
-
-          {/* C Grade */}
-          <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-4 sm:p-8 border border-gray-200 dark:border-white/5 shadow-sm hover:shadow-md dark:shadow-none transition-all hover:scale-[1.02] group">
-            <div className="flex items-center justify-center mb-4 sm:mb-6">
-              <div className="px-4 py-2 rounded-full bg-red-100 dark:bg-red-500/20 group-hover:scale-110 transition-transform">
-                <span className="text-sm font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">
-                  C
-                </span>
-              </div>
-            </div>
-            <div>
-              <p className="text-3xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-2">
-                {gradeC ?? <span className="text-gray-300 dark:text-white/20">—</span>}
-              </p>
-              <p className="text-sm text-gray-500 dark:text-white/50">
-                {t("home.matches")}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Job List Section */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-800 dark:text-white">
-            {t("home.matchedJobs")}
-          </h2>
-          <div className="flex items-center gap-3">
-            {!fetchComplete && matched.length > 0 && (
-              <span className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-white/30">
-                <span className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-white/30 animate-pulse" />
-                {t("home.findingMoreMatches")}
-              </span>
-            )}
-            {desiredRolesSource !== null && !matchLoading && matched.length > 0 && (
-              <button
-                onClick={handleLoadDifferent}
-                className="flex items-center gap-1 text-xs text-gray-400 dark:text-white/30 hover:text-gray-600 dark:hover:text-white/60 transition-colors"
-              >
-                <RefreshCw size={11} />
-                {t("home.loadDifferentJobs")}
-              </button>
-            )}
-            <span className="text-sm text-slate-500 dark:text-white/50">
-              {desiredRolesSource !== null &&
-                t("home.jobCount", { count: matched.length })}
-            </span>
-          </div>
-        </div>
-
-        {/* Loading skeleton — first paint before matches arrive */}
-        {desiredRolesSource === null && (
-          <div className="grid gap-4">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div
-                key={i}
-                className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-6 border border-gray-200 dark:border-white/5 animate-pulse"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-gray-200 dark:bg-white/10" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-4 bg-gray-200 dark:bg-white/10 rounded w-2/3" />
-                    <div className="h-3 bg-gray-100 dark:bg-white/5 rounded w-1/3" />
-                  </div>
+          <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-white/5 dark:bg-[#161616] sm:p-8">
+            <p className="text-sm font-medium text-purple-600 dark:text-purple-400">{t("home.matchSummary")}</p>
+            <div className="mt-6 grid grid-cols-3 gap-3 text-center">
+              {[["A", gradeA], ["B", gradeB], ["C", gradeC]].map(([grade, count]) => (
+                <div key={String(grade)} className="rounded-2xl bg-gray-50 p-4 dark:bg-white/5">
+                  <p className="text-xs text-gray-500 dark:text-white/50">{t("home.grade", { grade })}</p>
+                  <p className="mt-2 text-2xl font-bold">{count ?? "–"}</p>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        )}
+        </section>
 
-        {/* Error state */}
-        {matchError && !matchLoading && (
-          <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-12 border border-gray-200 dark:border-white/5 text-center">
-            <p className="text-gray-400 dark:text-white/40">
-              {t("home.noMatchesDescription")}
-            </p>
+        <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-white/5 dark:bg-[#161616] sm:p-8">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-purple-600 dark:text-purple-400">{t("home.recommendedJobs")}</p>
+              <h2 className="mt-1 text-2xl font-bold">{t("home.matchesForYou")}</h2>
+            </div>
+            <button onClick={handleLoadDifferent} className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 dark:border-white/10 dark:hover:bg-white/5" disabled={matchLoading}>
+              <RefreshCw className={`h-4 w-4 ${matchLoading ? "animate-spin" : ""}`} />
+              {t("home.loadDifferent")}
+            </button>
           </div>
-        )}
 
-        {/* No roles — guide user to set up their profile */}
-        {desiredRolesSource === "none" && (
-          <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-12 border border-gray-200 dark:border-white/5 text-center">
-            <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              {t("home.noRolesTitle")}
-            </p>
-            <p className="text-gray-400 dark:text-white/40 mb-6">
-              {t("home.noRolesDescription")}
-            </p>
-            <Link href="/user" className="app-primary-button inline-flex items-center gap-2">
-              {t("home.goToProfile")}
-            </Link>
-          </div>
-        )}
+          {matchLoading && matched.length === 0 && <p className="mt-6 text-sm text-gray-500 dark:text-white/50">{t("home.loadingMatches")}</p>}
+          {matchError && <p className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200">{matchError}</p>}
 
-        {/* Has roles but no matches */}
-        {desiredRolesSource !== "none" &&
-          desiredRolesSource !== null &&
-          matched.length === 0 &&
-          !matchLoading && (
-          <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-12 border border-gray-200 dark:border-white/5 text-center">
-            <p className="text-gray-400 dark:text-white/40">
-              {t("home.noMatchesDescription")}
-            </p>
-          </div>
-        )}
-
-        {/* Matched job cards — sliced to visible count */}
-        {matched.slice(0, visibleCount).length > 0 && (
-          <div className="grid gap-4">
+          <div className="mt-6 grid gap-4">
             {matched.slice(0, visibleCount).map((job) => (
               <JobListCard
                 key={job.id}
-                leading={
-                  <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-300 dark:text-white/20 overflow-hidden">
-                    {job.logo_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={job.logo_url}
-                        alt=""
-                        className="w-full h-full object-contain p-1.5"
-                      />
-                    ) : (
-                      <Briefcase size={20} />
-                    )}
-                  </div>
-                }
-                title={
-                  <Link
-                    href={`/jobs/${job.id}`}
-                    className="text-lg font-semibold text-gray-900 dark:text-white hover:underline leading-snug"
-                  >
-                    {job.headline}
-                  </Link>
-                }
-                badges={
-                  <div className="relative group/grade flex-shrink-0">
-                    <span
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpenGradeId(openGradeId === job.id ? null : job.id);
-                      }}
-                      className={`text-xs font-bold px-3 py-1 rounded-full cursor-pointer ${
-                        job.matchGrade === "A"
-                          ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-300 dark:border-green-800/50"
-                          : job.matchGrade === "B"
-                            ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border border-yellow-300 dark:border-yellow-800/50"
-                            : "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border border-orange-300 dark:border-orange-800/50"
-                      }`}
-                    >
-                      {job.matchGrade} {t("home.match")}
-                    </span>
-                    {/* Score tooltip — visible on hover (desktop) or tap (mobile) */}
-                    <div
-                      className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20
-                        pointer-events-none transition-opacity duration-150
-                        bg-gray-900 dark:bg-[#111] text-white text-xs rounded-xl p-3
-                        shadow-xl border border-white/10 whitespace-nowrap
-                        ${openGradeId === job.id ? 'opacity-100' : 'opacity-0 group-hover/grade:opacity-100'}`}
-                    >
-                      <div className="font-semibold text-white/90 mb-1.5">
-                        {t("home.gradeScoreLabel")}: {job.matchDebug.totalScore}
-                      </div>
-                      <div className="text-white/60">{job.matchDebug.scoreBreakdown}</div>
-                      <div className="text-white/60 mt-0.5">
-                        {locationTierLabel[job.matchDebug.locationTier] ?? job.matchDebug.locationTier}
-                      </div>
-                      {/* Caret pointing down */}
-                      <div
-                        className="absolute top-full left-1/2 -translate-x-1/2
-                          border-[5px] border-transparent border-t-gray-900 dark:border-t-[#111]"
-                      />
-                    </div>
-                  </div>
-                }
-                subtitle={job.employer?.name}
-                meta={
-                  <>
-                    {(job.workplace_address?.municipality ||
-                      job.workplace_address?.region) && (
-                      <span className="flex items-center gap-1">
-                        <MapPin size={13} />
-                        {formatLocation(job.workplace_address)}
-                      </span>
-                    )}
-                    {job.remote && (
-                      <span className="flex items-center gap-1 text-purple-500 dark:text-purple-400">
-                        <Wifi size={13} />
-                        {t("jobs.remoteLabel")}
-                      </span>
-                    )}
-                  </>
-                }
-                tags={
-                  <>
-                    {job.working_hours_type?.label && (
-                      <span className="text-xs bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-white/70 rounded-full px-3 py-1.5 border border-gray-200 dark:border-white/10">
-                        {job.working_hours_type.label}
-                      </span>
-                    )}
-                    {job.employment_type?.label && (
-                      <span className="text-xs bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-white/70 rounded-full px-3 py-1.5 border border-gray-200 dark:border-white/10">
-                        {job.employment_type.label}
-                      </span>
-                    )}
-                  </>
-                }
-                aside={
-                  <div className="flex items-center gap-2">
-                    <Link
-                      href={`/jobs/${job.id}`}
-                      className="app-secondary-button px-3 py-2 text-sm"
-                      title={t("home.viewJob")}
-                    >
-                      <Eye size={15} />
-                    </Link>
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        toggleFavorite({
-                          id: job.id,
-                          title: job.headline,
-                          company: job.employer?.name ?? "",
-                          location: formatLocation(job.workplace_address),
-                          matchGrade: job.matchGrade,
-                        });
-                      }}
-                      className={`flex-shrink-0 transition-colors p-2 ${
-                        isFavorite(job.id)
-                          ? "text-purple-500 dark:text-purple-400"
-                          : "text-slate-300 dark:text-white/20 hover:text-purple-500 dark:hover:text-purple-400"
-                      }`}
-                      title={
-                        isFavorite(job.id)
-                          ? t("home.removeFavorite")
-                          : t("home.addFavorite")
-                      }
-                    >
-                      <Bookmark
-                        size={18}
-                        fill={isFavorite(job.id) ? "currentColor" : "none"}
-                      />
-                    </button>
-                  </div>
-                }
-                footer={
-                  showDebug && job.matchDebug ? (
-                    <div className="text-xs text-gray-400 dark:text-white/30 font-mono space-y-0.5">
-                      {job.matchDebug.reasons.map((r, i) => (
-                        <div key={i}>{r}</div>
-                      ))}
-                    </div>
-                  ) : undefined
-                }
+                href={`/jobs/${job.id}`}
+                title={job.headline}
+                company={job.employer?.name ?? ""}
+                location={formatLocation(job.workplace_address)}
+                matchGrade={job.matchGrade}
+                isFavorite={isFavorite(job.id)}
+                onToggleFavorite={() => toggleFavorite(job.id)}
               />
             ))}
           </div>
-        )}
 
-        {/* View more — only when there may be more jobs waiting in the backend */}
-        {!matchLoading && matched.length > 0 && matched.length >= visibleCount && (
-          <div className="flex justify-center pt-2">
-            <button
-              onClick={() => {
-                const newCount = visibleCount + HOME_VIEW_MORE_STEP;
-                setVisibleCount(newCount);
-                updateSession({ visibleCount: newCount });
-              }}
-              className="app-secondary-button"
-            >
-              {t("jobs.loadMore")}
-            </button>
-          </div>
-        )}
-
-        {/* Spinner for subsequent loads (e.g. after View more) */}
-        {matchLoading && matched.length > 0 && (
-          <div className="flex justify-center pt-2">
-            <span className="text-sm text-gray-400 dark:text-white/40">
-              {t("home.loadingMatches")}
-            </span>
-          </div>
-        )}
+          {matched.length > 0 && matched.length >= visibleCount && !fetchComplete && (
+            <div className="mt-6 flex justify-center">
+              <button
+                onClick={() => setVisibleCount((count) => count + HOME_VIEW_MORE_STEP)}
+                className="rounded-xl bg-gray-900 px-5 py-3 text-sm font-semibold text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
+              >
+                {t("home.viewMore")}
+              </button>
+            </div>
+          )}
+        </section>
       </div>
-    </div>
+    </main>
   );
 }
