@@ -1,4 +1,4 @@
-const DEFAULT_BACKEND_URL = "";
+const DEFAULT_BACKEND_URL = process.env.NODE_ENV === "production" ? "" : "http://localhost:5000";
 
 function normalizeBackendUrl(value: string | null | undefined) {
   const trimmed = value?.trim();

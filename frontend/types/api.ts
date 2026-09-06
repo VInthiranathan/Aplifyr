@@ -1,3 +1,27 @@
+export type CareerKind = 'work' | 'education';
+
+/** Verified profile facts; keep separate from generated, job-specific CV wording. */
+export interface CareerEntryInput {
+  kind: CareerKind;
+  title: string;
+  organization: string;
+  location: string;
+  qualification: string;
+  start_month: string;
+  end_month: string | null;
+  is_current: boolean;
+  description: string;
+  achievements: string;
+  learned: string;
+  skills: string[];
+  strengths: string;
+}
+
+export interface CareerEntry extends CareerEntryInput {
+  id: string;
+  updated_at: string;
+}
+
 export interface Job {
   id: number;
   isNew: boolean;
@@ -139,4 +163,3 @@ export interface MatchProfileRequest {
   location?: string;
   locationPreferences?: string[];
 }
-

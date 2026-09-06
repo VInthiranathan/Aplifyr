@@ -37,7 +37,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const parsed = parseCookieHeader(cookieHeader)
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    return res.status(500).json({ error: 'Supabase not configured' })
+    res.status(500).json({ error: 'Supabase not configured' })
+    return
   }
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
@@ -54,17 +55,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     },
   })
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser()
+  let user
+  try {
+    const {
+      data: { user: authenticatedUser },
+      error: userError,
+    } = await supabase.auth.getUser()
 
-  if (userError) {
-    return res.status(500).json({ error: userError.message })
+    if (userError) {
+      res.status(401).json({ error: userError.message })
+      return
+    }
+
+    user = authenticatedUser
+  } catch (error) {
+    console.error('[api/profile] Supabase auth request failed', error)
+    res.status(503).json({ error: 'Authentication service temporarily unavailable' })
+    return
   }
 
   if (!user) {
-    return res.status(401).json({ error: 'Not authenticated' })
+    res.status(401).json({ error: 'Not authenticated' })
+    return
   }
 
   if (req.method === 'GET') {
@@ -74,9 +86,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('id', user.id)
       .maybeSingle()
 
-    if (error) return res.status(500).json({ error: error.message })
+    if (error) {
+      res.status(500).json({ error: error.message })
+      return
+    }
 
-    return res.status(200).json({ profile: profile ?? null })
+    res.status(200).json({ profile: profile ?? null })
+    return
   }
 
   if (req.method === 'PUT') {
@@ -100,13 +116,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .select()
         .single()
 
-      if (error) return res.status(500).json({ error: error.message })
-      return res.status(200).json({ profile: updated })
+      if (error) {
+        res.status(500).json({ error: error.message })
+        return
+      }
+
+      res.status(200).json({ profile: updated })
+      return
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e)
-      return res.status(500).json({ error: message })
+      res.status(500).json({ error: message })
+      return
     }
   }
 
-  return res.status(405).json({ error: 'Method not allowed' })
+  res.status(405).json({ error: 'Method not allowed' })
 }
