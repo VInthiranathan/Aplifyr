@@ -47,24 +47,6 @@ Current limitation:
 
 - the backend suppresses some exceptions while resolving municipality and job payload data, so certain bad responses can fail quietly
 
-## CV Upload Fails
-
-### "Only PDF files are supported"
-
-- upload a `.pdf` file only
-
-### "Could not extract text from the uploaded PDF"
-
-- use a text-based PDF with selectable text
-
-### Redirect to `/api/cv` fails
-
-Check:
-
-- the `cvs` bucket exists
-- Storage policies are configured
-- `profiles.cv_storage_path` contains a valid object path
-
 ## User Profile Changes Do Not Persist
 
 Check:

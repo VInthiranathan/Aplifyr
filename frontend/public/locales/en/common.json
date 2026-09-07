@@ -163,16 +163,6 @@
     "selected": "Selected: {{value}}",
     "techStack": "Tech stack",
     "desiredRoles": "Desired roles",
-    "cvResume": "CV / Resume",
-    "cvUploaded": "CV Uploaded",
-    "cvSavedHint": "Your CV is stored privately and parsed on the server for cover letters",
-    "viewCv": "View CV",
-    "replaceCv": "Replace CV",
-    "removeFile": "Remove File",
-    "uploadingCv": "Uploading your CV...",
-    "uploadYourCv": "Upload your CV",
-    "chooseFile": "Choose File",
-    "cvUploadHint": "Upload a PDF. We extract text on the server and use it when available for cover letters",
     "editModalTitle": "Edit Profile",
     "profilePicture": "Profile Picture",
     "profileImageUnavailable": "Profile images are disabled until storage and profile persistence are implemented end to end. Your initials are shown instead.",
@@ -192,12 +182,6 @@
     "region": "Region",
     "country": "Country",
     "remote": "Remote",
-    "fileSizeTooLarge": "File size must be less than 5MB",
-    "cvPdfOnly": "Only PDF files are supported for CV uploads",
-    "cvParseFailed": "We could not extract readable text from that PDF. Please upload a text-based PDF.",
-    "cvUploadedSuccess": "CV uploaded successfully!",
-    "cvUploadFailed": "Failed to upload CV",
-    "cvUploadError": "Error uploading CV",
     "saveProfileFailed": "Failed to save profile",
     "saveProfileError": "Error saving profile"
   },
@@ -279,7 +263,7 @@
     "retry": "Try again",
     "saved": "Your details have been saved.",
     "deleted": "The entry has been deleted.",
-    "requiredHint": "Fields marked * are required. Other details help you build a more relevant CV.",
+    "requiredHint": "Fields marked * are required. Other details give a clearer picture of your background.",
     "startMonth": "Start month",
     "endMonth": "End month",
     "present": "Present",
@@ -309,7 +293,7 @@
     },
     "work": {
       "heading": "Your work experience",
-      "intro": "Collect jobs, internships, freelance and volunteer work. These details will provide source material for future job-specific CVs.",
+      "intro": "Collect jobs, internships, freelance and volunteer work. Describe your responsibilities, achievements and what you learned.",
       "add": "Add experience",
       "edit": "Edit experience",
       "empty": "Which experiences would you like to highlight?",
@@ -330,7 +314,7 @@
     },
     "education": {
       "heading": "Your education",
-      "intro": "Collect education, courses and certifications, along with what you learned. These details will provide source material for future job-specific CVs.",
+      "intro": "Collect education, courses and certifications, along with what you learned.",
       "add": "Add education",
       "edit": "Edit education",
       "empty": "What have you studied?",
@@ -348,6 +332,10 @@
       "learnedHint": "Which methods, tools and practical skills did you learn?",
       "strengths": "Personal strengths you developed",
       "strengthsHint": "Give examples of developing analytical thinking, independence or collaboration."
+    },
+    "overview": {
+      "manage": "Manage",
+      "manageLabel": "Manage {{section}}"
     }
   }
 }

@@ -34,7 +34,7 @@ npm run dev
 - `JobsController` and `UserController` currently read local JSON from `backend/Data/jobs.json` and `backend/Data/user.json`.
 - `ExternalJobsController` proxies Arbetsförmedlingen / JobTech search APIs and contains filtering/mapping logic for regions, municipalities, occupations, and employment types.
 - `CoverLettersController` calls external LLM providers and depends on `GEMINI_API_KEY` and/or `GROQ_API_KEY`.
-- `UploadController` is a small upload/health surface.
+- `UploadController` retains only its health endpoint; file uploads are disabled.
 - `Program.cs` may optionally initialize Supabase, but startup must not hard-fail when Supabase env vars are absent or invalid.
 - Keep `Program.cs` CORS behavior configuration-driven. New deployment origins should be added via config/env, not hardcoded in source.
 - Keep backend changes conservative: preserve existing routes and response shapes unless the task explicitly requires an API change.
@@ -68,7 +68,7 @@ npm run dev
 ## Profile Page
 
 - Profile images are currently initials-only. Do not ship image upload UI unless storage and profile persistence are implemented end to end.
-- CV upload is implemented and persisted; profile image upload is not.
+- The overview shows saved work experience and education. File uploads are disabled.
 
 ## Internationalisation
 

@@ -9,8 +9,6 @@ create table public.profiles (
   created_at timestamp with time zone null default now(),
   updated_at timestamp with time zone null default now(),
   location_preferences text[] null default '{}'::text[],
-  cv_storage_path text null,
-  cv_text text null,
   constraint profiles_pkey primary key (id),
   constraint profiles_id_fkey foreign KEY (id) references auth.users (id) on delete CASCADE
 ) TABLESPACE pg_default;

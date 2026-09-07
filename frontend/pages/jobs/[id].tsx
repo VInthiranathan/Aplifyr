@@ -154,7 +154,6 @@ export default function JobDetailPage() {
                 bio: profileData.profile.bio,
                 tech_stack: profileData.profile.tech_stack,
                 roles: profileData.profile.roles,
-                cv_text: profileData.profile.cv_text,
               };
             }
           }

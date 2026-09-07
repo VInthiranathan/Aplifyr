@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'next-i18next';
 import { Briefcase, GraduationCap, Plus, Save } from 'lucide-react';
 import type { CareerEntry, CareerEntryInput, CareerKind } from '../types/api';
 import { CareerValidationError, validateCareerEntry } from '../lib/careerValidation';
 import { Button } from './ui/button';
+import { useCareerEntries } from '../lib/CareerEntriesContext';
 
 const inputClass = 'w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:border-white/10 dark:bg-[#1a1a1a] dark:text-white';
 const cardClass = 'rounded-2xl border border-gray-200 bg-white p-5 sm:p-6 dark:border-white/5 dark:bg-[#1a1a1a]';
@@ -15,9 +16,8 @@ const emptyEntry = (kind: CareerKind): CareerEntryInput => ({
 
 export default function CareerHistory({ kind }: { kind: CareerKind }) {
   const { t, i18n } = useTranslation('common');
-  const [entries, setEntries] = useState<CareerEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
+  const { entries: allEntries, setEntries, loading, loadError, load } = useCareerEntries();
+  const entries = allEntries.filter(entry => entry.kind === kind);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [draft, setDraft] = useState<CareerEntryInput | null>(null);
@@ -33,17 +33,6 @@ export default function CareerHistory({ kind }: { kind: CareerKind }) {
   const common = (key: string) => t(`career.${key}`);
   const Icon = kind === 'work' ? Briefcase : GraduationCap;
 
-  const load = useCallback(async () => {
-    setLoading(true); setLoadError('');
-    try {
-      const response = await fetch('/api/career', { credentials: 'same-origin' });
-      if (!response.ok) { setLoadError(response.status === 401 ? 'unauthenticated' : 'loadError'); return; }
-      const data = await response.json();
-      setEntries(data.entries.filter((entry: CareerEntry) => entry.kind === kind));
-    } catch { setLoadError('loadError'); }
-    finally { setLoading(false); }
-  }, [kind]);
-  useEffect(() => { void load(); }, [load]);
   useEffect(() => {
     if (!draft) return;
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };

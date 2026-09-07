@@ -14,27 +14,16 @@ import {
   Edit,
   FileText,
   Tag,
-  Upload,
   X,
   Save,
 } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "../../components/ui/button";
 import CareerHistory from "../../components/CareerHistory";
+import CareerOverview from "../../components/CareerOverview";
+import { CareerEntriesProvider } from "../../lib/CareerEntriesContext";
 const profileTabs = ['overview', 'work', 'education'] as const;
 type ProfileTab = typeof profileTabs[number];
-const CV_VIEW_ROUTE = "/api/cv";
-
-function hasStoredCv(profile: Record<string, any> | null | undefined) {
-  return Boolean(profile?.cv_storage_path);
-}
-
-function isPdfFile(file: File) {
-  return (
-    file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
-  );
-}
-
 interface Props {
   user: User | null;
 }
@@ -81,7 +70,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("*")
+        .select("id,full_name,title,location,bio,tech_stack,roles,location_preferences,created_at,updated_at")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -215,14 +204,9 @@ export default function UserPage({ user }: Props) {
   const [editSection, setEditSection] = useState<
     "profile" | "bio" | "skills" | "roles" | null
   >(null);
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [cvUrl, setCvUrl] = useState<string | null>(null);
   const [selectedLocations, setSelectedLocations] = useState<string[]>(
     user?.locationPreferences ?? [],
   );
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const locationFilterItems = locationFilterKeys.map((key) => ({
     value: key.replace("user.", ""),  // e.g. "remote", "region", "country"
     label: t(key),
@@ -249,7 +233,6 @@ export default function UserPage({ user }: Props) {
             setClientProfile(mapped);
             setEditedUser(mapped);
             setSelectedLocations(mapped.locationPreferences);
-            setCvUrl(hasStoredCv(data.profile) ? CV_VIEW_ROUTE : null);
           } else {
             // no profile yet — allow user to create one via UI
             setClientProfile(null);
@@ -266,42 +249,8 @@ export default function UserPage({ user }: Props) {
       setClientProfile(user);
       setEditedUser(user);
       setSelectedLocations(user.locationPreferences);
-      // Fetch CV URL for the user
-      (async () => {
-        try {
-          const res = await fetch("/api/profile", {
-            credentials: "same-origin",
-          });
-          if (res.ok) {
-            const data = await res.json();
-            if (data.profile) {
-              setCvUrl(hasStoredCv(data.profile) ? CV_VIEW_ROUTE : null);
-            }
-          }
-        } catch (e) {
-          console.error("Failed to fetch CV URL:", e);
-        }
-      })();
     }
   }, [user]);
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (file.size > 5 * 1024 * 1024) {
-        alert(t("user.fileSizeTooLarge"));
-        return;
-      }
-
-      if (!isPdfFile(file)) {
-        alert(t("user.cvPdfOnly"));
-        return;
-      }
-
-      setUploadedFile(file);
-      await uploadCV(file);
-    }
-  };
 
   const toggleLocation = async (location: string) => {
     const previousLocations = selectedLocations;
@@ -333,72 +282,6 @@ export default function UserPage({ user }: Props) {
     }
   };
 
-  const uploadCV = async (file: File) => {
-    setIsUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const res = await fetch("/api/upload-cv", {
-        method: "POST",
-        credentials: "same-origin",
-        body: formData,
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setCvUrl(data.cv_view_url || CV_VIEW_ROUTE);
-        alert(t("user.cvUploadedSuccess"));
-      } else {
-        const err = await res.json().catch(() => ({}));
-        console.error("CV upload failed", err);
-        if (err.code === "cv_pdf_only") {
-          alert(t("user.cvPdfOnly"));
-        } else if (err.code === "cv_parse_failed") {
-          alert(t("user.cvParseFailed"));
-        } else {
-          alert(t("user.cvUploadFailed"));
-        }
-      }
-    } catch (error) {
-      console.error("CV upload error:", error);
-      alert(t("user.cvUploadError"));
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const file = e.dataTransfer.files[0];
-      if (file.size > 5 * 1024 * 1024) {
-        alert(t("user.fileSizeTooLarge"));
-        return;
-      }
-
-      if (!isPdfFile(file)) {
-        alert(t("user.cvPdfOnly"));
-        return;
-      }
-
-      setUploadedFile(file);
-      await uploadCV(file);
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
   const handleSaveProfile = async () => {
     if (!editedUser) return;
     try {
@@ -417,6 +300,7 @@ export default function UserPage({ user }: Props) {
   };
 
   return (
+    <CareerEntriesProvider key={user?.id ?? "profile"}>
     <div className="min-h-screen bg-gray-50 dark:bg-[#0d0d0d]">
       {/* Banner — shorter on mobile */}
       <div className="h-28 sm:h-48 bg-gradient-to-r from-orange-300 via-purple-500 to-purple-700" />
@@ -498,9 +382,9 @@ export default function UserPage({ user }: Props) {
         ))}
         <section id="profile-panel-overview" role="tabpanel" aria-labelledby="profile-tab-overview" hidden={activeTab !== 'overview'} tabIndex={0}>
         {/* Two column layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           {/* Left column - Main content */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="min-w-0 space-y-6 lg:col-span-2 xl:col-span-3">
             {/* About Me */}
             <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-6 border border-gray-200 dark:border-white/5 shadow-sm">
               <div className="flex items-center gap-3 mb-4">
@@ -658,124 +542,13 @@ export default function UserPage({ user }: Props) {
             </div>
           </div>
 
-          {/* Right column - CV/Resume */}
-          <div className="lg:col-span-1">
-            <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-6 border border-gray-200 dark:border-white/5 shadow-sm">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-500/10 flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                </div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                  {t("user.cvResume")}
-                </h2>
-              </div>
-
-              {/* Upload area */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf"
-                onChange={handleFileChange}
-                className="hidden"
-                disabled={isUploading}
-              />
-
-              {cvUrl ? (
-                <div className="border-2 border-gray-200 dark:border-white/10 rounded-2xl p-8 text-center">
-                  <div className="flex flex-col items-center gap-4">
-                    <FileText className="w-14 h-14 text-green-600 dark:text-green-400" />
-                    <div>
-                      <p className="text-base font-semibold text-gray-900 dark:text-white mb-1">
-                        {t("user.cvUploaded")}
-                      </p>
-                      <p className="text-sm text-gray-500 dark:text-white/50">
-                        {t("user.cvSavedHint")}
-                      </p>
-                    </div>
-                    <div className="flex gap-3 mt-2">
-                      <a
-                        href={cvUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="app-primary-button px-6 py-3"
-                      >
-                        {t("user.viewCv")}
-                      </a>
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isUploading}
-                        className="app-secondary-button px-6 py-3"
-                      >
-                        {isUploading ? t("user.uploadingCv") : t("user.replaceCv")}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div
-                  onDrop={handleDrop}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all cursor-pointer ${
-                    isDragging
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-500/10"
-                      : "border-gray-200 dark:border-white/10 hover:border-blue-400 dark:hover:border-blue-500/50"
-                  } ${isUploading ? "opacity-50 pointer-events-none" : ""}`}
-                >
-                  <div className="flex flex-col items-center gap-4">
-                    {uploadedFile && !isUploading ? (
-                      <>
-                        <FileText className="w-14 h-14 text-blue-600 dark:text-blue-400" />
-                        <div>
-                          <p className="text-base font-semibold text-gray-900 dark:text-white mb-1">
-                            {uploadedFile.name}
-                          </p>
-                          <p className="text-sm text-gray-500 dark:text-white/50">
-                            {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
-                          </p>
-                        </div>
-                        <Button
-                          onClick={() => setUploadedFile(null)}
-                          variant="secondary"
-                          className="mt-2 h-auto px-8 py-3 text-red-700 dark:text-red-400 border-red-300 dark:border-red-800/60 hover:bg-red-100 dark:hover:bg-red-900/40 hover:text-red-700 dark:hover:text-red-300"
-                        >
-                          {t("user.removeFile")}
-                        </Button>
-                      </>
-                    ) : isUploading ? (
-                      <>
-                        <FileText className="w-14 h-14 text-blue-600 dark:text-blue-400 animate-pulse" />
-                        <p className="text-base font-semibold text-gray-900 dark:text-white">
-                          {t("user.uploadingCv")}
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-14 h-14 text-gray-400 dark:text-white/30" />
-                        <div>
-                          <p className="text-base font-semibold text-gray-900 dark:text-white mb-1">
-                            {t("user.uploadYourCv")}
-                          </p>
-                          <p className="text-sm text-gray-500 dark:text-white/50">
-                            PDF only • Max 5MB
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => fileInputRef.current?.click()}
-                          className="app-primary-button mt-2 px-8 py-3"
-                        >
-                          {t("user.chooseFile")}
-                        </button>
-                        <p className="text-xs text-gray-500 dark:text-white/50 mt-2 max-w-xs">
-                          {t("user.cvUploadHint")}
-                        </p>
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+          {/* Career facts remain visible together in the overview. */}
+          <aside className="min-w-0 space-y-6 lg:col-span-3 xl:col-span-2">
+            <CareerOverview onManage={kind => {
+              selectTab(kind);
+              requestAnimationFrame(() => document.getElementById(`profile-tab-${kind}`)?.focus());
+            }} />
+          </aside>
         </div>
         </section>
       </div>
@@ -950,5 +723,6 @@ export default function UserPage({ user }: Props) {
         </div>
       )}
     </div>
+    </CareerEntriesProvider>
   );
 }

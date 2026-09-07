@@ -163,16 +163,6 @@
     "selected": "Valt: {{value}}",
     "techStack": "Teknikstack",
     "desiredRoles": "Önskade roller",
-    "cvResume": "CV / Resume",
-    "cvUploaded": "CV uppladdat",
-    "cvSavedHint": "Ditt CV lagras privat och parsas på servern för personliga brev",
-    "viewCv": "Visa CV",
-    "replaceCv": "Byt ut CV",
-    "removeFile": "Ta bort fil",
-    "uploadingCv": "Laddar upp ditt CV...",
-    "uploadYourCv": "Ladda upp ditt CV",
-    "chooseFile": "Välj fil",
-    "cvUploadHint": "Ladda upp en PDF. Vi extraherar text på servern och använder den när den finns tillgänglig för personliga brev",
     "editModalTitle": "Redigera profil",
     "profilePicture": "Profilbild",
     "profileImageUnavailable": "Profilbilder är avstängda tills lagring och profilsparande är implementerade hela vägen. Dina initialer visas i stället.",
@@ -192,12 +182,6 @@
     "region": "Region",
     "country": "Land",
     "remote": "Remote",
-    "fileSizeTooLarge": "Filstorleken måste vara mindre än 5 MB",
-    "cvPdfOnly": "Endast PDF-filer stöds för CV-uppladdning",
-    "cvParseFailed": "Det gick inte att extrahera läsbar text från PDF-filen. Ladda upp en textbaserad PDF.",
-    "cvUploadedSuccess": "CV uppladdat!",
-    "cvUploadFailed": "Det gick inte att ladda upp CV",
-    "cvUploadError": "Fel vid uppladdning av CV",
     "saveProfileFailed": "Det gick inte att spara profilen",
     "saveProfileError": "Fel vid sparande av profil"
   },
@@ -279,7 +263,7 @@
     "retry": "Försök igen",
     "saved": "Uppgifterna har sparats.",
     "deleted": "Posten har tagits bort.",
-    "requiredHint": "Fält med * krävs. Övriga uppgifter hjälper dig att bygga ett mer relevant CV.",
+    "requiredHint": "Fält med * krävs. Övriga uppgifter ger en tydligare bild av din bakgrund.",
     "startMonth": "Startmånad",
     "endMonth": "Slutmånad",
     "present": "Pågående",
@@ -309,7 +293,7 @@
     },
     "work": {
       "heading": "Din arbetslivserfarenhet",
-      "intro": "Samla jobb, praktik, frilansuppdrag och ideellt arbete. Det du skriver här blir underlag för framtida jobbanpassade CV:n.",
+      "intro": "Samla jobb, praktik, frilansuppdrag och ideellt arbete. Beskriv dina uppgifter, resultat och vad du har lärt dig.",
       "add": "Lägg till erfarenhet",
       "edit": "Redigera erfarenhet",
       "empty": "Vilka erfarenheter vill du lyfta fram?",
@@ -330,7 +314,7 @@
     },
     "education": {
       "heading": "Dina utbildningar",
-      "intro": "Samla utbildningar, kurser och certifieringar och beskriv kunskaperna du har med dig. Det blir underlag för framtida jobbanpassade CV:n.",
+      "intro": "Samla utbildningar, kurser och certifieringar och beskriv kunskaperna du har med dig.",
       "add": "Lägg till utbildning",
       "edit": "Redigera utbildning",
       "empty": "Vad har du studerat?",
@@ -348,6 +332,10 @@
       "learnedHint": "Vilka metoder, verktyg och praktiska färdigheter lärde du dig?",
       "strengths": "Egenskaper du utvecklade",
       "strengthsHint": "Ge exempel på hur du utvecklade till exempel analytiskt tänkande, självständighet eller samarbete."
+    },
+    "overview": {
+      "manage": "Hantera",
+      "manageLabel": "Hantera {{section}}"
     }
   }
 }

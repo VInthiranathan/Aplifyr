@@ -1,6 +1,6 @@
 export type CareerKind = 'work' | 'education';
 
-/** Verified profile facts; keep separate from generated, job-specific CV wording. */
+/** User-provided work experience and education facts. */
 export interface CareerEntryInput {
   kind: CareerKind;
   title: string;

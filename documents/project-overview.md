@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Aplifyr helps a user move from job discovery to a prepared application by combining job search, profile management, CV upload, and AI-assisted cover letter generation.
+Aplifyr helps a user move from job discovery to a prepared application by combining job search, profile management, work experience and education, and AI-assisted cover letter generation.
 
 ## Main User Flows
 
@@ -23,16 +23,16 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 
 - frontend page: `frontend/pages/jobs/[id].tsx`
 - backend controller: `backend/Controllers/CoverLettersController.cs`
-- the frontend fetches the user profile and includes CV text when available
+- the frontend fetches supported user profile fields for personalization
 - the backend detects the language from the job description and then calls Gemini first, with Groq as fallback
 
-### User Profile and CV
+### User Profile and Career History
 
 - frontend page: `frontend/pages/user/index.tsx`
-- frontend API routes: `frontend/pages/api/profile.ts`, `frontend/pages/api/upload-cv.ts`, `frontend/pages/api/cv.ts`
+- frontend API routes: `frontend/pages/api/profile.ts`, `frontend/pages/api/career.ts`
 - Supabase stores profile data in `public.profiles`
-- uploaded CV PDFs are stored in a private `cvs` bucket
-- extracted PDF text is saved to `profiles.cv_text` and reused during cover letter generation
+- work experience and education are stored in `public.profile_career_entries`
+- the overview displays all saved career details; separate tabs provide editing
 
 ## Architecture
 
@@ -56,7 +56,7 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 
 - auth for sign-in and session handling
 - `profiles` table for user-facing profile data
-- private Storage bucket for CV uploads
+- owner-only career history protected by row-level security
 
 ## Important Runtime Behavior
 

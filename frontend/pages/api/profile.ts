@@ -82,7 +82,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'GET') {
     const { data: profile, error } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id,full_name,title,location,bio,tech_stack,roles,location_preferences,created_at,updated_at')
       .eq('id', user.id)
       .maybeSingle()
 
@@ -113,7 +113,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const { data: updated, error } = await supabase
         .from('profiles')
         .upsert(upsertObj, { onConflict: 'id' })
-        .select()
+        .select('id,full_name,title,location,bio,tech_stack,roles,location_preferences,created_at,updated_at')
         .single()
 
       if (error) {
