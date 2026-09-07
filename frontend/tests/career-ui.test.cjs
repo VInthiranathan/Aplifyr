@@ -21,11 +21,14 @@ const validation = load('lib/careerValidation.ts', {});
 const translations = JSON.parse(fs.readFileSync(path.join(__dirname, '../public/locales/sv/common.json')));
 const translate = key => key.split('.').reduce((o, k) => o?.[k], translations) ?? key;
 function setup(fetch) {
-  return load('components/CareerHistory.tsx', {
+  const context = load('lib/CareerEntriesContext.tsx', {}, { fetch, AbortController });
+  const Component = load('components/CareerHistory.tsx', {
     '../lib/careerValidation': validation,
+    '../lib/CareerEntriesContext': context,
     'next-i18next': { useTranslation: () => ({ t: translate, i18n: { language: 'sv' } }) },
     './ui/button': { Button: React.forwardRef(({ variant, ...props }, ref) => React.createElement('button', { ...props, ref })) },
   }, { fetch, window: { addEventListener() {}, removeEventListener() {} } }).default;
+  return props => React.createElement(context.CareerEntriesProvider, null, React.createElement(Component, props));
 }
 const response = (status, body) => ({ ok: status < 400, status, json: async () => body });
 const button = (view, text) => view.root.findAllByType('button').find(b => b.props.children === text || (Array.isArray(b.props.children) && b.props.children.includes(text)));

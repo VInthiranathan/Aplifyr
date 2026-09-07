@@ -4,15 +4,14 @@
 
 This document reflects the current schema implied by the checked-in Supabase migrations.
 
-It replaces the old planning note that described separate `cvs`, `job_posts`, `applications`, and `generated_documents` tables. Those tables are not created by the current migration set.
-
 ## Current Table: `public.profiles`
 
 Created and extended by:
 
 - `supabase/migrations/001_create_profiles_table.sql`
 - `supabase/migrations/002_add_location_preferences_to_profiles.sql`
-- `supabase/migrations/003_add_private_cv_columns.sql`
+- `supabase/migrations/003_add_private_cv_columns.sql` (historical)
+- `supabase/migrations/005_remove_cv_feature.sql` (removes legacy document fields)
 
 Current columns:
 
@@ -23,10 +22,7 @@ Current columns:
 - `bio text`
 - `tech_stack text[]`
 - `roles text[]`
-- `cv_url text`
 - `location_preferences text[] default '{}'::text[]`
-- `cv_storage_path text`
-- `cv_text text`
 - `created_at timestamptz default now()`
 - `updated_at timestamptz default now()`
 
@@ -48,13 +44,11 @@ Result:
 
 - `updated_at` is refreshed before each profile update
 
-## Storage Relationship
+## Career History
 
-CV files are not stored in a database table. The current app stores:
-
-- the actual PDF in the private Supabase Storage bucket `cvs`
-- the storage path in `profiles.cv_storage_path`
-- extracted text in `profiles.cv_text`
+Migration 004 adds `public.profile_career_entries`, with owner-only row-level security.
+See `profile-career-history.md` for fields and API behavior. Migration 005 leaves these
+entries intact and retires legacy document storage; see `retire-file-storage.md`.
 
 ## Notes for Future Work
 

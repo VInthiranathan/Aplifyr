@@ -1,34 +1,12 @@
 # Profile career history
 
-## Purpose and research
+## Purpose
 
-Job-specific CV generation needs structured source facts rather than only an uploaded
-PDF or a general biography. The profile now has Overview, Work experience and Education
-tabs. Jobs, internships, freelance and volunteer roles can all be recorded. Education
-also accommodates courses and certifications.
-
-Research reviewed on 2026-09-05:
-
-- [CareerOneStop: work experience](https://www.careeronestop.org/JobSearch/Resumes/ResumeGuide/work-experience.aspx)
-  recommends recording jobs, responsibilities and accomplishments. This informed separate
-  fields for tasks and results, with prompts to describe personal contributions.
-- [CareerOneStop: resumes](https://www.careeronestop.org/JobSearch/Resumes/resumes.aspx?frd=true)
-  recommends relevant keyword qualifications that the candidate actually possesses.
-  Skills are therefore stored alongside their source experience; personal strengths
-  have a separate field asking for evidence rather than an unsupported adjective list.
-- [Greenhouse: unsuccessful resume parsing](https://support.greenhouse.io/hc/en-us/articles/200989175-Unsuccessful-resume-parse)
-  documents parsing problems with columns, graphics, unclear sections and contact details
-  in headers or text boxes. Its parser also has a 2.5 MB limit, distinct from upload limits.
-  These are constraints for a future export, not a reason to restrict the profile's UI.
-- [WAI-ARIA tabs pattern](https://www.w3.org/WAI/ARIA/apg/patterns/tabs/)
-  informed tab roles, associated panels, selected state and arrow/Home/End navigation.
-- [Supabase row-level security](https://supabase.com/docs/guides/database/postgres/row-level-security)
-  informed owner-only policies using authenticated user IDs.
-
-No universal ATS score or guaranteed acceptance is claimed. The future generator should
-select and rephrase relevant verified facts, never invent skills, degrees or numerical
-results. Use normal section headings, one-column text-based exports, and a user review
-before download. Keep generated job-specific CVs separate from these source facts.
+The profile has Overview, Work experience and Education tabs. The overview displays
+all saved entries and details in two timeline cards, with ongoing entries first.
+The cards show accurate loading, error/retry and empty states. Manage buttons lead to
+the editors. One shared data provider keeps saves and deletions synchronized across
+the overview and both tabs without discarding editor drafts.
 
 ## Implemented fields and behavior
 
@@ -60,7 +38,7 @@ Both English and Swedish, light and dark themes, and responsive form columns are
 `public.profile_career_entries` stores one record per experience or education, with `kind`
 as the discriminator. It references `auth.users` directly, so a missing legacy `profiles`
 row does not prevent career entry creation. Account deletion cascades to these entries.
-Existing biography, skills, preferences and uploaded CV data are not overwritten.
+Existing biography, skills and preferences are not overwritten.
 
 `/api/career` uses the existing cookie-based Supabase authentication and the public anon
 key with the user's session. No service-role key is used. Ownership is assigned from
@@ -92,24 +70,7 @@ change does not execute remote migrations automatically.
 
 ## Verification
 
-Run in `frontend/`:
-
-```sh
-npm ci
-npm test
-npm run build
-```
-
-The 14 automated tests cover validation, API authentication/ownership/version checks,
-translation parity, component create/edit/delete, failure recovery, and migration/RLS
-behavior in local PostgreSQL via PGlite. They do not replace a smoke test against the
-deployed Supabase instance. The production build passes. Cloud Browser could not reach
-the local preview, so no visual browser verification is claimed.
-
-## Boundary for the next CV feature
-
-This implements the requested profile foundation. It does not add a CV generator or
-change cover-letter generation. A later job-specific generator should read these entries
-server-side for the authenticated user and preserve entry IDs for traceability. It will
-also need contact details, languages and relevant links, job-ad input, an editable preview,
-and text-based PDF/DOCX export. Missing details should be requested, never inferred as fact.
+Run `npm test` and `npm run build` from `frontend/`. Tests cover validation,
+API ownership/version checks, translations, editor behavior, shared overview state,
+and local PostgreSQL constraints and storage retirement. A deployed Supabase smoke
+test is still required for the production environment.

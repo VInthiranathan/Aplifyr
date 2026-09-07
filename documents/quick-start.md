@@ -39,7 +39,7 @@ Copy-Item .env.example .env.local
 
 File: `backend/.env`
 
-Required for Supabase-backed profile and CV features:
+Required for Supabase-backed profile features:
 
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
@@ -91,11 +91,11 @@ Run the migration files in this order:
 
 1. `supabase/migrations/001_create_profiles_table.sql`
 2. `supabase/migrations/002_add_location_preferences_to_profiles.sql`
-3. `supabase/migrations/003_add_private_cv_columns.sql`
+3. `supabase/migrations/003_add_private_cv_columns.sql` (historical migration)
+4. `supabase/migrations/004_create_profile_career_entries.sql`
+5. `supabase/migrations/005_remove_cv_feature.sql`
 
-## Configure Private CV Storage
-
-Follow `documents/supabase-storage-setup.md` before testing CV upload.
+For an existing installation, follow `documents/retire-file-storage.md` for the one-time retirement of legacy storage.
 
 ## Start the App
 
@@ -116,7 +116,7 @@ This starts both services:
 2. Sign in through Supabase auth.
 3. Visit `/jobs` and confirm live job listings load.
 4. Visit `/user` and save a profile.
-5. Upload a text-based PDF CV.
+5. Add work experience and education, then verify both in the profile overview.
 6. Open a job detail page and generate a cover letter.
 
 ## Build Validation
@@ -136,4 +136,4 @@ npm run build
 - backend CORS is configuration-driven and can use `CORS_ALLOWED_ORIGINS`
 - the dashboard home page reads local JSON data from `backend/Data/jobs.json`
 - the profile page depends on Supabase auth and the `profiles` table
-- CV upload supports PDF only and rejects files larger than 5 MB
+- career entries persist through `/api/career` and require migration 004

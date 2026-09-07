@@ -8,7 +8,7 @@ The feature needs:
 
 - at least one AI provider key in `backend/.env`
 - a reachable backend URL from the frontend
-- optional but recommended Supabase profile data so the prompt can include the user's bio, roles, tech stack, and extracted CV text
+- optional but recommended Supabase profile data so the prompt can include the user's bio, roles, tech stack
 
 ## Required Backend Configuration
 
@@ -31,13 +31,14 @@ The frontend sends:
 
 - the selected job ad
 - profile fields such as name, title, location, bio, tech stack, and roles
-- `cv_text` when a readable PDF CV has already been uploaded
+
+The backend allowlists supported profile fields, ignoring unknown legacy inputs. It does not use uploaded documents.
 
 The backend then:
 
 1. extracts job title, employer, description, and location from the request body
 2. detects whether the job description is Swedish or English
-3. builds a prompt using the job data plus profile and CV data
+3. builds a prompt using the job data plus supported profile data
 4. calls Gemini first when available
 5. falls back to Groq if Gemini fails
 
@@ -46,9 +47,8 @@ The backend then:
 1. Start backend and frontend.
 2. Sign in.
 3. Save profile data on `/user`.
-4. Upload a readable PDF CV if you want CV grounding.
-5. Open any job detail page.
-6. Click the cover letter generation action.
+4. Open any job detail page.
+5. Click the cover letter generation action.
 
 ## Expected Backend Response
 
@@ -85,7 +85,6 @@ Possible causes:
 - the user is not signed in
 - `/api/profile` is failing because Supabase is not configured
 - no profile data has been saved yet
-- no readable PDF has been uploaded, so `cv_text` is empty
 
 ### Generated letter is too generic
 
