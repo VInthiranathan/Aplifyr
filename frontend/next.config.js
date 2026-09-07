@@ -20,6 +20,17 @@ const nextConfig = {
   turbopack: {
     root: __dirname,
   },
+  // next-i18next loads its Pages Router config and locale files from disk at runtime.
+  // Its dynamic config require cannot be discovered reliably by output file tracing in
+  // serverless/monorepo deployments, so explicitly keep these small runtime assets in
+  // every server trace. This prevents Vercel functions from starting without the config
+  // or translations even though the build itself succeeded.
+  outputFileTracingIncludes: {
+    '/*': [
+      './next-i18next.config.js',
+      './public/locales/**/*.json',
+    ],
+  },
   async rewrites() {
     if (!backendBaseUrl) return []
 
