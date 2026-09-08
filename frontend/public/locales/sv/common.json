@@ -1,4 +1,16 @@
 {
+  "privacy": {
+    "title": "Integritet och personuppgifter",
+    "pending": "Fullständig integritetsinformation är ännu inte publicerad. Tjänsten är inte redo för publik lansering innan ansvarig verksamhet har kompletterat informationen.",
+    "exportScope": "Inloggade användare kan hämta kontoidentitet, profil och karriäruppgifter samt favoriter i denna webbläsare. Exporten omfattar inte leverantörsloggar, säkerhetskopior eller data i andra webbläsare. Kontakta oss för ett fullständigt tillgångsärende.",
+    "export": "Hämta mina uppgifter (JSON)",
+    "exportError": "Exporten kunde inte slutföras. Kontrollera att du är inloggad och försök igen, eller kontakta oss.",
+    "rights": "Dina rättigheter",
+    "rightsDetails": "Kontakta ansvarig verksamhet för frågor om tillgång, rättelse, radering, begränsning, invändning och dataportabilitet. Du kan också lämna klagomål till Integritetsskyddsmyndigheten. Vilka rättigheter som gäller beror på behandlingen.",
+    "contactPending": "Kontakt för integritetsärenden är ännu inte konfigurerad. Detta måste åtgärdas före publik lansering.",
+    "profileConflict": "Profilen har ändrats sedan du öppnade den. Kopiera dina ändringar och ladda om sidan innan du sparar igen.",
+    "close": "Stäng"
+  },
   "nav": {
     "userDetails": "Användarinfo",
     "home": "Hem",

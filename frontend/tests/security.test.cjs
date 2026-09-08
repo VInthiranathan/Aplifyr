@@ -39,7 +39,7 @@ test('debug session never discloses cookie or user data', () => {
 });
 test('profile rejects malformed or oversized inputs before database access; never uses supplied id', async () => {
   const writes = [];
-  const query = { upsert(value) { writes.push(value); return this; }, select() { return this; }, single: async () => ({ data: {}, error: null }) };
+  const query = { insert(value) { writes.push(value); return this; }, select() { return this; }, maybeSingle: async () => ({ data: {}, error: null }) };
   const handler = load('pages/api/profile.ts', {
     '../../lib/jobPreferences': load('lib/jobPreferences.ts'),
     '../../lib/apiSecurity': safety,
@@ -49,7 +49,7 @@ test('profile rejects malformed or oversized inputs before database access; neve
     const res = response(); await handler({ method: 'PUT', headers: { 'content-type': 'application/json' }, body }, res); assert.equal(res.code, 400);
   }
   assert.equal(writes.length, 0);
-  const res = response(); await handler({ method: 'PUT', headers: { 'content-type': 'application/json' }, body: { id: 'victim', name: 'Test', tags: ['C#'] } }, res);
+  const res = response(); await handler({ method: 'PUT', headers: { 'content-type': 'application/json' }, body: { id: 'victim', name: 'Test', tags: ['C#'], updatedAt: null } }, res);
   assert.equal(res.code, 200); assert.equal(writes[0].id, 'owner'); assert.equal(res.headers['Cache-Control'], 'private, no-store');
 });
 test('logout rejects GET and cross-site POST without touching auth', async () => {

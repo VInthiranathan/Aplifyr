@@ -99,6 +99,9 @@ Run the migration files in this order:
 4. `supabase/migrations/004_create_profile_career_entries.sql`
 5. `supabase/migrations/005_remove_cv_feature.sql`
 6. `supabase/migrations/006_secure_profiles.sql`
+7. `supabase/migrations/007_personal_data_limits.sql`
+
+Existing installations: inspect live RLS/policies and migration history first. The owner reports profile RLS already enabled; do not blindly replay schema or policies. Follow [the Supabase/GDPR runbook](gdpr-supabase-runbook.md), including legacy constraint checks. Configure server-side `PRIVACY_NOTICE_SV`, `PRIVACY_NOTICE_EN` and `PRIVACY_CONTACT_EMAIL` before public launch; see [privacy controls](privacy-controls.md).
 
 For an existing installation, follow `documents/retire-file-storage.md` for the one-time retirement of legacy storage.
 
@@ -143,4 +146,4 @@ npm run build
 - the dashboard loads personalized JobTech matches; JSON jobs are a separate demo endpoint
 - the profile page depends on Supabase auth and the `profiles` table
 - career entries persist through `/api/career` and require migration 004
-- profile RLS requires migration 006; see [security and EU privacy audit](security-gdpr-audit-2026-09-08.md) before deployment
+- migration 006 represents the repository's profile RLS baseline; reconcile with existing live policies before deployment

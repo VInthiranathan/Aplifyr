@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/auth-helpers-nextjs'
 
-const PUBLIC_PATHS = ['/auth']
+const PUBLIC_PATHS = ['/auth', '/privacy']
 
 function isPublicPath(pathname: string) {
   if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return true

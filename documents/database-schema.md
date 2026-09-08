@@ -13,6 +13,7 @@ Created and extended by:
 - `supabase/migrations/003_add_private_cv_columns.sql` (historical)
 - `supabase/migrations/005_remove_cv_feature.sql` (removes legacy document fields)
 - `supabase/migrations/006_secure_profiles.sql` (owner-only row-level access)
+- `supabase/migrations/007_personal_data_limits.sql` (profile/skill limits, initially NOT VALID for legacy rows)
 
 Current columns:
 
@@ -56,5 +57,7 @@ See `profile-career-history.md` for fields and API behavior. Migration 005 leave
 entries intact and retires legacy document storage; see `retire-file-storage.md`.
 
 ## Notes for Future Work
+
+Migration 007 limits profile name/title/location to 200 characters, bio to 5,000, and profile lists to 50 non-null items of at most 100 characters. Career skill items receive the same per-item constraint. Older invalid rows are preserved until reviewed; new writes are checked. Total career count is not limited by this migration. See [the runbook](gdpr-supabase-runbook.md) before applying or validating constraints. Existing production RLS must be inspected, not assumed missing or replaced blindly.
 
 If the project later needs application history, generated document archives, or structured job tracking, those tables still need real migrations before they can be treated as part of the live system.

@@ -41,6 +41,13 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 
 ## Architecture
 
+### Privacy controls
+
+- Public `/privacy` page links to an authenticated, owner-scoped JSON export and configured rights contact.
+- General profile edits now require an optimistic version; career reads use bounded keyset pagination.
+- External employer logos are replaced with local icons to avoid automatic third-party image requests.
+- See [Privacy controls](privacy-controls.md) for contracts and limitations, and the Swedish [Supabase/GDPR runbook](gdpr-supabase-runbook.md) for deployment and organizational actions.
+
 ### Frontend
 
 - Next.js 16 with the Pages Router

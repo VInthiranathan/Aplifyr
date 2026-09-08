@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { readCareerEntries } from '../../lib/readCareerEntries';
 import { createServerClient, parseCookieHeader, serializeCookieHeader } from '@supabase/auth-helpers-nextjs';
 import { CareerValidationError, isCareerId, validateCareerEntry } from '../../lib/careerValidation';
 
@@ -34,10 +35,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (authError || !user) return res.status(401).json({ code: 'unauthenticated' });
     const table = () => supabase.from('profile_career_entries');
     if (req.method === 'GET') {
-      const { data, error } = await table().select(columns).eq('user_id', user.id)
-        .order('is_current', { ascending: false }).order('start_month', { ascending: false }).order('id');
-      if (error) return res.status(503).json({ code: 'loadError' });
-      return res.status(200).json({ entries: data });
+      try {
+        const entries = await readCareerEntries(supabase, user.id, columns);
+        entries.sort((a, b) => Number(b.is_current) - Number(a.is_current) || b.start_month.localeCompare(a.start_month) || a.id.localeCompare(b.id));
+        return res.status(200).json({ entries });
+      } catch { return res.status(503).json({ code: 'loadError' }); }
     }
     const body = req.body;
     if (req.method === 'POST') {

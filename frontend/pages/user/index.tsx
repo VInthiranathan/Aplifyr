@@ -178,13 +178,13 @@ const saveProfile = async (nextUser: User, section: "profile" | "bio" | "skills"
     method: "PUT",
     credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(fields),
+    body: JSON.stringify({ ...fields, updatedAt: nextUser.updatedAt ?? null }),
   });
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     console.error("save profile failed", err);
-    throw new Error("save profile failed");
+    throw new Error(res.status === 409 ? "profileConflict" : "save profile failed");
   }
 
   const data = await res.json();
@@ -251,7 +251,7 @@ export default function UserPage({ user }: Props) {
       setIsEditModalOpen(false);
     } catch (error) {
       console.error(error);
-      alert(t("user.saveProfileError"));
+      alert(t(error instanceof Error && error.message === "profileConflict" ? "privacy.profileConflict" : "user.saveProfileError"));
     }
   };
 

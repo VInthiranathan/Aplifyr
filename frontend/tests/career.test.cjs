@@ -58,11 +58,12 @@ const updated_at = '2026-01-01T12:00:00.000Z';
 function api({ user = { id: 'owner' }, data = { ...valid, id, updated_at }, error = null, configured = true } = {}) {
   const calls = [];
   const query = {};
-  for (const op of ['select', 'eq', 'order', 'insert', 'update', 'delete']) query[op] = (...args) => { calls.push([op, ...args]); return query; };
+  for (const op of ['select', 'eq', 'order', 'limit', 'gt', 'insert', 'update', 'delete']) query[op] = (...args) => { calls.push([op, ...args]); return query; };
   query.then = resolve => Promise.resolve({ data, error }).then(resolve);
   query.single = query.maybeSingle = async () => ({ data, error });
   const handler = load('pages/api/career.ts', {
     '../../lib/careerValidation': validation,
+    '../../lib/readCareerEntries': load('lib/readCareerEntries.ts'),
     '@supabase/auth-helpers-nextjs': {
       createServerClient: () => ({ auth: { getUser: async () => ({ data: { user }, error: null }) }, from: () => query }),
       parseCookieHeader: () => [], serializeCookieHeader: () => '',

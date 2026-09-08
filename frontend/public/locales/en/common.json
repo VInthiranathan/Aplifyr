@@ -1,4 +1,16 @@
 {
+  "privacy": {
+    "title": "Privacy and personal data",
+    "pending": "The complete privacy notice has not been published yet. The service is not ready for public launch until the responsible organization completes this information.",
+    "exportScope": "Signed-in users can download account identity, profile and career facts, plus favorites in this browser. The export excludes provider logs, backups and data in other browsers. Contact us for a complete access request.",
+    "export": "Download my data (JSON)",
+    "exportError": "The export could not be completed. Check that you are signed in and try again, or contact us.",
+    "rights": "Your rights",
+    "rightsDetails": "Contact the responsible organization about access, correction, erasure, restriction, objection and data portability. You may also complain to the Swedish Authority for Privacy Protection. Applicable rights depend on the processing.",
+    "contactPending": "The privacy contact has not been configured yet. This must be resolved before public launch.",
+    "profileConflict": "The profile changed after you opened it. Copy your changes and reload the page before saving again.",
+    "close": "Close"
+  },
   "nav": {
     "userDetails": "User Details",
     "home": "Home",

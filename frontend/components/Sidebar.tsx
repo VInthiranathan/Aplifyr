@@ -23,6 +23,7 @@ const navItemDefs = [
   { key: "nav.favorites", href: "/favorites", icon: Bookmark },
   { key: "nav.allJobs", href: "/jobs", icon: Briefcase },
   { key: "nav.support", href: "/support", icon: HelpCircle },
+  { key: "privacy.title", href: "/privacy", icon: User },
 ];
 
 export default function Sidebar() {

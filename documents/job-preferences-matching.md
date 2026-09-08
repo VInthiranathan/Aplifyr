@@ -19,6 +19,7 @@ Reloading/leaving the document with a draft triggers the browser's unsaved-chang
 
 Existing profile editors send only the fields belonging to their section. `PUT /api/profile`
 preserves omitted fields, so saving a biography does not overwrite job preferences.
+PUT also requires `updatedAt` and uses an owner-/version-filtered update (or null-version insert), returning 409 for a conflict. See [privacy controls](privacy-controls.md).
 Both PUT and PATCH require JSON, reject cross-origin browser mutations, and return no-store responses. PUT additionally validates field/list lengths; the profile endpoint body limit is 32 KiB. Migration 006 enforces ownership even for direct Data API requests.
 
 ## Match inputs and ranking

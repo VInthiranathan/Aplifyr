@@ -1,4 +1,5 @@
 import { signOut } from "../lib/signOut";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { useTranslation } from "next-i18next";
@@ -64,6 +65,7 @@ export default function SettingsDrawer({ open, onClose }: Props) {
         </div>
 
         <div className="flex flex-col gap-2 p-4 flex-1">
+          <Link href="/privacy" onClick={onClose} className="underline">{t('privacy.title')}</Link>
           {/* locale toggle */}
           <Button
             onClick={() => {

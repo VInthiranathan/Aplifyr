@@ -1,4 +1,6 @@
 import { ReactNode } from "react";
+import Link from "next/link";
+import { useTranslation } from "next-i18next";
 import { Sun, Moon } from "lucide-react";
 import AnimatedBackground from "./AnimatedBackground";
 import { Button } from "./ui/button";
@@ -30,6 +32,7 @@ export default function AuthShell({
   children,
   footer,
 }: AuthShellProps) {
+  const { t } = useTranslation('common');
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-gray-50 dark:bg-[#0d0d0d]">
       {/* Form panel: full-width on mobile, fixed sidebar on sm+ */}
@@ -46,6 +49,7 @@ export default function AuthShell({
         {children}
 
         {footer}
+        <Link href="/privacy" className="mt-4 text-sm underline">{t('privacy.title')}</Link>
 
         <div className="mt-6 flex items-center gap-2 px-1 justify-center">
           <Button

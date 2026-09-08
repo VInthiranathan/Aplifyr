@@ -18,7 +18,7 @@ function App({ Component, pageProps }: AppProps) {
   )
 
   const isPublicFullScreenRoute = useMemo(
-    () => isAuthRoute || router.pathname === '/404',
+    () => isAuthRoute || router.pathname === '/404' || router.pathname === '/privacy',
     [isAuthRoute, router.pathname],
   )
 

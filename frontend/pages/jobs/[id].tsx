@@ -275,16 +275,7 @@ export default function JobDetailPage() {
           <div className="max-w-6xl mx-auto">
             <div className="flex flex-wrap items-start gap-4">
               <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg bg-slate-100 dark:bg-white/5 flex items-center justify-center flex-shrink-0">
-                {job.logo_url ? (
-                  <img
-                    src={safeExternalUrl(job.logo_url)}
-                    referrerPolicy="no-referrer"
-                    alt=""
-                    className="w-full h-full object-contain p-1"
-                  />
-                ) : (
-                  <Briefcase />
-                )}
+                <Briefcase />
               </div>
               <div className="flex-1">
                 <div className="flex items-start justify-between gap-4">

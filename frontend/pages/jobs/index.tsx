@@ -581,12 +581,7 @@ export default function AllJobsPage() {
               }
               leading={
                 <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-300 dark:text-white/20 overflow-hidden">
-                  {job.logo_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={job.logo_url} alt="" className="w-full h-full object-contain p-1.5" />
-                  ) : (
-                    <Briefcase size={20} />
-                  )}
+                  <Briefcase size={20} />
                 </div>
               }
               subtitle={job.employer?.name}

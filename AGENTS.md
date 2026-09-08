@@ -47,7 +47,19 @@ The documents above provide supporting project context when relevant.
 - Document how to verify the feature, including relevant test/build commands and any manual or live-service checks still required. Clearly distinguish automated fixture tests from live integration verification.
 - Before marking work complete or merging, review the feature diff and its documentation together. Confirm the documented behavior matches the code and identify the updated `documents/` files in the PR summary. A feature change without current, accurate documentation is not complete.
 
-## Local Development
+## EU/EEA Privacy and GDPR — Required for Every Feature
+
+- Treat privacy by design and by default as acceptance criteria, not a post-release checklist. Read `documents/gdpr-supabase-runbook.md` and the current feature documentation before changing personal-data flows.
+- Document data fields, purpose, necessity, legal-basis decision, recipients/processors, retention/deletion, access controls and any EU/EEA transfer for every new or changed processing activity. Never invent legal bases, controller details, signed contracts, retention periods or compliance claims.
+- Collect and transmit the minimum required facts. Do not add sensitive data, tracking, external fonts/images, AI recipients or model-training uses silently. Optional external processing must remain disabled until the owner approves the documented provider/transfer arrangements.
+- Preserve the user's existing Supabase RLS/policies. An absent repo migration is NOT evidence that production RLS is missing. Inspect live policies with authorized read-only access or supply verification SQL; do not replace policies blindly. Test anonymous access, two-user isolation, direct Data API writes and service-role boundaries.
+- Keep service-role credentials server-only and narrowly scoped. Verify identity and ownership independently of client IDs. Require safe mutations, payload limits, generic errors and no-store for private responses. Never log tokens, personal prompts, generated letters or raw provider responses.
+- Cover access/export, correction, restriction, objection and deletion implications, including local storage, legacy objects, caches, processors and backups. Do not claim a UI action deletes data across systems unless verified end to end. Actual production deletions/migrations need explicit target confirmation and the approved deployment workflow.
+- Do not assume an EU data centre eliminates international transfers. Verify subprocessors/support access, appropriate contracts and transfer safeguards with the owner. Record unresolved decisions and block the affected launch/processing until resolved.
+- Screen profiling/AI changes for DPIA needs and significant automated decisions. Keep recommendations explainable, user-controlled and distinct from verified facts; do not promise unbiased or accurate AI output.
+- Add regression tests and update `documents/` in the same branch. The completion report must distinguish code implemented, local tests passed, production checks pending and legal/organizational decisions pending. GDPR conformity cannot be certified by code review alone.
+
+## Local Development Commands
 
 ```powershell
 # backend

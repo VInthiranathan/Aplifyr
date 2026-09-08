@@ -45,6 +45,7 @@ key with the user's session. No service-role key is used. Ownership is assigned 
 `auth.getUser()`, never accepted from the request body, and also enforced by database RLS.
 
 - GET: returns `{ entries }` for the signed-in user, including both kinds.
+- GET internally uses owner-scoped keyset pagination (100 rows/request, at most 100 requests and 8 Mi characters). It keeps fetching even below the requested page size. A limit, invalid cursor or database failure returns 503 rather than a silently incomplete history. Reads are not a cross-page transaction snapshot; see [privacy controls](privacy-controls.md).
 - POST: validates a `CareerEntryInput` and returns `{ entry }`.
 - PUT: requires the full input plus `id` and the last `updated_at` value.
 - DELETE: requires `id` and the last `updated_at` value.

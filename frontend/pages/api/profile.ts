@@ -141,6 +141,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'PUT') {
     try {
       const body = req.body
+      const version = body.updatedAt
+      if (version !== null && (typeof version !== 'string' || !Number.isFinite(Date.parse(version)))) {
+        res.status(400).json({ error: 'Profile version required' }); return
+      }
 
       if (!body || typeof body !== 'object' || Array.isArray(body)) {
         res.status(400).json({ error: 'Invalid profile' })
@@ -158,11 +162,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (input in body) upsertObj[column] = normalizeStringArray(body[input])
       }
 
-      const { data: updated, error } = await supabase
-        .from('profiles')
-        .upsert(upsertObj, { onConflict: 'id' })
+      const table = supabase.from('profiles')
+      const { id, ...fields } = upsertObj
+      const write = version === null ? table.insert(upsertObj) : table.update(fields).eq('id', user.id).eq('updated_at', version)
+      const { data: updated, error } = await write
         .select('id,full_name,title,location,bio,tech_stack,roles,location_preferences,created_at,updated_at')
-        .single()
+        .maybeSingle()
+
+      if ((!error && !updated) || error?.code === '23505') {
+        res.status(409).json({ error: 'Profile changed; reload before saving' }); return
+      }
 
       if (error) {
         res.status(500).json({ error: 'Profile operation failed' })
