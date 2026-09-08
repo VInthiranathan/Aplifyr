@@ -100,6 +100,9 @@ Run the migration files in this order:
 5. `supabase/migrations/005_remove_cv_feature.sql`
 6. `supabase/migrations/006_secure_profiles.sql`
 7. `supabase/migrations/007_personal_data_limits.sql`
+8. `supabase/migrations/008_privacy_consent_and_limits.sql`
+
+For the owner's existing 001–005 installation with profile RLS, 008 is also supplied as a single manual upgrade including missing 007 limits and additive owner guards. It preserves existing policies. Reconcile migration history after manual application. AI now requires backend `SUPABASE_SERVICE_ROLE_KEY` for atomic reservations, reviewed/enabled DB notices and explicit user consent. See [privacy controls](privacy-controls.md); SQL alone does not deploy the UI or activate AI.
 
 Existing installations: inspect live RLS/policies and migration history first. The owner reports profile RLS already enabled; do not blindly replay schema or policies. Follow [the Supabase/GDPR runbook](gdpr-supabase-runbook.md), including legacy constraint checks. Configure server-side `PRIVACY_NOTICE_SV`, `PRIVACY_NOTICE_EN` and `PRIVACY_CONTACT_EMAIL` before public launch; see [privacy controls](privacy-controls.md).
 

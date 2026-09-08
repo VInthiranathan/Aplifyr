@@ -2,6 +2,8 @@
 
 Uppdaterad 2026-09-08. Branch: `fix/security-gdpr-audit`.
 
+Senaste samlade migrationsfil: `supabase/migrations/008_privacy_consent_and_limits.sql`. Den är avsedd för ditt befintliga schema och innehåller samtycke, reservationskvoter, ägarskydd och saknade fältgränser. Appens samtyckesflöde, nonce-CSP och övriga kodfixar kräver separat driftsättning av branchen. Följ operatörskommentarerna i SQL-filen innan AI aktiveras.
+
 Du har uppgett att RLS redan är aktiverat för profilen. Det respekteras: avsaknaden i migration 001 bevisar inte en lucka i din drift. Inga produktionsinställningar eller användaruppgifter har ändrats under granskningen. Den här guiden är en teknisk åtgärdsplan, inte ett juridiskt intyg. Hela fyndlistan finns i [granskningsrapporten](security-gdpr-audit-2026-09-08.md).
 
 ## 1. Kontrollera befintligt Supabase-projekt – läsning först
@@ -47,7 +49,7 @@ Spara testresultat utan tokens eller riktiga personuppgifter.
 
 ## 2. Inför databasskydd mot stora direktanrop
 
-Ny migration `supabase/migrations/007_personal_data_limits.sql` begränsar profiltext och listor samt varje karriärfärdighet. Den ändrar inga RLS-policies. Kör efter föregående schemamigrationer, först i staging. `NOT VALID` bevarar äldre rader men kontrollerar nya/uppdaterade rader; en redan för stor rad kan därför inte uppdateras förrän den rättats. Ingen automatisk kapning sker.
+Migration 007, även inkluderad när den saknas i den samlade migrationen `008_privacy_consent_and_limits.sql`, begränsar profiltext och listor samt varje karriärfärdighet. Den ändrar inga RLS-policies. Kör efter föregående schemamigrationer, först i staging. `NOT VALID` bevarar äldre rader men kontrollerar nya/uppdaterade rader; en redan för stor rad kan därför inte uppdateras förrän den rättats. Ingen automatisk kapning sker.
 
 Efter migrationen, inventera endast antal avvikelser:
 
@@ -68,7 +70,7 @@ alter table public.profiles validate constraint profiles_personal_data_limits;
 alter table public.profile_career_entries validate constraint career_skill_item_limits;
 ```
 
-Ta backup och bedöm låsningstid före produktionskörning. Migrationsfilen är avsedd att köras en gång via migrationshistoriken. En total karriärkvot per konto ingår inte: välj rimlig gräns och implementera atomisk databaskvot innan obegränsad publik registrering. En UI-gräns räcker inte mot direkt Data API.
+Ta backup och bedöm låsningstid före produktionskörning. Migrationsfilen är avsedd att köras en gång via migrationshistoriken. Migration 008 inför en atomisk kvot på 200 karriärposter per konto, även vid direkt Data API. Äldre överkvotsdata bevaras; nya poster kräver att antalet först minskas.
 
 ## 3. Hosted Auth, nycklar och driftskydd
 
@@ -77,7 +79,7 @@ Ta backup och bedöm låsningstid före produktionskörning. Migrationsfilen är
 - Begränsa redirect-URL:er till kontrollerade HTTPS-domäner; testa återställning och tokenrefresh.
 - Håll service-role enbart i skyddad server-/administratörsmiljö. Rotera endast berörda nycklar med samordnad driftsplan om exponering konstateras eller misstänks.
 - Verifiera HTTPS/HSTS, backup/återläsning, loggåtkomst och faktisk logglagringstid. Lägg inte request bodies, cookies eller AI-texter i tracing.
-- Backendens frekvensbegränsning är processlokal. Före större/skalig drift behövs distribuerad per-användarkvot, samtidighetsgräns, global kostnadsspärr och larm. Använd inte enbart IP eftersom många användare kan dela adress.
+- Allmän frekvens-/samtidighetsbegränsning är processlokal. Migration 008 inför distribuerade AI-kvoter och reservationslås. Ställ in leverantörernas monetära budgettak och larm separat; SQL-gränsen räknar anrop, inte kronor.
 
 ## 4. Publicera riktig integritetsinformation
 
@@ -110,7 +112,7 @@ Ingen automatisk konto-raderingsendpoint har införts: berörda produktionssyste
 
 Lämna `AI_ALLOWED_PROVIDERS` tom tills varje aktiverad leverantör är bedömd. Dokumentera Supabase, hosting, e-post och AI: roll, avtal/biträdesavtal där tillämpligt, underbiträden, data, supportåtkomst, länder, retention, träning och radering. EU-region utesluter inte tredjelandsåtkomst. Bedöm aktuell överföringsmekanism, exempelvis tillämpligt adekvansbeslut eller SCC med kompletterande bedömning/skydd; ett regionval är inte hela lösningen. [IMY om överföringar](https://www.imy.se/verksamhet/dataskydd/det-har-galler-enligt-gdpr/overforing-till-tredje-land/).
 
-Karriärhistorik skickas inte automatiskt till brev-AI i denna ändring. Att börja skicka den kräver ett explicit, dataminimerat produktflöde och uppdaterad information. Undvik känsliga fritextuppgifter; bedöm särskilda krav om sådana faktiskt behandlas.
+Jobbdetaljen har nu ett explicit val av högst tre karriärposter: endast typ, titel, organisation, datum och färdigheter skickas. Övrig karriärfritext skickas inte. Samtycke krävs per leverantör. Undvik känsliga fritextuppgifter; bedöm särskilda krav om sådana faktiskt behandlas.
 
 ## 7. Retention, incidenter och konsekvensbedömning
 
@@ -122,6 +124,6 @@ Dokumentera DPIA-screening för profilering/AI. Genomför konsekvensbedömning o
 
 ## 8. Kvarstående kod- och driftarbete – inte dolt som klart
 
-Utöver verksamhets- och Supabasepunkterna ovan återstår: bounded matchcache/pool och belastningstest (F06), vissa vanliga sökrutternas upstream-fel (F07), fullständig nonce-CSP (S11), komplett tangentbords-/språkgenomgång (F10), AI-instruktionsseparation/faktaval (F12) och verklig supportleverans (F03). Ingen av dessa är löst bara genom RLS. Prioritera säker kapacitet och AI-skydd före publik exponering; AI kan hållas avstängt under tiden.
+Kod för cache-/poolgränser, tydliga upstream-fel, nonce-CSP, fokusfällor, AI-instruktionsseparation, valda karriärfakta och konfigurerbar e-postkontakt är nu införd. Migration 008 inför samtycke och distribuerad AI-begränsning. Kvar före produktion: normal CI/Docker-gate, belastnings-/webbläsartest i staging, hosted Supabase/Auth, avtal, rättsliga grunder, fullständiga notice-texter, retention och fungerande organisatoriska rutiner. Detta kan inte lösas genom SQL eller användarsamtycke ensamt.
 
 Godkänn inte lansering förrän ansvariga signerat relevanta punkter och staging visar godkända tester. Använd granskningens ID:n i ärenden för att följa upp kvarstående arbete.

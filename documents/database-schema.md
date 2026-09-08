@@ -52,6 +52,8 @@ Result:
 
 ## Career History
 
+Migration 008 introduces versioned `ai_privacy_notices`, owner-readable/RPC-written `ai_consents` and `ai_consent_receipts`, private `ai_usage` and singleton `ai_budget`, plus private `aplifyr_career_counts`. All personal owner tables cascade from auth.users. Client grants cannot modify consents or quota counters; the service-role-only reservation checks current consent and budget atomically. See [privacy controls](privacy-controls.md) for contracts, limits, retention responsibilities and upgrade prerequisites.
+
 Migration 004 adds `public.profile_career_entries`, with owner-only row-level security.
 See `profile-career-history.md` for fields and API behavior. Migration 005 leaves these
 entries intact and retires legacy document storage; see `retire-file-storage.md`.

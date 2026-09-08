@@ -24,6 +24,8 @@ Both PUT and PATCH require JSON, reject cross-origin browser mutations, and retu
 
 ## Match inputs and ranking
 
+Capacity follow-up: cache is bounded to 32 entries/process, 1,000 jobs and 512 Ki serialized characters per pool. Exceeding a pool bound returns 422 before page mutation, stops polling and displays incomplete-result guidance. HTTP responses are bounded and concurrent requests limited. See [privacy controls](privacy-controls.md) for deployment implications.
+
 - Each desired role has its own upstream query and pagination cursor. Results are combined
   and deduplicated by ad ID. If roles are empty, the profile title is the fallback.
 - A role's individual words must match the headline or an occupation field. Existing

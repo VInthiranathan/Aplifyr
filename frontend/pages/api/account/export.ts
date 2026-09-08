@@ -14,6 +14,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (profileError) throw new Error('Profile unavailable');
     const career = await readCareerEntries(supabase, user.id,
       'id,kind,title,organization,location,qualification,start_month,end_month,is_current,description,achievements,learned,skills,strengths,created_at,updated_at');
-    res.status(200).json({ exportedAt: new Date().toISOString(), account: { id: user.id, email: user.email, createdAt: user.created_at }, profile, career });
+    const {data:aiConsent,error:consentError}=await supabase.rpc('export_ai_consents');
+    if(consentError || !aiConsent || JSON.stringify(aiConsent).length>8*1024*1024) throw new Error('Consent export unavailable');
+    res.status(200).json({ exportedAt: new Date().toISOString(), account: { id: user.id, email: user.email, createdAt: user.created_at }, profile, career, aiConsent });
   } catch { res.status(503).json({ error: 'Export temporarily unavailable' }); }
 }

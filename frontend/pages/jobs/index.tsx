@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import type { GetStaticProps } from "next";
+import type { GetServerSideProps } from "next";
 import type { ExternalJob, AFSearchResult } from "../../types/api";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
@@ -22,7 +22,7 @@ import JobListCard from "../../components/JobListCard";
 import { Button } from "../../components/ui/button";
 import { useFavorites } from "../../lib/useFavorites";
 
-export const getStaticProps: GetStaticProps = async ({ locale }) => ({
+export const getServerSideProps: GetServerSideProps = async ({ locale }) => ({
   props: { ...(await serverSideTranslations(locale ?? "en", ["common"])) },
 });
 

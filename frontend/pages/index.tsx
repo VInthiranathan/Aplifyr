@@ -146,6 +146,7 @@ function HomeContent({ matchReq, progression, showDebug, profileId }: Props) {
   const [poolRevision, setPoolRevision] = useState(0);
   const [matchLoading, setMatchLoading] = useState(false);
   const [matchError, setMatchError] = useState<string | null>(null);
+  const [poolLimited,setPoolLimited]=useState(false);
   const [desiredRolesSource, setDesiredRolesSource] = useState<
     "roles" | "title_fallback" | "none" | null
   >(_snap?.desiredRolesSource ?? null);
@@ -178,6 +179,7 @@ function HomeContent({ matchReq, progression, showDebug, profileId }: Props) {
             signal: controller.signal,
           },
         );
+        if(res.status===422)setPoolLimited(true);
         if (!res.ok) throw new Error(`backend ${res.status}`);
         const data: MatchedJobsResponse = await res.json();
 
@@ -240,7 +242,7 @@ function HomeContent({ matchReq, progression, showDebug, profileId }: Props) {
   // Fires every 5 s until the backend signals fetchComplete=true.
   // Skips when the tab is backgrounded to conserve AF API quota.
   useEffect(() => {
-    if (fetchComplete || desiredRolesSource === null || desiredRolesSource === "none") return;
+    if (fetchComplete || poolLimited || desiredRolesSource === null || desiredRolesSource === "none") return;
     const backendBase = getPublicBackendUrl();
     let inFlight = false;
     const controller = new AbortController();
@@ -255,6 +257,7 @@ function HomeContent({ matchReq, progression, showDebug, profileId }: Props) {
           body: JSON.stringify(matchReq),
           signal: controller.signal,
         });
+        if(res.status===422){setPoolLimited(true);return;}
         if (!res.ok) return;
         const result = await res.json() as { fetchComplete: boolean; addedCount: number; cacheExpired?: boolean };
         if (controller.signal.aborted) return;
@@ -269,7 +272,7 @@ function HomeContent({ matchReq, progression, showDebug, profileId }: Props) {
     }, 5000);
     return () => { clearInterval(timer); controller.abort(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchComplete, desiredRolesSource]);
+  }, [fetchComplete, desiredRolesSource, poolLimited]);
 
   // Close grade tooltip when clicking anywhere outside
   useEffect(() => {
@@ -445,7 +448,7 @@ function HomeContent({ matchReq, progression, showDebug, profileId }: Props) {
             {t("home.matchedJobs")}
           </h2>
           <div className="flex items-center gap-3">
-            {!fetchComplete && matched.length > 0 && (
+            {!fetchComplete && !poolLimited && matched.length > 0 && (
               <span className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-white/30">
                 <span className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-white/30 animate-pulse" />
                 {t("home.findingMoreMatches")}
@@ -488,6 +491,7 @@ function HomeContent({ matchReq, progression, showDebug, profileId }: Props) {
         )}
 
         {/* Error state */}
+        {poolLimited && <p role="status" className="app-card-base p-4">{t('consent.poolLimit')}</p>}
         {matchError && !matchLoading && (
           <div role="alert" className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-12 border border-gray-200 dark:border-white/5 text-center">
             <p className="text-gray-400 dark:text-white/40">

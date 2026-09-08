@@ -9,6 +9,7 @@ namespace Aplifyr.Api.Controllers;
 public partial class ExternalJobsController
 {
     private static readonly object MatchCacheLock = new();
+    private sealed class MatchCapacityException : Exception { }
     private sealed record ScoredJob(int GradeOrder, int TotalScore, string Id, string Json);
     private sealed class MatchSearch
     {
@@ -75,7 +76,7 @@ public partial class ExternalJobsController
                 if (!_cache.TryGetValue(context.CacheKey, out MatchCacheEntry? cached) || cached is null)
                 {
                     cached = new MatchCacheEntry { Searches = context.Roles.Select(role => new MatchSearch { Role = role }).ToList() };
-                    _cache.Set(context.CacheKey, cached, TimeSpan.FromMinutes(15));
+                    _cache.Set(context.CacheKey, cached, new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15), Size = 1 });
                 }
                 entry = cached;
             }
@@ -95,6 +96,7 @@ public partial class ExternalJobsController
             }
             finally { entry.Gate.Release(); }
         }
+        catch (MatchCapacityException) { return StatusCode(422, new { error = "matchCapacity" }); }
         catch (Exception ex) when (ex is HttpRequestException or JsonException or TaskCanceledException)
         {
             _logger.LogWarning(ex, "Could not fetch matched jobs");
@@ -115,6 +117,7 @@ public partial class ExternalJobsController
             if (!entry.FetchComplete) await FetchMatchPage(entry, entry.Searches.First(search => !search.Complete), context);
             return Ok(new { fetchComplete = entry.FetchComplete, totalCached = entry.Jobs.Count, addedCount = entry.Jobs.Count - before, totalAfJobs = entry.TotalAfJobs });
         }
+        catch (MatchCapacityException) { return StatusCode(422, new { error = "matchCapacity" }); }
         catch (Exception ex) when (ex is HttpRequestException or JsonException or TaskCanceledException)
         {
             _logger.LogWarning(ex, "Could not continue matched job search");
@@ -141,7 +144,7 @@ public partial class ExternalJobsController
         var root = document.RootElement;
         if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("hits", out var hits) || hits.ValueKind != JsonValueKind.Array ||
             !root.TryGetProperty("total", out var total) || total.ValueKind != JsonValueKind.Object ||
-            !total.TryGetProperty("value", out var totalValue) || !totalValue.TryGetInt32(out var count) || count < 0)
+            !total.TryGetProperty("value", out var totalValue) || totalValue.ValueKind != JsonValueKind.Number || !totalValue.TryGetInt32(out var count) || count < 0)
             throw new JsonException("Invalid job search response");
         // Stage the whole page. A malformed response must not partially mutate the cache or advance its cursor.
         var additions = new List<ScoredJob>();
@@ -162,6 +165,9 @@ public partial class ExternalJobsController
             additions.Add(new(grade == "A" ? 0 : grade == "B" ? 1 : 2, score, jobId,
                 BuildJobResultJson(hit.GetRawText(), grade, locationScore, tier, techBoost, terms, score, matchedOn, matchedValue, reasons)));
         }
+        // Fail explicitly before mutation, never silently claim a truncated pool is complete.
+        if (entry.Jobs.Count + additions.Count > 1000 || entry.Jobs.Sum(job => job.Json.Length) + additions.Sum(job => job.Json.Length) > 512 * 1024)
+            throw new MatchCapacityException();
         entry.Jobs.AddRange(additions);
         search.SearchTerm = term;
         search.Total = count;

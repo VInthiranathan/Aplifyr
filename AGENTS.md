@@ -49,6 +49,8 @@ The documents above provide supporting project context when relevant.
 
 ## EU/EEA Privacy and GDPR — Required for Every Feature
 
+- Optional AI uses per-provider, versioned consent through `/api/account/consent` and a database reservation before every provider call. Never bypass the reservation, silently enable a fallback provider, preselect consent, mutate an accepted notice version or couple optional AI consent to account access. Keep withdrawal available when providers are disabled; include receipts in data exports. See `documents/privacy-controls.md`.
+
 - Treat privacy by design and by default as acceptance criteria, not a post-release checklist. Read `documents/gdpr-supabase-runbook.md` and the current feature documentation before changing personal-data flows.
 - Document data fields, purpose, necessity, legal-basis decision, recipients/processors, retention/deletion, access controls and any EU/EEA transfer for every new or changed processing activity. Never invent legal bases, controller details, signed contracts, retention periods or compliance claims.
 - Collect and transmit the minimum required facts. Do not add sensitive data, tracking, external fonts/images, AI recipients or model-training uses silently. Optional external processing must remain disabled until the owner approves the documented provider/transfer arrangements.

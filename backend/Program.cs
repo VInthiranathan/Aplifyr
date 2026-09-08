@@ -52,8 +52,14 @@ builder.Services.AddRateLimiter(options => {
             PermitLimit = ai ? 10 : 120, Window = TimeSpan.FromMinutes(1), QueueLimit = 0,
         });
     });
+    options.GlobalLimiter = PartitionedRateLimiter.CreateChained(options.GlobalLimiter,
+        PartitionedRateLimiter.Create<HttpContext, string>(_ => RateLimitPartition.GetConcurrencyLimiter("requests",
+            _ => new ConcurrencyLimiterOptions { PermitLimit = 8, QueueLimit = 0 })));
 });
-builder.Services.AddMemoryCache();
+builder.Services.AddMemoryCache(options => options.SizeLimit = 32);
+builder.Services.AddHttpClient("privacy-db", client => { client.Timeout = TimeSpan.FromSeconds(5); client.MaxResponseContentBufferSize = 32768; })
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+builder.Services.AddSingleton<AiPrivacyGate>();
 builder.Services.AddControllers();
 
 var configuredOrigins = builder.Configuration

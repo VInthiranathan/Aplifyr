@@ -43,6 +43,8 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 
 ### Privacy controls
 
+- Follow-up migration 008 adds per-provider consent and withdrawal, immutable notice receipts, distributed AI reservations and career quotas. Nonce CSP and bounded matching capacity are now implemented. See the current enforcement section in [Privacy controls](privacy-controls.md).
+
 - Public `/privacy` page links to an authenticated, owner-scoped JSON export and configured rights contact.
 - General profile edits now require an optimistic version; career reads use bounded keyset pagination.
 - External employer logos are replaced with local icons to avoid automatic third-party image requests.
@@ -83,9 +85,9 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 - profile images are initials-only; file uploads are disabled
 - the job detail page has no raw-response debug toggle
 - job and profile extraction logic contains some silent catches, which makes failures harder to diagnose
-- support delivery is not implemented; the contact form is disabled and does not claim successful delivery
+- support uses a configured mailto contact; sending occurs in the user's mail application and requires a real monitored mailbox
 - favorites are browser-local and account-scoped; legacy unowned favorites are cleared rather than assigned to another login
-- backend demo `/api/user` is Development-only; shared backend request limits are process-local, not distributed quotas
+- backend demo `/api/user` is Development-only; general limits are process-local, while AI reservations and quotas are shared through Supabase migration 008
 - GDPR operational tasks and remaining code limitations are listed in the [security and EU privacy audit](security-gdpr-audit-2026-09-08.md)
 
 ## Folder Map

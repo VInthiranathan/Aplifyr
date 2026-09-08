@@ -1,4 +1,4 @@
-import type { GetStaticProps } from "next";
+import type { GetServerSideProps } from "next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import { useFavorites } from "../lib/useFavorites";
@@ -9,7 +9,7 @@ import { Search, Bookmark, Trash2, MapPin, Briefcase } from "lucide-react";
 import JobListCard from "../components/JobListCard";
 import { Button } from "../components/ui/button";
 
-export const getStaticProps: GetStaticProps = async ({ locale }) => ({
+export const getServerSideProps: GetServerSideProps = async ({ locale }) => ({
   props: { ...(await serverSideTranslations(locale ?? "en", ["common"])) },
 });
 

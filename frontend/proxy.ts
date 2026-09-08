@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import {contentSecurityPolicy} from './lib/contentSecurityPolicy'
 import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/auth-helpers-nextjs'
 
@@ -25,12 +26,21 @@ function isPublicPath(pathname: string) {
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
+  const asset = pathname.startsWith('/api/') || pathname.startsWith('/_next/') || pathname.startsWith('/locales/') || ['/favicon.ico','/Aplifyr_Ikon.png','/AplifyrLogo.png'].includes(pathname)
+  const nonce = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))))
+  const headers = new Headers(req.headers)
+  headers.set('x-csp-nonce', nonce)
+  const res = NextResponse.next({ request: { headers } })
+  if (!asset) {
+    res.headers.set('Content-Security-Policy', contentSecurityPolicy(nonce, process.env.NODE_ENV === 'production', process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_BACKEND_URL))
+    res.headers.set('Cache-Control', 'private, no-store')
+  }
 
   // Login, password recovery, static files and API routes must never depend on
   // an outbound Supabase auth request just to become reachable. This also keeps
   // /auth usable when Supabase has a temporary network interruption.
   if (isPublicPath(pathname)) {
-    return NextResponse.next()
+    return res
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -40,10 +50,8 @@ export async function proxy(req: NextRequest) {
   if (!supabaseUrl || !supabaseAnonKey) {
     return process.env.NODE_ENV === 'production'
       ? new NextResponse('Authentication unavailable', { status: 503 })
-      : NextResponse.next()
+      : res
   }
-
-  const res = NextResponse.next()
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {

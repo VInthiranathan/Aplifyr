@@ -33,6 +33,36 @@ await Check("invalid subject", "Bearer x", "https://example.supabase.co", HttpSt
 await Check("verified identity", "Bearer x", "https://example.supabase.co", HttpStatusCode.OK, "{\"id\":\"11111111-1111-4111-8111-111111111111\"}", 200, true);
 Console.WriteLine($"PASS: {passed} AI authentication boundary tests");
 
+var privacyContext=new DefaultHttpContext();
+privacyContext.User=new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(
+ [new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier,"11111111-1111-4111-8111-111111111111")],"test"));
+var privacyConfig=new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?>{
+ ["SUPABASE_URL"]="https://example.supabase.co",["SUPABASE_SERVICE_ROLE_KEY"]="fixture-key"}).Build();
+var privacyFactory=new PrivacyFactory();var gate=new AiPrivacyGate(privacyFactory,privacyConfig);
+if(await gate.Reserve(new DefaultHttpContext(),"gemini") is not null || privacyFactory.Calls!=0)throw new Exception("Unauthenticated reservation");
+if(await gate.Reserve(privacyContext,"gemini") is not null)throw new Exception("Missing consent allowed");
+privacyFactory.Enabled=true;
+var lease=await gate.Reserve(privacyContext,"groq") ?? throw new Exception("Valid reservation denied");
+await lease.DisposeAsync();if(privacyFactory.Releases!=1)throw new Exception("Missing lease release");
+privacyFactory.Fail=true;
+if(await gate.Reserve(privacyContext,"gemini") is not null)throw new Exception("Privacy outage allowed");
+Console.WriteLine("PASS: AI privacy reservations require identity, consent response and healthy DB; leases release");
+
+sealed class PrivacyFactory : HttpMessageHandler,IHttpClientFactory
+{
+ public int Calls;public int Releases;public bool Enabled;public bool Fail;
+ public HttpClient CreateClient(string name)=>new(this,false);
+ protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,CancellationToken token)
+ {
+  Calls++;
+  if(request.RequestUri?.Host!="example.supabase.co")throw new Exception("Unexpected destination");
+  var body=await request.Content!.ReadAsStringAsync(token);
+  if(!body.Contains("11111111-1111-4111-8111-111111111111"))throw new Exception("Unverified owner");
+  if(request.RequestUri.AbsolutePath.EndsWith("release_ai_call"))Releases++;
+  return new HttpResponseMessage(Fail?HttpStatusCode.ServiceUnavailable:HttpStatusCode.OK){Content=new StringContent(Enabled?"\"22222222-2222-4222-8222-222222222222\"":"null")};
+ }
+}
+
 sealed class FakeFactory(HttpStatusCode status, string body) : IHttpClientFactory
 {
     public FakeHandler Handler { get; } = new(status, body);

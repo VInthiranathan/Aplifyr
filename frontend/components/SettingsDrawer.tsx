@@ -1,4 +1,5 @@
 import { signOut } from "../lib/signOut";
+import {useDialogFocus} from '../lib/useDialogFocus';
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
@@ -13,11 +14,19 @@ interface Props {
 }
 
 export default function SettingsDrawer({ open, onClose }: Props) {
+  const dialog=useDialogFocus(open,onClose);
   const { t } = useTranslation("common");
   const { resolvedTheme, setTheme } = useTheme();
   const { locale, push, asPath } = useRouter();
   const isDark = resolvedTheme === "dark";
   const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const media = window.matchMedia('(min-width: 768px)');
+    const closeOnDesktop = () => { if (media.matches) onClose(); };
+    closeOnDesktop(); media.addEventListener('change', closeOnDesktop);
+    return () => media.removeEventListener('change', closeOnDesktop);
+  }, [open, onClose]);
 
   useEffect(() => {
     setMounted(true);
@@ -47,6 +56,8 @@ export default function SettingsDrawer({ open, onClose }: Props) {
       {/* drawer panel */}
       <div
         role="dialog"
+        ref={dialog}
+        tabIndex={-1}
         aria-modal="true"
         aria-label={t("nav.settings")}
         className="fixed right-0 top-0 bottom-0 z-50 w-64 bg-white dark:bg-[#1a1a1a] border-l border-slate-200 dark:border-white/10 shadow-xl md:hidden flex flex-col"
@@ -58,7 +69,7 @@ export default function SettingsDrawer({ open, onClose }: Props) {
           <button
             onClick={onClose}
             className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-white/60"
-            aria-label="Close"
+            aria-label={t('privacy.close')}
           >
             <X size={18} />
           </button>
