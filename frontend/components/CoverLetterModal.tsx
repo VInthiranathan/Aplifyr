@@ -1,3 +1,4 @@
+import { safeExternalUrl } from "../lib/safeHtml";
 import { X, Copy, RefreshCw, Edit2, Send, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTranslation } from "next-i18next";
@@ -45,10 +46,11 @@ export default function CoverLetterModal({
   };
 
   const handleApply = () => {
-    if (applicationUrl) {
+    const url = safeExternalUrl(applicationUrl);
+    if (url) {
       handleCopy();
       setTimeout(() => {
-        window.open(applicationUrl, "_blank");
+        window.open(url, "_blank", "noopener,noreferrer");
       }, 500);
     }
   };

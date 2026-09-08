@@ -1,3 +1,4 @@
+-- Historical schema reference only. Apply numbered supabase/migrations instead.
 create table public.profiles (
   id uuid not null,
   full_name text null,

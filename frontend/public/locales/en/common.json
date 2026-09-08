@@ -139,7 +139,8 @@
     "contact": "Contact:",
     "externalInstructions": "Apply via the external website described in the ad (open the ad on Arbetsformedlingen below).",
     "genericInstructions": "Application instructions are available in the ad. Open the ad below.",
-    "deadlineLabel": "Application deadline: {{date}}"
+    "deadlineLabel": "Application deadline: {{date}}",
+    "aiDisclosure": "Create a draft with external AI? Your profile (name, title, location, biography, skills and roles) and the job ad are sent to an enabled provider: Gemini or Groq. If both are enabled, Groq can be used when Gemini fails. Do not include sensitive information. Review the result before use."
   },
   "coverLetter": {
     "title": "Cover Letter",
@@ -213,7 +214,8 @@
     "formMessagePlaceholder": "Describe your issue...",
     "formSubmit": "Send",
     "formSuccess": "Message sent!",
-    "formSuccessDesc": "We'll get back to you within 24 hours."
+    "formSuccessDesc": "We'll get back to you within 24 hours.",
+    "unavailable": "The contact form is not connected yet. Messages cannot be sent here."
   },
   "auth": {
     "welcomeBack": "Welcome back",

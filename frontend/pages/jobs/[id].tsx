@@ -1,3 +1,4 @@
+import { safeHtml, safeExternalUrl } from "../../lib/safeHtml";
 import { useRouter } from "next/router";
 import type { GetServerSideProps } from "next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
@@ -128,7 +129,7 @@ export default function JobDetailPage() {
   }, [data, id]);
 
   const generate = async () => {
-    if (!job) return;
+    if (!job || !window.confirm(t("jobDetail.aiDisclosure"))) return;
     setGenerating(true);
     setLetter(null);
     try {
@@ -166,6 +167,7 @@ export default function JobDetailPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token ?? ""}`,
         },
         body: JSON.stringify({
           jobs: [job],
@@ -186,7 +188,6 @@ export default function JobDetailPage() {
       }
 
       const data = await res.json();
-      console.log("Cover letter response:", data);
 
       if (Array.isArray(data) && data[0]?.coverLetter) {
         setLetter(data[0].coverLetter);
@@ -266,7 +267,7 @@ export default function JobDetailPage() {
           </div>
 
           <div className="prose max-w-none text-sm text-slate-700 dark:text-white bg-white dark:bg-[#111] p-4 rounded-lg">
-            <div dangerouslySetInnerHTML={{ __html: jobHtml ?? "" }} />
+            <div dangerouslySetInnerHTML={{ __html: safeHtml(jobHtml ?? "") }} />
           </div>
         </div>
       ) : (
@@ -276,7 +277,8 @@ export default function JobDetailPage() {
               <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg bg-slate-100 dark:bg-white/5 flex items-center justify-center flex-shrink-0">
                 {job.logo_url ? (
                   <img
-                    src={job.logo_url}
+                    src={safeExternalUrl(job.logo_url)}
+                    referrerPolicy="no-referrer"
                     alt=""
                     className="w-full h-full object-contain p-1"
                   />
@@ -403,7 +405,7 @@ export default function JobDetailPage() {
                         return (
                           <Button asChild variant="external" className="h-auto w-full px-4 py-2.5">
                             <a
-                              href={externalUrl}
+                              href={safeExternalUrl(externalUrl)}
                               target="_blank"
                               rel="noopener noreferrer"
                             >
@@ -419,7 +421,7 @@ export default function JobDetailPage() {
                           {renderApplicationInstructions(job, t)}
                           <Button asChild variant="external" className="h-auto w-full px-4 py-2.5">
                             <a
-                              href={getAfUrl(job)}
+                              href={safeExternalUrl(getAfUrl(job))}
                               target="_blank"
                               rel="noopener noreferrer"
                             >
@@ -465,7 +467,7 @@ export default function JobDetailPage() {
           letter={letter}
           jobTitle={job?.headline || job?.title || t("jobDetail.defaultJobTitle")}
           company={job?.employer?.name || job?.advertiser || ""}
-          applicationUrl={getApplicationUrl()}
+          applicationUrl={safeExternalUrl(getApplicationUrl())}
           onRegenerate={generate}
           isRegenerating={generating}
         />
@@ -633,15 +635,15 @@ function renderAFDescription(
     const normalized = unescapeHtml(html)
       .replace(/\\n/g, "\n")
       .replace(/\r\n/g, "\n");
-    // If server already provided HTML markup, render it verbatim.
+    // Sanitize formatted HTML immediately before rendering.
     if (containsHtml(normalized))
-      return <div dangerouslySetInnerHTML={{ __html: normalized }} />;
+      return <div dangerouslySetInnerHTML={{ __html: safeHtml(normalized) }} />;
 
     // Preserve newlines exactly: convert each newline to a <br/>,
     // so double newlines become two <br/> (visual blank line) instead
     // of being collapsed into a single paragraph.
     const converted = convertDescriptionText(normalized);
-    return <div dangerouslySetInnerHTML={{ __html: converted }} />;
+    return <div dangerouslySetInnerHTML={{ __html: safeHtml(converted) }} />;
   }
 
   if (typeof text === "string" && text.trim().length > 0) {
@@ -649,18 +651,18 @@ function renderAFDescription(
       .replace(/\\n/g, "\n")
       .replace(/\r\n/g, "\n");
     const converted = convertDescriptionText(normalized);
-    return <div dangerouslySetInnerHTML={{ __html: converted }} />;
+    return <div dangerouslySetInnerHTML={{ __html: safeHtml(converted) }} />;
   }
 
   if (
     typeof job.description === "object" &&
-    typeof job.description.text === "string"
+    typeof job.description?.text === "string"
   ) {
     const normalized = unescapeHtml(job.description.text)
       .replace(/\\n/g, "\n")
       .replace(/\r\n/g, "\n");
     const converted = convertDescriptionText(normalized);
-    return <div dangerouslySetInnerHTML={{ __html: converted }} />;
+    return <div dangerouslySetInnerHTML={{ __html: safeHtml(converted) }} />;
   }
 
   return <div>{t("jobDetail.noDescription")}</div>;
@@ -698,7 +700,7 @@ function renderQualifications(
           <h2 className="text-2xl font-semibold mb-4">{t("jobDetail.qualifications")}</h2>
           <div
             className="prose max-w-none text-sm text-slate-700 dark:text-white"
-            dangerouslySetInnerHTML={{ __html: normalized }}
+            dangerouslySetInnerHTML={{ __html: safeHtml(normalized) }}
           />
         </section>
       );
@@ -708,7 +710,7 @@ function renderQualifications(
         <h2 className="text-2xl font-semibold mb-4">{t("jobDetail.qualifications")}</h2>
         <div
           className="prose max-w-none text-sm text-slate-700 dark:text-white"
-          dangerouslySetInnerHTML={{ __html: converted }}
+          dangerouslySetInnerHTML={{ __html: safeHtml(converted) }}
         />
       </section>
     );
@@ -724,7 +726,7 @@ function renderQualifications(
         <h2 className="text-2xl font-semibold mb-4">{t("jobDetail.qualifications")}</h2>
         <div
           className="prose max-w-none text-sm text-slate-700 dark:text-white"
-          dangerouslySetInnerHTML={{ __html: converted }}
+          dangerouslySetInnerHTML={{ __html: safeHtml(converted) }}
         />
       </section>
     );
@@ -743,7 +745,7 @@ function renderQualifications(
         <h2 className="text-2xl font-semibold mb-4">{t("jobDetail.qualifications")}</h2>
         <div
           className="prose max-w-none text-sm text-slate-700 dark:text-white"
-          dangerouslySetInnerHTML={{ __html: converted }}
+          dangerouslySetInnerHTML={{ __html: safeHtml(converted) }}
         />
       </section>
     );
@@ -781,7 +783,7 @@ function renderOtherInformation(
           <h2 className="text-2xl font-semibold mb-4">{t("jobDetail.otherInformation")}</h2>
           <div
             className="prose max-w-none text-sm text-slate-700 dark:text-white"
-            dangerouslySetInnerHTML={{ __html: normalized }}
+            dangerouslySetInnerHTML={{ __html: safeHtml(normalized) }}
           />
         </section>
       );
@@ -791,7 +793,7 @@ function renderOtherInformation(
         <h2 className="text-2xl font-semibold mb-4">{t("jobDetail.otherInformation")}</h2>
         <div
           className="prose max-w-none text-sm text-slate-700 dark:text-white"
-          dangerouslySetInnerHTML={{ __html: converted }}
+          dangerouslySetInnerHTML={{ __html: safeHtml(converted) }}
         />
       </section>
     );
@@ -807,7 +809,7 @@ function renderOtherInformation(
         <h2 className="text-2xl font-semibold mb-4">{t("jobDetail.otherInformation")}</h2>
         <div
           className="prose max-w-none text-sm text-slate-700 dark:text-white"
-          dangerouslySetInnerHTML={{ __html: converted }}
+          dangerouslySetInnerHTML={{ __html: safeHtml(converted) }}
         />
       </section>
     );
@@ -815,7 +817,7 @@ function renderOtherInformation(
 
   if (
     typeof job.additionalInformation === "object" &&
-    typeof job.additionalInformation.text === "string"
+    typeof job.additionalInformation?.text === "string"
   ) {
     const normalized = unescapeHtml(job.additionalInformation.text)
       .replace(/\\n/g, "\n")
@@ -826,7 +828,7 @@ function renderOtherInformation(
         <h2 className="text-2xl font-semibold mb-4">Övrig information</h2>
         <div
           className="prose max-w-none text-sm text-slate-700 dark:text-white"
-          dangerouslySetInnerHTML={{ __html: converted }}
+          dangerouslySetInnerHTML={{ __html: safeHtml(converted) }}
         />
       </section>
     );

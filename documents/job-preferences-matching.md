@@ -19,6 +19,7 @@ Reloading/leaving the document with a draft triggers the browser's unsaved-chang
 
 Existing profile editors send only the fields belonging to their section. `PUT /api/profile`
 preserves omitted fields, so saving a biography does not overwrite job preferences.
+Both PUT and PATCH require JSON, reject cross-origin browser mutations, and return no-store responses. PUT additionally validates field/list lengths; the profile endpoint body limit is 32 KiB. Migration 006 enforces ownership even for direct Data API requests.
 
 ## Match inputs and ranking
 
@@ -58,6 +59,7 @@ and refreshes visible matches when jobs are added. Profile changes remount the m
 client session keys include the authenticated profile identity. Errors offer an explicit retry.
 `totalAfJobs` sums per-query upstream totals and can count overlapping ads; `totalMatched`
 is the deduplicated pool size. Search coverage and remote metadata depend on JobTech.
+Auth changes also clear the in-memory match session. Backend request limits are process-local (120 non-AI requests/minute), so polling can receive 429. Cache memory is not yet globally bounded; see the security audit for the remaining scaling risks.
 
 ## Verification
 

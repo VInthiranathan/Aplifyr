@@ -139,7 +139,8 @@
     "contact": "Kontakt:",
     "externalInstructions": "Ansök via den externa webbplats som anges i annonsen (öppna annonsen på Arbetsförmedlingen nedan).",
     "genericInstructions": "Ansökningsinstruktioner finns i annonsen. Öppna annonsen nedan.",
-    "deadlineLabel": "Sista ansökningsdag: {{date}}"
+    "deadlineLabel": "Sista ansökningsdag: {{date}}",
+    "aiDisclosure": "Skapa ett utkast med extern AI? Din profil (namn, titel, ort, biografi, färdigheter och roller) och jobbannonsen skickas till en aktiverad leverantör: Gemini eller Groq. Om båda är aktiverade kan Groq användas när Gemini misslyckas. Ta inte med känsliga uppgifter. Granska resultatet innan du använder det."
   },
   "coverLetter": {
     "title": "Personligt brev",
@@ -213,7 +214,8 @@
     "formMessagePlaceholder": "Beskriv ditt ärende...",
     "formSubmit": "Skicka",
     "formSuccess": "Meddelandet skickat!",
-    "formSuccessDesc": "Vi återkommer inom 24 timmar."
+    "formSuccessDesc": "Vi återkommer inom 24 timmar.",
+    "unavailable": "Kontaktformuläret är inte anslutet ännu. Meddelanden kan inte skickas här."
   },
   "auth": {
     "welcomeBack": "Välkommen tillbaka",

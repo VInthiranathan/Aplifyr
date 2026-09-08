@@ -17,10 +17,8 @@ function isPublicPath(pathname: string) {
   if (pathname.startsWith('/api')) return true
 
   // Common single-file assets
-  if (pathname === '/favicon.ico') return true
+  if (['/favicon.ico', '/Aplifyr_Ikon.png', '/AplifyrLogo.png'].includes(pathname)) return true
 
-  // Any path with an extension is treated as a static file
-  if (/\.[a-zA-Z0-9]+$/.test(pathname)) return true
 
   return false
 }
@@ -40,7 +38,9 @@ export async function proxy(req: NextRequest) {
 
   // If Supabase isn't configured yet, don't block local dev.
   if (!supabaseUrl || !supabaseAnonKey) {
-    return NextResponse.next()
+    return process.env.NODE_ENV === 'production'
+      ? new NextResponse('Authentication unavailable', { status: 503 })
+      : NextResponse.next()
   }
 
   const res = NextResponse.next()
@@ -70,7 +70,7 @@ export async function proxy(req: NextRequest) {
     }
   } catch (error) {
     // Do not let a temporary ECONNRESET crash the Next request pipeline.
-    console.error('[auth proxy] Failed to validate session', error)
+    console.error('[auth proxy] Failed to validate session')
   }
 
   const redirectUrl = req.nextUrl.clone()

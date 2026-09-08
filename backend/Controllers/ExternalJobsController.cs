@@ -334,11 +334,11 @@ public partial class ExternalJobsController : ControllerBase
         if (!string.IsNullOrWhiteSpace(workingHoursType)) qs["working_hours_type"] = workingHoursType;
         ApplyEmploymentTypeFilter(qs, employmentType);
         ApplyOccupationFilters(qs, occupation);
-        qs["limit"] = limit.ToString();
-        qs["offset"] = offset.ToString();
+        qs["limit"] = Math.Clamp(limit, 1, 100).ToString();
+        qs["offset"] = Math.Clamp(offset, 0, 2000).ToString();
         var url = $"{AF_BASE}/{AF_SEARCH_PATH}?{qs}";
         try { var response = await _http.GetAsync(url); var content = await response.Content.ReadAsStringAsync(); return Content(content, "application/json"); }
-        catch (Exception ex) { return StatusCode(502, new { error = "Could not reach Arbetsförmedlingen API", detail = ex.Message }); }
+        catch (Exception) { return StatusCode(502, new { error = "Could not reach Arbetsförmedlingen API" }); }
     }
 
     [HttpGet("occupations")]
@@ -358,7 +358,7 @@ public partial class ExternalJobsController : ControllerBase
                 foreach (var mappedMunicipality in mappedMunicipalities) qs.Add("municipality", mappedMunicipality);
                 qs.Remove("region");
             }
-            catch (Exception ex) { return StatusCode(502, new { error = "Could not reach Arbetsförmedlingen API", detail = ex.Message }); }
+            catch (Exception) { return StatusCode(502, new { error = "Could not reach Arbetsförmedlingen API" }); }
         }
         if (remote.HasValue) qs["remote"] = remote.Value.ToString().ToLower();
         ApplyEmploymentTypeFilter(qs, employmentType);
@@ -371,7 +371,7 @@ public partial class ExternalJobsController : ControllerBase
             var values = document.RootElement.GetProperty("stats").EnumerateArray().FirstOrDefault(stat => string.Equals(stat.GetProperty("type").GetString(), "occupation-name", StringComparison.OrdinalIgnoreCase)).GetProperty("values").EnumerateArray().Select(value => new { code = value.TryGetProperty("code", out var codeElement) ? codeElement.GetString() : null, label = value.TryGetProperty("term", out var termElement) ? termElement.GetString() : null, count = value.TryGetProperty("count", out var countElement) && countElement.TryGetInt32(out var count) ? count : 0 }).Where(value => !string.IsNullOrWhiteSpace(value.code) && !string.IsNullOrWhiteSpace(value.label)).GroupBy(value => value.label!, StringComparer.OrdinalIgnoreCase).Select(group => new { label = group.First().label, codes = group.Select(value => value.code!).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(), count = group.Sum(value => value.count) }).OrderByDescending(value => value.count).ThenBy(value => value.label).ToArray();
             return Ok(values);
         }
-        catch (Exception ex) { _logger.LogWarning(ex, "Occupation municipality resolution failed for filters {Filters} with regions {Regions}", municipalityFilters, resolvedRegionCodes); return StatusCode(502, new { error = "Could not reach Arbetsförmedlingen API", detail = ex.Message }); }
+        catch (Exception ex) { _logger.LogWarning(ex, "Occupation municipality resolution failed for filters {Filters} with regions {Regions}", municipalityFilters, resolvedRegionCodes); return StatusCode(502, new { error = "Could not reach Arbetsförmedlingen API" }); }
     }
 
     private static void ApplyEmploymentTypeFilter(System.Collections.Specialized.NameValueCollection qs, string? employmentType)
@@ -452,7 +452,7 @@ public partial class ExternalJobsController : ControllerBase
             catch (JsonException ex) { _logger.LogDebug(ex, "ExternalJobsController.GetById: could not parse direct response for {Id}", id); }
             return Content(content, "application/json");
         }
-        catch (Exception ex) { return StatusCode(502, new { error = "Could not reach Arbetsförmedlingen API", detail = ex.Message }); }
+        catch (Exception) { return StatusCode(502, new { error = "Could not reach Arbetsförmedlingen API" }); }
     }
 
 }

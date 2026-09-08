@@ -35,11 +35,11 @@ max_client_conn = 100
 
 [db.migrations]
 enabled = true
-schema_paths = ["./migrations/*.sql"]
+schema_paths = []
 
 [db.seed]
 enabled = true
-sql_paths = ["./seed.sql"]
+sql_paths = []
 
 [db.network_restrictions]
 enabled = false

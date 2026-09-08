@@ -1,3 +1,4 @@
+import { signOut } from "../lib/signOut";
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { useTranslation } from "next-i18next";
@@ -92,9 +93,7 @@ export default function SettingsDrawer({ open, onClose }: Props) {
         {/* sign out */}
         <div className="p-4 border-t border-slate-200 dark:border-white/10">
           <Button
-            onClick={() => {
-              window.location.href = "/api/auth/signout";
-            }}
+            onClick={signOut}
             variant="ghost"
             className="w-full justify-start text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-300"
           >

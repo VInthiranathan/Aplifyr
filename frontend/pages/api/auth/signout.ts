@@ -1,3 +1,4 @@
+import { isSafeMutation } from '../../../lib/apiSecurity'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import {
   createServerClient,
@@ -18,11 +19,14 @@ function appendSetCookie(res: NextApiResponse, values: string[]) {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'GET' && req.method !== 'POST') {
-    res.setHeader('Allow', ['GET', 'POST'])
+  res.setHeader('Cache-Control', 'private, no-store')
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', ['POST'])
     res.status(405).json({ error: 'Method not allowed' })
     return
   }
+
+  if (!isSafeMutation(req)) { res.status(403).json({ error: 'Forbidden' }); return }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -60,9 +64,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Ignore errors; we'll still expire cookies below.
   }
 
-  // Expire ALL incoming cookies to reliably clear HttpOnly auth cookies
-  // regardless of their exact names.
-  const expired = incomingCookies.map(({ name }) =>
+  // Expire Supabase auth cookies only; preserve unrelated preferences.
+  const expired = incomingCookies.filter(({ name }) => /^sb-.*-auth-token(?:\.\d+)?$/.test(name)).map(({ name }) =>
     serializeCookieHeader(name, '', {
       path: '/',
       expires: new Date(0),

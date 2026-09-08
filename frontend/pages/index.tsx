@@ -12,6 +12,7 @@ import {
   serializeCookieHeader,
 } from "@supabase/auth-helpers-nextjs";
 import { useTranslation } from "next-i18next";
+import { isDebugUiEnabled } from "../lib/backendUrl";
 import { isSupabaseConfigured } from "../lib/supabaseClient";
 import Link from "next/link";
 import JobListCard from "../components/JobListCard";
@@ -41,7 +42,8 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
 }) => {
   // Progression is hardcoded — real data is out of scope until a later slice.
   const progression: Progression = { applied: 0, readyToApply: 0, readyToGenerate: 0 };
-  const showDebug = query.debug === "1";
+  res.setHeader("Cache-Control", "private, no-store");
+  const showDebug = isDebugUiEnabled() && query.debug === "1";
 
   let matchReq: MatchProfileRequest = {};
   let profileId = "";

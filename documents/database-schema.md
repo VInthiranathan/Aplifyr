@@ -12,6 +12,7 @@ Created and extended by:
 - `supabase/migrations/002_add_location_preferences_to_profiles.sql`
 - `supabase/migrations/003_add_private_cv_columns.sql` (historical)
 - `supabase/migrations/005_remove_cv_feature.sql` (removes legacy document fields)
+- `supabase/migrations/006_secure_profiles.sql` (owner-only row-level access)
 
 Current columns:
 
@@ -27,6 +28,10 @@ Current columns:
 - `updated_at timestamptz default now()`
 
 ## Triggers and Functions
+
+Migration 006 enables RLS on profiles, revokes anon/public grants, and grants authenticated CRUD subject to ownership. A restrictive owner guard also constrains older permissive policies. It locks the signup/update trigger functions' search paths and restricts direct execution of the signup function. No profile data is deleted by migration 006.
+
+`documents/profiles-schema-reference.sql` is only a historical schema reference, not a migration. Apply the numbered migration files; do not replay the reference over existing tables.
 
 ### New User Profile Creation
 

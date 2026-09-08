@@ -46,7 +46,7 @@ export default function SupportPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    setSent(true)
+    // Delivery is not configured; never claim a message was sent.
   }
 
   return (
@@ -98,6 +98,8 @@ export default function SupportPage() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
+            <p role="status" className="text-sm text-slate-600 dark:text-white/60">{t('support.unavailable')}</p>
+            <fieldset disabled className="space-y-4 opacity-60">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-medium text-slate-500 dark:text-white/50">{t('support.formName')}</label>
@@ -138,6 +140,7 @@ export default function SupportPage() {
             >
               {t('support.formSubmit')}
             </button>
+            </fieldset>
           </form>
         )}
       </div>

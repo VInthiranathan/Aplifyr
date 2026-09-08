@@ -1,3 +1,4 @@
+import { isSafeMutation, validProfile } from '../../lib/apiSecurity'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { validateJobPreferences } from '../../lib/jobPreferences'
 import {
@@ -30,12 +31,19 @@ function appendSetCookie(res: NextApiResponse, values: string[]) {
   res.setHeader('Set-Cookie', [...existingArray, ...values])
 }
 
+export const config = { api: { bodyParser: { sizeLimit: '32kb' } } };
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   res.setHeader('Cache-Control', 'private, no-store')
-  if (['PUT', 'PATCH'].includes(req.method ?? '') &&
-    (req.headers['sec-fetch-site'] === 'cross-site' || !req.headers['content-type']?.startsWith('application/json'))) {
-    res.status(403).json({ error: 'JSON same-site request required' })
-    return
+  if (!['GET', 'PUT', 'PATCH'].includes(req.method ?? '')) {
+    res.setHeader('Allow', 'GET, PUT, PATCH')
+    res.status(405).json({ error: 'Method not allowed' }); return
+  }
+  if (['PUT', 'PATCH'].includes(req.method ?? '') && !isSafeMutation(req)) {
+    res.status(403).json({ error: 'Forbidden' }); return
+  }
+  if (req.method === 'PUT' && !validProfile(req.body)) {
+    res.status(400).json({ error: 'Invalid profile' }); return
   }
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -70,13 +78,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } = await supabase.auth.getUser()
 
     if (userError) {
-      res.status(401).json({ error: userError.message })
+      res.status(401).json({ error: 'Not authenticated' })
       return
     }
 
     user = authenticatedUser
   } catch (error) {
-    console.error('[api/profile] Supabase auth request failed', error)
+    console.error('[api/profile] Authentication service unavailable')
     res.status(503).json({ error: 'Authentication service temporarily unavailable' })
     return
   }
@@ -94,7 +102,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .maybeSingle()
 
     if (error) {
-      res.status(500).json({ error: error.message })
+      res.status(500).json({ error: 'Profile operation failed' })
       return
     }
 
@@ -157,15 +165,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .single()
 
       if (error) {
-        res.status(500).json({ error: error.message })
+        res.status(500).json({ error: 'Profile operation failed' })
         return
       }
 
       res.status(200).json({ profile: updated })
       return
     } catch (e) {
-      const message = e instanceof Error ? e.message : String(e)
-      res.status(500).json({ error: message })
+      res.status(503).json({ error: 'Profile operation failed' })
       return
     }
   }

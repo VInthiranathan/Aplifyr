@@ -35,6 +35,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
   req,
   res,
 }) => {
+  res.setHeader("Cache-Control", "private, no-store");
   try {
     if (isSupabaseConfigured) {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
@@ -52,7 +53,8 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
             const setCookie = cookies.map(({ name, value, options }) =>
               serializeCookieHeader(name, value, options),
             );
-            setCookie.forEach((c) => res.setHeader("Set-Cookie", c));
+            const existing = res.getHeader("Set-Cookie");
+            res.setHeader("Set-Cookie", [...(typeof existing === "string" ? [existing] : Array.isArray(existing) ? existing : []), ...setCookie]);
           },
         },
       });

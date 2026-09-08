@@ -30,6 +30,7 @@ function api({user={id:'owner'}, data={id:'owner'}, error=null} = {}) {
   for (const method of ['from','insert','update','upsert','eq','select']) query[method]=(...args)=>{calls.push([method,...args]); return query;};
   query.maybeSingle = query.single = async()=>({data,error});
   const handler=load('pages/api/profile.ts', {
+    '../../lib/apiSecurity':load('lib/apiSecurity.ts'),
     '../../lib/jobPreferences':validation,
     '@supabase/auth-helpers-nextjs':{createServerClient:()=>({...query,auth:{getUser:async()=>({data:{user}})}}), parseCookieHeader:()=>[], serializeCookieHeader:()=>''},
   }, {process:{env:{NEXT_PUBLIC_SUPABASE_URL:'https://example.test',NEXT_PUBLIC_SUPABASE_ANON_KEY:'test'}}}).default;

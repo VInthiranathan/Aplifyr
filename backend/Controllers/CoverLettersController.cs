@@ -2,13 +2,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
-namespace Examensarbete.Api.Controllers;
+namespace Aplifyr.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
 public class CoverLettersController : ControllerBase
 {
-    private static readonly HttpClient _http = new();
+    private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(30) };
     private readonly ILogger<CoverLettersController> _logger;
 
     public CoverLettersController(ILogger<CoverLettersController> logger)
@@ -17,10 +17,18 @@ public class CoverLettersController : ControllerBase
     }
 
     [HttpPost("generate-all")]
+    [RequestSizeLimit(64 * 1024)]
     public async Task<IActionResult> GenerateAll([FromBody] JsonElement request)
     {
+        if (request.ValueKind != JsonValueKind.Object) return BadRequest(new { error = "Expected an object" });
+        var approvedProviders = (Environment.GetEnvironmentVariable("AI_ALLOWED_PROVIDERS") ?? "")
+            .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        if (approvedProviders.Length == 0) return StatusCode(503, new { error = "AI generation is not enabled" });
         var geminiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY");
         var groqKey = Environment.GetEnvironmentVariable("GROQ_API_KEY");
+
+        if (!approvedProviders.Contains("gemini", StringComparer.OrdinalIgnoreCase)) geminiKey = null;
+        if (!approvedProviders.Contains("groq", StringComparer.OrdinalIgnoreCase)) groqKey = null;
 
         _logger.LogInformation("[CoverLetters] GEMINI_API_KEY configured: {IsConfigured}", !string.IsNullOrEmpty(geminiKey));
         _logger.LogInformation("[CoverLetters] GROQ_API_KEY configured: {IsConfigured}", !string.IsNullOrEmpty(groqKey));
@@ -32,7 +40,9 @@ public class CoverLettersController : ControllerBase
         }
 
         // Extract jobs and user profile from request
-        if (!request.TryGetProperty("jobs", out var jobs) || jobs.ValueKind != JsonValueKind.Array)
+        if (!request.TryGetProperty("jobs", out var jobs) || jobs.ValueKind != JsonValueKind.Array ||
+            jobs.GetArrayLength() < 1 || jobs.GetArrayLength() > 3 ||
+            jobs.EnumerateArray().Any(job => job.ValueKind != JsonValueKind.Object))
         {
             _logger.LogError("[CoverLetters] ERROR: Missing 'jobs' array in request");
             return BadRequest(new { error = "Expected 'jobs' array in request body" });
@@ -55,7 +65,7 @@ public class CoverLettersController : ControllerBase
             // Extract bio/profile description if present
             if (userProfile.TryGetProperty("bio", out var bioProp))
             {
-                var bio = bioProp.GetString();
+                var bio = bioProp.ValueKind == JsonValueKind.String ? bioProp.GetString() : null;
                 if (!string.IsNullOrEmpty(bio))
                 {
                     bioText = bio;
@@ -104,7 +114,7 @@ public class CoverLettersController : ControllerBase
                 {
                     _logger.LogInformation("[CoverLetters] Gemini succeeded for: {Title}", title);
                     results.Add(new { title, coverLetter, provider = "Gemini" });
-                    await Task.Delay(500);
+                    await Task.Delay(500, HttpContext.RequestAborted);
                     continue;
                 }
                 _logger.LogWarning("[CoverLetters] Gemini failed for: {Title}", title);
@@ -120,7 +130,7 @@ public class CoverLettersController : ControllerBase
                 {
                     _logger.LogInformation("[CoverLetters] Groq succeeded for: {Title}", title);
                     results.Add(new { title, coverLetter, provider = "Groq" });
-                    await Task.Delay(500);
+                    await Task.Delay(500, HttpContext.RequestAborted);
                     continue;
                 }
                 _logger.LogWarning("[CoverLetters] Groq failed for: {Title}", title);
@@ -129,7 +139,7 @@ public class CoverLettersController : ControllerBase
 
             _logger.LogWarning("[CoverLetters] Both AI providers failed for: {Title}", title);
             results.Add(new { title, error = errorMsg, detail = "Both AI providers failed" });
-            await Task.Delay(500);
+            await Task.Delay(500, HttpContext.RequestAborted);
         }
 
         _logger.LogInformation("[CoverLetters] Completed processing. Returning {ResultCount} result(s)", results.Count);
@@ -346,14 +356,16 @@ public class CoverLettersController : ControllerBase
                 }
             };
 
-            var req = new HttpRequestMessage(HttpMethod.Post, $"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={apiKey}");
+            var model = Environment.GetEnvironmentVariable("GEMINI_MODEL");
+            if (string.IsNullOrWhiteSpace(model)) return "";
+            using var req = new HttpRequestMessage(HttpMethod.Post, $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(model)}:generateContent");
+            req.Headers.Add("x-goog-api-key", apiKey);
             req.Content = new StringContent(JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
 
-            var res = await _http.SendAsync(req);
+            using var res = await _http.SendAsync(req, HttpContext.RequestAborted);
             if (!res.IsSuccessStatusCode)
             {
-                var errorBody = await res.Content.ReadAsStringAsync();
-                _logger.LogWarning("Gemini API error: Status {StatusCode}, Body: {Body}", res.StatusCode, errorBody);
+                _logger.LogWarning("Gemini API error: Status {StatusCode}", res.StatusCode);
                 return "";
             }
 
@@ -374,12 +386,12 @@ public class CoverLettersController : ControllerBase
                 }
             }
 
-            _logger.LogWarning("Gemini response missing expected structure: {Content}", content);
+            _logger.LogWarning("Gemini response missing expected structure");
             return "";
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Gemini exception: {ExceptionType} - {Message}", ex.GetType().Name, ex.Message);
+            _logger.LogWarning("Gemini request failed: {ExceptionType}", ex.GetType().Name);
             return "";
         }
     }
@@ -403,15 +415,14 @@ public class CoverLettersController : ControllerBase
                 temperature = 0.7
             };
 
-            var req = new HttpRequestMessage(HttpMethod.Post, "https://api.groq.com/openai/v1/chat/completions");
+            using var req = new HttpRequestMessage(HttpMethod.Post, "https://api.groq.com/openai/v1/chat/completions");
             req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
             req.Content = new StringContent(JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
 
-            var res = await _http.SendAsync(req);
+            using var res = await _http.SendAsync(req, HttpContext.RequestAborted);
             if (!res.IsSuccessStatusCode)
             {
-                var errorBody = await res.Content.ReadAsStringAsync();
-                _logger.LogWarning("Groq API error: Status {StatusCode}, Body: {Body}", res.StatusCode, errorBody);
+                _logger.LogWarning("Groq API error: Status {StatusCode}", res.StatusCode);
                 return "";
             }
 
@@ -428,12 +439,12 @@ public class CoverLettersController : ControllerBase
                 }
             }
 
-            _logger.LogWarning("Groq response missing expected structure: {Content}", content);
+            _logger.LogWarning("Groq response missing expected structure");
             return "";
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Groq exception: {ExceptionType} - {Message}", ex.GetType().Name, ex.Message);
+            _logger.LogWarning("Groq request failed: {ExceptionType}", ex.GetType().Name);
             return "";
         }
     }
