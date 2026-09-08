@@ -1,240 +1,320 @@
 # Aplifyr — Agent Instructions
 
-## Repo Overview
+## 1. Project Overview
 
-This workspace contains a two-service application:
+Aplifyr contains:
 
-- `backend/` — .NET 10 Web API (`Aplifyr.Api`) on `http://localhost:5000`
-- `frontend/` — Next.js 16 Pages Router app on `http://localhost:3000`
-- `supabase/` — Supabase config and migrations for frontend-auth/profile features
+- `backend/` — .NET 10 Web API (`Aplifyr.Api`)
+- `frontend/` — Next.js 16 Pages Router application
+- `supabase/` — Supabase configuration and migrations
 
-Treat the backend and frontend as independently runnable. Do not assume one can be replaced by the other.
+Frontend and backend are independently runnable services.
 
-## Git and Branch Safety
+The product name is **Aplifyr**. Do not reintroduce previous product names in application code, configuration, namespaces, package metadata, or UI.
 
-- Do not create new branches unless explicitly requested by the user.
-- Do not switch branches unless explicitly requested.
-- Never make changes directly to `main` unless the user explicitly asks for it.
-- Work on the branch provided by the current task/environment.
+---
+
+## 2. Source of Truth
+
+Read only the documentation relevant to the task:
+
+- `documents/project-overview.md` — architecture and project purpose
+- `documents/quick-start.md` — local setup and workflow
+- `documents/database-schema.md` — database structure
+- relevant feature documentation under `documents/`
+
+`AGENTS.md` defines persistent repository rules.
+
+Project documents define implementation-specific behavior.
+
+---
+
+## 3. Git Safety
+
+- Do not create or switch branches unless explicitly requested.
+- Never make changes directly to `main` unless explicitly requested.
 - Do not amend, rewrite, rebase, reset, or force-push existing commits unless explicitly requested.
-- Keep commits and changes focused on the requested task.
-- Before finishing, inspect the final diff and make sure unrelated files were not changed.
+- Keep changes focused on the requested task.
+- Review the final diff before finishing.
+- Do not modify unrelated files.
 
-## Project Identity
+---
 
-- The project name is **Aplifyr**.
-- Always refer to the application, solution, API, and product as Aplifyr.
-- Do not reintroduce the previous project name in code, configuration, package metadata, namespaces, or UI.
-- The word "examensarbete" may remain in thesis/report text when it refers to the academic thesis itself rather than the product name.
+## 4. Documentation
 
-## Source of Truth
+Feature documentation is part of implementation.
 
-Before making significant changes, read the relevant project documentation:
-- `documents/project-overview.md` — project architecture and purpose
-- `documents/quick-start.md` — local setup and development workflow
-- `documents/database-schema.md` — database structure when working with data/Supabase
+When a feature is added, changed, or removed:
 
-`AGENTS.md` contains the rules that must always be followed.
-The documents above provide supporting project context when relevant.
+- update the existing canonical document in `documents/`
+- create a new document only when no suitable document exists
+- update `documents/project-overview.md` when needed for discoverability
+- update architecture, setup, database, or privacy documentation when affected
 
-## Feature Documentation — Required for Every Change
+Documentation must describe actual implemented behavior.
 
-- Whenever a feature is added, changed, or removed, create or update its documentation in `documents/` in the same branch and pull request. Documentation is part of the implementation, not a follow-up task.
-- Read the existing feature documentation first. Prefer updating the canonical document instead of creating competing descriptions. Link new feature documents from `documents/project-overview.md` so they can be found.
-- Define the feature's purpose, scope, user flow, and actual behavior. Where applicable, document affected frontend/backend files and routes, request/response contracts, data storage and migrations, permissions, configuration, validation, error states, fallbacks, and known limitations.
-- Verify the documentation against the implemented code, types, database migrations, configuration, and tests. Use the project's actual names and paths; do not present planned behavior, assumptions, or unverified integrations as implemented facts.
-- Update related architecture, setup, and database documents whenever the change affects them. Remove or correct obsolete descriptions caused by the change, and keep cross-references consistent.
-- Document how to verify the feature, including relevant test/build commands and any manual or live-service checks still required. Clearly distinguish automated fixture tests from live integration verification.
-- Before marking work complete or merging, review the feature diff and its documentation together. Confirm the documented behavior matches the code and identify the updated `documents/` files in the PR summary. A feature change without current, accurate documentation is not complete.
+Where relevant, include:
 
-## EU/EEA Privacy and GDPR — Required for Every Feature
+- purpose and scope
+- user flow
+- routes/components
+- API contracts
+- persistence/migrations
+- permissions/security
+- validation/error behavior
+- important limitations
+- verification steps
 
-- Optional AI uses per-provider, versioned consent through `/api/account/consent` and a database reservation before every provider call. Never bypass the reservation, silently enable a fallback provider, preselect consent, mutate an accepted notice version or couple optional AI consent to account access. Keep withdrawal available when providers are disabled; include receipts in data exports. See `documents/privacy-controls.md`.
+Keep documentation consistent with code and schema.
 
-- Treat privacy by design and by default as acceptance criteria, not a post-release checklist. Read `documents/gdpr-supabase-runbook.md` and the current feature documentation before changing personal-data flows.
-- Document data fields, purpose, necessity, legal-basis decision, recipients/processors, retention/deletion, access controls and any EU/EEA transfer for every new or changed processing activity. Never invent legal bases, controller details, signed contracts, retention periods or compliance claims.
-- Collect and transmit the minimum required facts. Do not add sensitive data, tracking, external fonts/images, AI recipients or model-training uses silently. Optional external processing must remain disabled until the owner approves the documented provider/transfer arrangements.
-- Preserve the user's existing Supabase RLS/policies. An absent repo migration is NOT evidence that production RLS is missing. Inspect live policies with authorized read-only access or supply verification SQL; do not replace policies blindly. Test anonymous access, two-user isolation, direct Data API writes and service-role boundaries.
-- Keep service-role credentials server-only and narrowly scoped. Verify identity and ownership independently of client IDs. Require safe mutations, payload limits, generic errors and no-store for private responses. Never log tokens, personal prompts, generated letters or raw provider responses.
-- Cover access/export, correction, restriction, objection and deletion implications, including local storage, legacy objects, caches, processors and backups. Do not claim a UI action deletes data across systems unless verified end to end. Actual production deletions/migrations need explicit target confirmation and the approved deployment workflow.
-- Do not assume an EU data centre eliminates international transfers. Verify subprocessors/support access, appropriate contracts and transfer safeguards with the owner. Record unresolved decisions and block the affected launch/processing until resolved.
-- Screen profiling/AI changes for DPIA needs and significant automated decisions. Keep recommendations explainable, user-controlled and distinct from verified facts; do not promise unbiased or accurate AI output.
-- Add regression tests and update `documents/` in the same branch. The completion report must distinguish code implemented, local tests passed, production checks pending and legal/organizational decisions pending. GDPR conformity cannot be certified by code review alone.
+---
 
-## Local Development Commands
+## 5. Backend Rules
 
-```powershell
-# backend
-cd backend
-dotnet restore
-dotnet run
+Controllers live in `backend/Controllers/` and use `[ApiController]` with `api/[controller]` routes.
 
-# frontend
-cd frontend
-npm install
-npm run dev
-```
+Current architecture:
 
-- The backend must keep working for local development even when Supabase credentials are missing.
-- Frontend page/API code should use `frontend/lib/backendUrl.ts` to resolve backend URLs instead of reimplementing env fallback order inline.
-- The backend resolves allowed CORS origins from `AllowedOrigins` or `CORS_ALLOWED_ORIGINS`, with localhost defaults when neither is set.
+- `JobsController` and `UserController` use local JSON data.
+- `ExternalJobsController` integrates with Arbetsförmedlingen / JobTech.
+- `CoverLettersController` may use Gemini and/or Groq.
+- `UploadController` only retains its health endpoint; file uploads are disabled.
+- `Program.cs` may initialize Supabase, but local backend startup must not fail because optional Supabase credentials are missing or invalid.
 
-## Backend Rules
+Rules:
 
-- Controllers live in `backend/Controllers/` and use `[ApiController]` with `api/[controller]` routes.
-- `JobsController` and `UserController` currently read local JSON from `backend/Data/jobs.json` and `backend/Data/user.json`.
-- `ExternalJobsController` proxies Arbetsförmedlingen / JobTech search APIs and contains filtering/mapping logic for regions, municipalities, occupations, and employment types.
-- `CoverLettersController` calls external LLM providers and depends on `GEMINI_API_KEY` and/or `GROQ_API_KEY`.
-- `UploadController` retains only its health endpoint; file uploads are disabled.
-- `Program.cs` may optionally initialize Supabase, but startup must not hard-fail when Supabase env vars are absent or invalid.
-- Keep `Program.cs` CORS behavior configuration-driven. New deployment origins should be added via config/env, not hardcoded in source.
-- Keep backend changes conservative: preserve existing routes and response shapes unless the task explicitly requires an API change.
-- When request payload parsing degrades prompt quality or external-job filtering, prefer typed reads plus warning logs over silent `catch {}` blocks.
+- preserve existing routes and response shapes unless the task requires an API change
+- keep CORS configuration-driven
+- prefer typed request parsing
+- do not silently swallow meaningful parsing or integration failures
+- preserve the local JSON-backed demo flow unless the task explicitly changes its data source
 
-## Frontend Rules
+---
 
-- Pages Router only. Do not introduce App Router files or patterns.
-- Shared API types belong in `frontend/types/api.ts`.
-- Shared runtime env resolution belongs in `frontend/lib/backendUrl.ts`.
-- Shared layout/navigation lives in `frontend/components/`.
-- Use `lucide-react` for icons.
-- Use `next-themes` for light/dark mode and preserve both theme variants for new UI.
-- `frontend/proxy.ts` is active request middleware/proxy logic; do not replace it with older Next.js middleware conventions unless the framework requires it.
+## 6. Frontend Rules
 
-## Backend URL Usage
+The frontend uses the **Next.js Pages Router**.
 
-- Server-side page fetching should call `getServerBackendUrl()` from `frontend/lib/backendUrl.ts`.
-- Client-side fetching should call `getPublicBackendUrl()` from `frontend/lib/backendUrl.ts`.
-- `frontend/next.config.js` also uses these env vars for `/api/:path*` rewrites.
-- Keep env fallback order aligned across all three surfaces:
-  - page data fetching
-  - client fetches
-  - rewrite destination
+Do not introduce App Router patterns unless the project is intentionally migrated.
 
-## Debug UI
+Use:
 
-- Raw API response panels must be gated behind development mode or `NEXT_PUBLIC_ENABLE_DEBUG_UI=true`.
-- Do not expose debug toggles on production-facing pages by default.
+- `frontend/types/api.ts` for shared API types
+- `frontend/lib/backendUrl.ts` for backend URL resolution
+- `frontend/components/` for shared components
+- `lucide-react` for icons
+- `next-themes` for theme support
+- Tailwind CSS for styling
 
-## Profile Page
+`frontend/proxy.ts` contains active request/proxy logic.
 
-- Profile images are currently initials-only. Do not ship image upload UI unless storage and profile persistence are implemented end to end.
-- The overview shows saved work experience and education. File uploads are disabled.
-- Desired roles and geographic preferences belong in the dedicated job preferences tab, not the overview. See `documents/job-preferences-matching.md` for persistence and matching behavior.
+### Backend URLs
 
-## Internationalisation
+- server-side: `getServerBackendUrl()`
+- client-side: `getPublicBackendUrl()`
+- keep fallback behavior aligned with `frontend/next.config.js`
 
-- `next-i18next` is configured in `frontend/next-i18next.config.js`.
-- Supported locales are `en` and `sv`.
-- Shared namespace is `common`.
-- Locale files live in:
-  - `frontend/public/locales/en/common.json`
-  - `frontend/public/locales/sv/common.json`
-- Every user-facing string must be backed by translation keys in both files.
-- Do not hardcode visible English or Swedish text in JSX unless it is data returned by an external API.
-- Group keys by feature/page (`home`, `jobs`, `favorites`, `jobDetail`, `support`, `auth`, `user`, etc.).
-- If a page renders translated text, make sure it loads `serverSideTranslations(locale ?? 'en', ['common'])`.
+Do not duplicate backend URL fallback logic inline.
 
-## Styling Guidance
+---
 
-- Tailwind CSS utilities only; keep changes consistent with the existing styling approach.
-- Write light-mode classes first, then `dark:` overrides.
-- Reuse the shared style primitives in `frontend/styles/globals.css` before inventing page-local hover or button treatments.
-- Preserve the existing palette and structure:
-  - page background: `bg-gray-50 dark:bg-[#0d0d0d]`
-  - card background: `bg-white dark:bg-[#1a1a1a]`
-  - primary text: `text-gray-900 dark:text-white`
-  - secondary text: `text-gray-500 dark:text-white/60`
-  - borders: `border-gray-200 dark:border-white/5`
+## 7. Internationalisation
 
-### Standard Hover
+`next-i18next` supports:
 
-- The default interactive hover should match the sidebar pattern.
-- Use `app-hover-standard` for controls that should behave like sidebar items.
-- Use `app-card-base` + `app-card-hover` for hoverable cards and panels.
-- Do not introduce blue-only hover states for standard app surfaces.
+- `en`
+- `sv`
 
-### Page Layout
+Shared namespace: `common`
 
-- Page-level spacing should follow the in-app shell used by Support and All Jobs.
-- Prefer shared page layout primitives from `frontend/styles/globals.css` for standard page structure:
-  - `app-page-shell` for outer page padding and vertical rhythm
-  - `app-page-header` for title/subtitle grouping
-  - `app-page-title` for the main page heading
-  - `app-page-subtitle` for the supporting line below the title
-- Home and Favorites should align with the same page-shell spacing and header rhythm as the rest of the app instead of using custom `min-h-screen`, `p-8`, or oversized hero-style headings.
+Locale files:
+
+- `frontend/public/locales/en/common.json`
+- `frontend/public/locales/sv/common.json`
+
+Rules:
+
+- user-facing strings require translation keys in both locales
+- do not hardcode visible English/Swedish strings in JSX unless they are external data
+- group keys by feature/page
+- pages using translations must load the required namespace
+
+---
+
+## 8. UI and Styling
+
+Keep UI consistent with the existing application.
+
+Prefer shared primitives over page-local styling.
+
+### Layout primitives
+
+Use where appropriate:
+
+- `app-page-shell`
+- `app-page-header`
+- `app-page-title`
+- `app-page-subtitle`
+
+### Interactive surfaces
+
+- `app-hover-standard`
+- `app-card-base`
+- `app-card-hover`
 
 ### Buttons
 
-- Prefer the shared button system in `frontend/components/ui/button.tsx`.
-- Standard app buttons should collapse into two main treatments only:
-  - primary for the main action in a view or card
-  - secondary for supporting and neutral actions
-- Primary actions should use the app-styled primary treatment instead of generic blue or purple buttons.
-- Secondary actions should use the app-styled neutral treatment instead of ad hoc gray, white-outline, or custom muted buttons.
-- Shared options now are:
-  - `Button` default or `variant="primary"` for primary actions
-  - `Button variant="secondary"` for secondary actions
-  - `Button variant="ghost"` for navbar-like icon or subtle utility actions
-  - `Button variant="external"` only for outbound/external-link actions such as opening original job ads or external apply flows
-  - `Button variant="link"` for inline text-only actions that should still use the shared API
-  - `app-primary-button` and `app-secondary-button` when a plain element or link must match the same system
-- Avoid reintroducing `bg-blue-600 hover:bg-blue-700`, `bg-purple-600 hover:bg-purple-700`, or page-local button palettes for standard actions.
-- On job detail surfaces, prefer shared primary/secondary buttons and reserve the external variant for outbound links only.
-- Do not override shared button shape with `rounded-none` on auth or other standard app surfaces.
-- Auth pages, favorites actions, and sidebar/auth-shell utility controls should use the shared Button API for submit, toggle, close, and icon actions unless the control is a true navigation link.
+Prefer `frontend/components/ui/button.tsx`.
 
-### Job Lists
+Use existing variants:
 
-- Job listings on home, favorites, and all jobs should use the same layout shell.
-- Prefer `frontend/components/JobListCard.tsx` for job-list rows/cards.
-- The standard job-list surface is `app-job-list-card`.
-- Keep these job-list pages visually aligned:
-  - title/link treatment
-  - meta row spacing
-  - tag/chip styling
-  - aside actions and match badge placement
-  - footer spacing and dividers when present
+- primary
+- secondary
+- ghost
+- external — outbound links only
+- link
 
-## Safe File Editing
+Avoid adding page-specific button color systems for standard actions.
 
-- Read the complete relevant file before replacing or substantially rewriting it.
-- Prefer small, targeted edits over reconstructing existing files.
-- Preserve existing business logic unless the requested task explicitly changes it.
-- Do not truncate large controllers, configuration files, translation files, lockfiles, or generated metadata files.
-- Do not delete existing functionality merely because it appears unrelated to the current task.
-- Do not replace a large file from memory or from a partial excerpt when the full source can be read.
-- Pay particular attention when modifying large or logic-heavy files such as `backend/Controllers/ExternalJobsController.cs`.
-- Preserve unrelated formatting and behavior where practical so diffs stay reviewable.
+### Job lists
 
-## Safe Change Expectations
+Prefer:
 
-- Prefer root-cause fixes over view-only patches.
-- Keep the backend runnable without optional secrets.
-- Preserve the current JSON-backed local demo flow unless the task explicitly changes the data source.
-- Remove dead code when it is clearly unused, but do not delete debugging surfaces that are still part of an active workflow without checking nearby usage.
-- When changing filtering or external-job behavior, validate that pagination and filter query params still line up with `ExternalJobsController`.
+- `frontend/components/JobListCard.tsx`
+- `app-job-list-card`
 
-## Secrets and Environment Files
+New UI must support light and dark mode.
+
+---
+
+## 9. Profile Rules
+
+- Profile images are initials-only unless storage and persistence are implemented end to end.
+- File/CV uploads are disabled.
+- Work experience and education belong in their dedicated profile areas.
+- Desired roles and geographic preferences belong in Job Preferences.
+- Matching behavior is documented in `documents/job-preferences-matching.md`.
+
+Keep detailed feature behavior in canonical feature documents instead of duplicating it here.
+
+---
+
+## 10. Supabase and Database Rules
+
+Repository migrations live under `supabase/`.
+
+For schema changes:
+
+- inspect relevant existing migrations
+- preserve compatibility where practical
+- review constraints, indexes, triggers, and RLS implications
+- keep migration files production-safe
+- do not assume missing repository migrations prove that production policies are absent
+- do not blindly replace existing RLS policies
+
+Take extra care with destructive changes such as:
+
+- dropping tables/columns
+- deleting data
+- replacing policies
+- changing authentication behavior
+- removing constraints
+
+---
+
+## 11. Privacy, GDPR, and Security
+
+For features involving personal data, read:
+
+- `documents/privacy-controls.md`
+- `documents/gdpr-supabase-runbook.md`
+- relevant feature documentation
+
+Do not invent:
+
+- legal bases
+- processor agreements
+- retention periods
+- transfer safeguards
+- compliance claims
+
+For user-owned Supabase data:
+
+- evaluate RLS requirements
+- enforce ownership server-side/database-side
+- do not rely on frontend-only authorization
+- keep service-role credentials server-only
+- verify identity independently of client-supplied IDs
+
+Optional AI processing must follow the project's documented consent flow.
+
+Do not:
+
+- bypass required consent/reservation flows
+- silently enable fallback providers
+- preselect optional consent
+- transmit unnecessary personal data
+- silently add processors or tracking
+
+Do not claim end-to-end deletion or GDPR conformity unless verified across all relevant systems.
+
+---
+
+## 12. Secrets and Environment
 
 Never commit secrets or credentials.
 
 Do not commit:
 
-- `.env` files containing real credentials
+- real `.env` files
 - API keys
 - access tokens
 - Supabase service-role keys
-- private credentials or certificates
+- private certificates or credentials
 
-- Use environment variables and `.env.example` files for configuration examples.
-- Never hardcode production credentials or deployment URLs in source code.
-- Keep server-only secrets out of `NEXT_PUBLIC_*` variables.
-- Do not print secret values in logs, test output, screenshots, commit messages, or task summaries.
+Use environment variables and `.env.example` for examples.
 
-## Validation
+Rules:
 
-Run the narrowest relevant validation after edits, and use executable validation rather than diff-only review.
+- keep server secrets out of `NEXT_PUBLIC_*`
+- do not hardcode production credentials
+- do not print secrets in logs, tests, screenshots, commits, or summaries
+
+Important variables:
+
+| Variable | Purpose |
+|---|---|
+| `BACKEND_URL` | Server-side backend URL |
+| `NEXT_PUBLIC_BACKEND_URL` | Browser-visible backend URL |
+| `NEXT_PUBLIC_ENABLE_DEBUG_UI` | Debug UI outside development |
+| `NEXT_PUBLIC_SUPABASE_URL` | Frontend Supabase URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Frontend Supabase anon key |
+| `SUPABASE_URL` | Optional backend Supabase URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | Backend Supabase service-role key |
+| `CORS_ALLOWED_ORIGINS` | Allowed backend CORS origins |
+| `GEMINI_API_KEY` | Gemini integration |
+| `GROQ_API_KEY` | Groq integration |
+
+Raw API/debug panels must remain disabled in production unless explicitly enabled by configuration.
+
+---
+
+## 13. Safe File Editing
+
+- read the complete relevant file before substantially rewriting it
+- prefer targeted edits
+- do not reconstruct large files from partial excerpts
+- do not truncate controllers, configuration, translation files, lockfiles, or generated metadata
+- preserve unrelated business logic
+- avoid unrelated refactors
+
+Take extra care with large logic-heavy files such as `backend/Controllers/ExternalJobsController.cs`.
+
+---
+
+## 14. Validation
+
+Use the project's executable validation.
 
 ### Backend
 
@@ -259,33 +339,26 @@ When backend deployment or Docker configuration changes:
 docker build -f backend/Dockerfile .
 ```
 
-- If only a narrow area changed and a faster targeted check exists, run it first, but still run the relevant production build before declaring the task complete when practical.
-- If the backend build is blocked by a stale running process locking `bin/Debug`, stop that process and rerun validation rather than weakening the check.
-- Fix validation failures caused by your changes before reporting the task as complete.
-- If validation cannot be run because a required tool or external service is unavailable, state that clearly instead of claiming success.
+Rules:
 
-## Completion Checklist
+- run targeted tests/checks when available
+- run the relevant production build before declaring substantial changes complete when practical
+- fix validation failures caused by the change
+- if validation cannot run, report that clearly
+- never claim success based only on diff review
 
-Before reporting a task as complete:
+---
 
-1. Review every changed file.
-2. Confirm no unrelated files or behavior changed accidentally.
-3. Run the relevant validation/build commands.
-4. Check the final diff for unintended deletions, truncation, secrets, or generated noise.
-5. For each added, changed, or removed feature, confirm its `documents/` documentation and affected project references are updated and agree with the implementation.
-6. Report what changed, which documentation was updated, and which validation checks passed or could not be run.
+## 15. Completion Criteria
 
-## Environment Variables
+Before marking work complete:
 
-| Variable | Purpose |
-|---|---|
-| `BACKEND_URL` | Server-side backend base URL |
-| `NEXT_PUBLIC_BACKEND_URL` | Browser-visible backend base URL |
-| `NEXT_PUBLIC_ENABLE_DEBUG_UI` | Opt in to debug response panels outside development |
-| `NEXT_PUBLIC_SUPABASE_URL` | Frontend Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Frontend Supabase anon key |
-| `SUPABASE_URL` | Optional backend Supabase URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | Optional backend Supabase service-role key |
-| `CORS_ALLOWED_ORIGINS` | Optional comma-separated frontend origins allowed by backend CORS |
-| `GEMINI_API_KEY` | Cover-letter generation via Gemini |
-| `GROQ_API_KEY` | Cover-letter generation via Groq |
+1. review the final diff
+2. confirm no unrelated files or behavior changed
+3. run relevant validation
+4. check for unintended deletions, truncation, debug code, generated noise, and secrets
+5. verify required documentation is updated
+6. verify relevant database/RLS/security implications when applicable
+7. report what changed, what was validated, and anything still unverified
+
+A feature is not complete if required documentation is stale or relevant validation has not been considered.
