@@ -51,7 +51,8 @@
     "tierNoPreference": "No location set",
     "tierOutOfRegion": "Outside region",
     "findingMoreMatches": "Finding more matches...",
-    "viewJob": "View job details"
+    "viewJob": "View job details",
+    "matchLoadError": "Could not load matched jobs. Please try again."
   },
   "favorites": {
     "loading": "Loading favorites...",
@@ -257,7 +258,8 @@
       "label": "Profile sections",
       "overview": "Overview",
       "work": "Work experience",
-      "education": "Education"
+      "education": "Education",
+      "preferences": "Job preferences"
     },
     "loading": "Loading your details…",
     "retry": "Try again",
@@ -337,5 +339,22 @@
       "manage": "Manage",
       "manageLabel": "Manage {{section}}"
     }
+  },
+  "preferences": {
+    "title": "Job preferences",
+    "intro": "Tell us which jobs you want. Your saved choices are used to rank jobs on the home page.",
+    "rolesHelp": "Enter up to 20 roles, separated by commas. Be specific. Your profile title is used when no roles are set.",
+    "locationHelp": "Your home location helps us assess where jobs are based.",
+    "scopeHelp": "Select the areas you are open to. Multiple choices broaden your search. Nearby is assessed within the same region; exact commuting distance is not calculated. Remote work uses the information in the ad.",
+    "skillsHelp": "Your profile skills help matching prioritize relevant ads.",
+    "saving": "Saving…",
+    "saved": "Job preferences saved.",
+    "error": "Could not save. Your changes are still here — please try again.",
+    "invalid": "Enter up to 20 roles of up to 100 characters each and a location of up to 200 characters.",
+    "loading": "Loading profile…",
+    "unavailable": "Could not load your profile. Reload the page and try again.",
+    "unsaved": "You have unsaved changes.",
+    "reset": "Reset",
+    "conflict": "The profile changed in another view. Copy your changes and reload the page before saving again."
   }
 }

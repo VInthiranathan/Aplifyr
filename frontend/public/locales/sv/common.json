@@ -51,7 +51,8 @@
     "tierNoPreference": "Ingen platsinställning",
     "tierOutOfRegion": "Utanför region",
     "findingMoreMatches": "Söker fler matchningar...",
-    "viewJob": "Visa jobbdetaljer"
+    "viewJob": "Visa jobbdetaljer",
+    "matchLoadError": "Det gick inte att hämta matchade jobb. Försök igen."
   },
   "favorites": {
     "loading": "Laddar favoriter...",
@@ -257,7 +258,8 @@
       "label": "Profilavsnitt",
       "overview": "Översikt",
       "work": "Arbetslivserfarenhet",
-      "education": "Utbildning"
+      "education": "Utbildning",
+      "preferences": "Jobbpreferenser"
     },
     "loading": "Hämtar dina uppgifter…",
     "retry": "Försök igen",
@@ -337,5 +339,22 @@
       "manage": "Hantera",
       "manageLabel": "Hantera {{section}}"
     }
+  },
+  "preferences": {
+    "title": "Jobbpreferenser",
+    "intro": "Berätta vilka jobb du söker. Dina sparade val används för att rangordna jobben på startsidan.",
+    "rolesHelp": "Ange upp till 20 roller, separerade med kommatecken. Var gärna specifik. Utan roller används din profiltitel.",
+    "locationHelp": "Din hemort används för att bedöma var jobben finns.",
+    "scopeHelp": "Välj de områden du är öppen för. Flera val breddar sökningen. Närliggande område bedöms inom samma län; exakt pendlingsavstånd beräknas inte. Distans bedöms utifrån annonsens uppgifter.",
+    "skillsHelp": "Dina kompetenser i profilen hjälper matchningen att prioritera relevanta annonser.",
+    "saving": "Sparar…",
+    "saved": "Jobbpreferenserna är sparade.",
+    "error": "Det gick inte att spara. Dina ändringar finns kvar – försök igen.",
+    "invalid": "Ange högst 20 roller med högst 100 tecken per roll och en ort med högst 200 tecken.",
+    "loading": "Laddar profil…",
+    "unavailable": "Profilen kunde inte laddas. Ladda om sidan och försök igen.",
+    "unsaved": "Du har osparade ändringar.",
+    "reset": "Återställ",
+    "conflict": "Profilen har ändrats i en annan vy. Kopiera dina ändringar och ladda om sidan innan du sparar igen."
   }
 }

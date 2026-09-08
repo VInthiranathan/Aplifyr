@@ -22,6 +22,8 @@ jobs:
         run: dotnet restore backend/Aplifyr.Api.csproj
       - name: Build
         run: dotnet build backend/Aplifyr.Api.csproj --configuration Release --no-restore
+      - name: Matching regression tests
+        run: dotnet run --project tests/Aplifyr.Matching.Tests --configuration Release
       - name: Docker build
         run: docker build -f backend/Dockerfile .
 
