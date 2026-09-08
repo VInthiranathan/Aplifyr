@@ -37,6 +37,16 @@ Before making significant changes, read the relevant project documentation:
 `AGENTS.md` contains the rules that must always be followed.
 The documents above provide supporting project context when relevant.
 
+## Feature Documentation — Required for Every Change
+
+- Whenever a feature is added, changed, or removed, create or update its documentation in `documents/` in the same branch and pull request. Documentation is part of the implementation, not a follow-up task.
+- Read the existing feature documentation first. Prefer updating the canonical document instead of creating competing descriptions. Link new feature documents from `documents/project-overview.md` so they can be found.
+- Define the feature's purpose, scope, user flow, and actual behavior. Where applicable, document affected frontend/backend files and routes, request/response contracts, data storage and migrations, permissions, configuration, validation, error states, fallbacks, and known limitations.
+- Verify the documentation against the implemented code, types, database migrations, configuration, and tests. Use the project's actual names and paths; do not present planned behavior, assumptions, or unverified integrations as implemented facts.
+- Update related architecture, setup, and database documents whenever the change affects them. Remove or correct obsolete descriptions caused by the change, and keep cross-references consistent.
+- Document how to verify the feature, including relevant test/build commands and any manual or live-service checks still required. Clearly distinguish automated fixture tests from live integration verification.
+- Before marking work complete or merging, review the feature diff and its documentation together. Confirm the documented behavior matches the code and identify the updated `documents/` files in the PR summary. A feature change without current, accurate documentation is not complete.
+
 ## Local Development
 
 ```powershell
@@ -96,6 +106,7 @@ npm run dev
 
 - Profile images are currently initials-only. Do not ship image upload UI unless storage and profile persistence are implemented end to end.
 - The overview shows saved work experience and education. File uploads are disabled.
+- Desired roles and geographic preferences belong in the dedicated job preferences tab, not the overview. See `documents/job-preferences-matching.md` for persistence and matching behavior.
 
 ## Internationalisation
 
@@ -247,7 +258,8 @@ Before reporting a task as complete:
 2. Confirm no unrelated files or behavior changed accidentally.
 3. Run the relevant validation/build commands.
 4. Check the final diff for unintended deletions, truncation, secrets, or generated noise.
-5. Report what changed and which validation checks passed or could not be run.
+5. For each added, changed, or removed feature, confirm its `documents/` documentation and affected project references are updated and agree with the implementation.
+6. Report what changed, which documentation was updated, and which validation checks passed or could not be run.
 
 ## Environment Variables
 

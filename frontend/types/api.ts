@@ -47,6 +47,7 @@ export interface JobsData {
 
 export interface User {
   id: string;
+  updatedAt?: string;
   name: string;
   title: string;
   location: string;

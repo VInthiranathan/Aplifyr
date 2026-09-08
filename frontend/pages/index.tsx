@@ -1,4 +1,4 @@
-﻿import type { GetServerSideProps } from "next";
+import type { GetServerSideProps } from "next";
 import type {
   MatchedJob,
   MatchedJobsResponse,
@@ -19,6 +19,8 @@ import { useFavorites } from "../lib/useFavorites";
 import { MapPin, Wifi, Briefcase, Bookmark, RefreshCw, Eye } from "lucide-react";
 import { formatLocation } from "../lib/utils";
 import { useMatchSession } from "../lib/matchSessionContext";
+import { getPublicBackendUrl } from "../lib/backendUrl";
+import { collectMatchSkills, matchProfileKey } from "../lib/matchProfile";
 import { useState, useEffect } from "react";
 
 const HOME_INITIAL_COUNT = 30;
@@ -28,6 +30,7 @@ interface Props {
   matchReq: MatchProfileRequest;
   progression: Progression;
   showDebug: boolean;
+  profileId: string;
 }
 
 export const getServerSideProps: GetServerSideProps<Props> = async ({
@@ -41,6 +44,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
   const showDebug = query.debug === "1";
 
   let matchReq: MatchProfileRequest = {};
+  let profileId = "";
 
   if (isSupabaseConfigured) {
     const supabase = createServerClient(
@@ -90,11 +94,16 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
       .eq("id", user.id)
       .maybeSingle();
 
+    profileId = user.id;
+    const { data: careerEntries, error: careerError } = await supabase
+      .from("profile_career_entries").select("skills").eq("user_id", user.id)
+      .order("id");
+    if (careerError) console.warn("[home] Could not load career skills for matching");
     matchReq = {
       roles: profile?.roles ?? [],
-      title: profile?.title ?? undefined,
-      tags: profile?.tech_stack ?? [],
-      location: profile?.location ?? undefined,
+      title: profile?.title ?? "",
+      tags: collectMatchSkills(profile?.tech_stack, careerEntries ?? []),
+      location: profile?.location ?? "",
       locationPreferences: profile?.location_preferences ?? [],
     };
   }
@@ -102,6 +111,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
   return {
     props: {
       matchReq,
+      profileId,
       progression,
       showDebug,
       ...(await serverSideTranslations(locale ?? "en", ["common"])),
@@ -109,7 +119,11 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
   };
 };
 
-export default function Home({ matchReq, progression, showDebug }: Props) {
+export default function Home(props: Props) {
+  return <HomeContent key={props.profileId + matchProfileKey(props.matchReq)} {...props} />;
+}
+
+function HomeContent({ matchReq, progression, showDebug, profileId }: Props) {
   const { t } = useTranslation("common");
   const { toggleFavorite, isFavorite } = useFavorites();
 
@@ -117,15 +131,7 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
   const { getSession, updateSession } = useMatchSession();
 
   // Stable hash of the current SSR profile — detects profile changes between navigations.
-  const [currentHash] = useState<string>(() =>
-    JSON.stringify({
-      roles: [...(matchReq.roles ?? [])].sort(),
-      title: matchReq.title ?? null,
-      tags: [...(matchReq.tags ?? [])].sort(),
-      location: matchReq.location ?? null,
-      locationPreferences: [...(matchReq.locationPreferences ?? [])].sort(),
-    })
-  );
+  const currentHash = profileId + matchProfileKey(matchReq);
 
   // Restore session if the profile hasn't changed since the last visit.
   const [_snap] = useState(() => {
@@ -135,6 +141,7 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
 
   // ── Matched jobs client state ────────────────────────────────────────────
   const [matched, setMatched] = useState<MatchedJob[]>(_snap?.matched ?? []);
+  const [poolRevision, setPoolRevision] = useState(0);
   const [matchLoading, setMatchLoading] = useState(false);
   const [matchError, setMatchError] = useState<string | null>(null);
   const [desiredRolesSource, setDesiredRolesSource] = useState<
@@ -151,7 +158,7 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
   // ── Fetch matches after mount (and whenever visibleCount / seed changes) ──
   useEffect(() => {
     // Only refetch when we need more jobs than we already have loaded.
-    if (matched.length >= visibleCount) return;
+    if (poolRevision === 0 && matched.length >= visibleCount) return;
 
     const controller = new AbortController();
 
@@ -159,7 +166,7 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
       setMatchLoading(true);
       setMatchError(null);
       try {
-        const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL ?? "";
+        const backendBase = getPublicBackendUrl();
         const res = await fetch(
           `${backendBase}/api/externaljobs/match?limit=${visibleCount}&seed=${seed}`,
           {
@@ -172,6 +179,7 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
         if (!res.ok) throw new Error(`backend ${res.status}`);
         const data: MatchedJobsResponse = await res.json();
 
+        if (controller.signal.aborted) return;
         setMatched(data.matched);
         setDesiredRolesSource(data.profileUsed.desiredRolesSource);
         setFetchComplete(data.stats.fetchComplete);
@@ -189,14 +197,14 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
           err instanceof Error ? err.message : "Could not load matches",
         );
       } finally {
-        setMatchLoading(false);
+        if (!controller.signal.aborted) setMatchLoading(false);
       }
     }
 
     loadMatches();
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleCount, seed]);
+  }, [visibleCount, seed, poolRevision]);
 
   const total =
     progression.applied + progression.readyToApply + progression.readyToGenerate || 1;
@@ -231,26 +239,33 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
   // Skips when the tab is backgrounded to conserve AF API quota.
   useEffect(() => {
     if (fetchComplete || desiredRolesSource === null || desiredRolesSource === "none") return;
-    const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL ?? "";
+    const backendBase = getPublicBackendUrl();
+    let inFlight = false;
+    const controller = new AbortController();
     const timer = setInterval(async () => {
+      if (inFlight) return;
       if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      inFlight = true;
       try {
         const res = await fetch(`${backendBase}/api/externaljobs/match/continue`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(matchReq),
+          signal: controller.signal,
         });
         if (!res.ok) return;
-        const result = await res.json() as { fetchComplete: boolean };
+        const result = await res.json() as { fetchComplete: boolean; addedCount: number; cacheExpired?: boolean };
+        if (controller.signal.aborted) return;
+        if (result.addedCount > 0 || result.cacheExpired) setPoolRevision(value => value + 1);
         if (result.fetchComplete) {
           setFetchComplete(true);
           updateSession({ fetchComplete: true });
         }
       } catch {
-        // silently ignore — will retry on the next tick
-      }
+        // Retry temporary upstream failures on the next tick.
+      } finally { inFlight = false; }
     }, 5000);
-    return () => clearInterval(timer);
+    return () => { clearInterval(timer); controller.abort(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchComplete, desiredRolesSource]);
 
@@ -451,7 +466,7 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
         </div>
 
         {/* Loading skeleton — first paint before matches arrive */}
-        {desiredRolesSource === null && (
+        {desiredRolesSource === null && !matchError && (
           <div className="grid gap-4">
             {Array.from({ length: 3 }).map((_, i) => (
               <div
@@ -472,10 +487,11 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
 
         {/* Error state */}
         {matchError && !matchLoading && (
-          <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-12 border border-gray-200 dark:border-white/5 text-center">
+          <div role="alert" className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-12 border border-gray-200 dark:border-white/5 text-center">
             <p className="text-gray-400 dark:text-white/40">
-              {t("home.noMatchesDescription")}
+              {t("home.matchLoadError")}
             </p>
+            <button type="button" className="app-secondary-button mt-4" onClick={() => setPoolRevision(value => value + 1)}>{t('career.retry')}</button>
           </div>
         )}
 
@@ -498,10 +514,10 @@ export default function Home({ matchReq, progression, showDebug }: Props) {
         {desiredRolesSource !== "none" &&
           desiredRolesSource !== null &&
           matched.length === 0 &&
-          !matchLoading && (
+          !matchLoading && !matchError && (
           <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-12 border border-gray-200 dark:border-white/5 text-center">
             <p className="text-gray-400 dark:text-white/40">
-              {t("home.noMatchesDescription")}
+              {t(fetchComplete ? "home.noMatchesDescription" : "home.loadingMatches")}
             </p>
           </div>
         )}

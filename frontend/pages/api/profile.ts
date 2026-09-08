@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { validateJobPreferences } from '../../lib/jobPreferences'
 import {
   createServerClient,
   parseCookieHeader,
@@ -30,6 +31,12 @@ function appendSetCookie(res: NextApiResponse, values: string[]) {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  res.setHeader('Cache-Control', 'private, no-store')
+  if (['PUT', 'PATCH'].includes(req.method ?? '') &&
+    (req.headers['sec-fetch-site'] === 'cross-site' || !req.headers['content-type']?.startsWith('application/json'))) {
+    res.status(403).json({ error: 'JSON same-site request required' })
+    return
+  }
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
@@ -91,7 +98,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return
     }
 
-    res.status(200).json({ profile: profile ?? null })
+    res.status(200).json({ profile: profile ?? null, userId: user.id })
+    return
+  }
+
+  if (req.method === 'PATCH') {
+    const preferences = validateJobPreferences(req.body)
+    const version = req.body?.updatedAt
+    if (!preferences || (version !== null && (typeof version !== 'string' || !Number.isFinite(Date.parse(version))))) {
+      res.status(400).json({ error: 'Invalid job preferences' })
+      return
+    }
+    try {
+      const fields = { roles: preferences.roles, location: preferences.location,
+        location_preferences: preferences.locationPreferences }
+      const table = supabase.from('profiles')
+      const query = version === null ? table.insert({ id: user.id, ...fields }) :
+        table.update(fields).eq('id', user.id).eq('updated_at', version)
+      const { data: profile, error } = await query
+        .select('id,full_name,title,location,bio,tech_stack,roles,location_preferences,created_at,updated_at')
+        .maybeSingle()
+      if ((!error && !profile) || error?.code === '23505') {
+        res.status(409).json({ error: 'Profile changed; reload before saving' })
+        return
+      }
+      if (error) throw error
+      res.status(200).json({ profile })
+    } catch {
+      res.status(503).json({ error: 'Could not save job preferences' })
+    }
     return
   }
 
@@ -99,15 +134,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       const body = req.body
 
-      const upsertObj = {
-        id: user.id,
-        full_name: body.name ?? null,
-        title: body.title ?? null,
-        location: body.location ?? null,
-        bio: body.bio ?? null,
-        location_preferences: normalizeStringArray(body.locationPreferences),
-        tech_stack: normalizeStringArray(body.tags),
-        roles: normalizeStringArray(body.roles),
+      if (!body || typeof body !== 'object' || Array.isArray(body)) {
+        res.status(400).json({ error: 'Invalid profile' })
+        return
+      }
+      // Preserve omitted fields so editing a biography cannot overwrite newer preferences.
+      const upsertObj: Record<string, unknown> = { id: user.id }
+      for (const [input, column] of Object.entries({ name: 'full_name', title: 'title', location: 'location', bio: 'bio' })) {
+        if (input in body) {
+          if (typeof body[input] !== 'string') { res.status(400).json({ error: 'Invalid profile' }); return }
+          upsertObj[column] = body[input]
+        }
+      }
+      for (const [input, column] of Object.entries({ locationPreferences: 'location_preferences', tags: 'tech_stack', roles: 'roles' })) {
+        if (input in body) upsertObj[column] = normalizeStringArray(body[input])
       }
 
       const { data: updated, error } = await supabase
@@ -130,5 +170,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
+  res.setHeader('Allow', 'GET, PUT, PATCH')
   res.status(405).json({ error: 'Method not allowed' })
 }

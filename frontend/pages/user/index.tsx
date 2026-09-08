@@ -19,10 +19,12 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "../../components/ui/button";
+import JobPreferences from "../../components/JobPreferences";
+import { useMatchSession } from "../../lib/matchSessionContext";
 import CareerHistory from "../../components/CareerHistory";
 import CareerOverview from "../../components/CareerOverview";
 import { CareerEntriesProvider } from "../../lib/CareerEntriesContext";
-const profileTabs = ['overview', 'work', 'education'] as const;
+const profileTabs = ['overview', 'work', 'education', 'preferences'] as const;
 type ProfileTab = typeof profileTabs[number];
 interface Props {
   user: User | null;
@@ -77,6 +79,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
       const frontendUser: User | null = profile
         ? {
             id: profile.id,
+            updatedAt: profile.updated_at,
             name: profile.full_name ?? "",
             title: profile.title ?? "",
             location: profile.location ?? "",
@@ -119,14 +122,6 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
   }
 };
 
-const locationFilterKeys = [
-  "user.onlyMyLocation",
-  "user.nearbyLocation",
-  "user.region",
-  "user.country",
-  "user.remote",
-];
-
 const emptyUser: User = {
   id: "",
   name: "",
@@ -149,6 +144,7 @@ const CANONICAL_LOCATION_PREFS = new Set([
 
 const mapProfileToUser = (profile: Record<string, any>): User => ({
   id: profile.id,
+  updatedAt: profile.updated_at,
   name: profile.full_name ?? "",
   title: profile.title ?? "",
   location: profile.location ?? "",
@@ -173,12 +169,14 @@ const mapProfileToUser = (profile: Record<string, any>): User => ({
     : "",
 });
 
-const saveProfile = async (nextUser: User) => {
+const saveProfile = async (nextUser: User, section: "profile" | "bio" | "skills") => {
+  const fields = section === "profile" ? { name: nextUser.name, title: nextUser.title, location: nextUser.location }
+    : section === "bio" ? { bio: nextUser.bio } : { tags: nextUser.tags };
   const res = await fetch("/api/profile", {
     method: "PUT",
     credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(nextUser),
+    body: JSON.stringify(fields),
   });
 
   if (!res.ok) {
@@ -193,6 +191,7 @@ const saveProfile = async (nextUser: User) => {
 
 export default function UserPage({ user }: Props) {
   const { t } = useTranslation("common");
+  const { clearSession } = useMatchSession();
   const [activeTab, setActiveTab] = useState<ProfileTab>('overview');
   const [visitedTabs, setVisitedTabs] = useState<ProfileTab[]>(['overview']);
   const selectTab = (tab: ProfileTab) => {
@@ -202,16 +201,8 @@ export default function UserPage({ user }: Props) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editedUser, setEditedUser] = useState<User | null>(user);
   const [editSection, setEditSection] = useState<
-    "profile" | "bio" | "skills" | "roles" | null
+    "profile" | "bio" | "skills" | null
   >(null);
-  const [selectedLocations, setSelectedLocations] = useState<string[]>(
-    user?.locationPreferences ?? [],
-  );
-  const locationFilterItems = locationFilterKeys.map((key) => ({
-    value: key.replace("user.", ""),  // e.g. "remote", "region", "country"
-    label: t(key),
-  }));
-
   // client-side profile state: undefined = loading, null = no profile, User = loaded
   const [clientProfile, setClientProfile] = useState<User | null | undefined>(
     user,
@@ -232,66 +223,29 @@ export default function UserPage({ user }: Props) {
             const mapped = mapProfileToUser(data.profile);
             setClientProfile(mapped);
             setEditedUser(mapped);
-            setSelectedLocations(mapped.locationPreferences);
           } else {
             // no profile yet — allow user to create one via UI
-            setClientProfile(null);
-            setEditedUser({ ...emptyUser });
-            setSelectedLocations([]);
+            setClientProfile({ ...emptyUser, id: data.userId });
+            setEditedUser({ ...emptyUser, id: data.userId });
           }
         } catch (e) {
           setClientProfile(null);
           setEditedUser({ ...emptyUser });
-          setSelectedLocations([]);
         }
       })();
     } else {
       setClientProfile(user);
       setEditedUser(user);
-      setSelectedLocations(user.locationPreferences);
     }
   }, [user]);
 
-  const toggleLocation = async (location: string) => {
-    const previousLocations = selectedLocations;
-    const nextLocations = previousLocations.includes(location)
-      ? previousLocations.filter((loc) => loc !== location)
-      : [...previousLocations, location];
-
-    const baseUser = clientProfile ?? editedUser ?? emptyUser;
-    const nextUser: User = {
-      ...baseUser,
-      locationPreferences: nextLocations,
-    };
-
-    setSelectedLocations(nextLocations);
-    setClientProfile((prev) => (prev === undefined ? prev : nextUser));
-    setEditedUser(nextUser);
-
-    try {
-      const savedProfile = await saveProfile(nextUser);
-      setClientProfile(savedProfile);
-      setEditedUser(savedProfile);
-      setSelectedLocations(savedProfile.locationPreferences);
-    } catch (error) {
-      console.error(error);
-      setSelectedLocations(previousLocations);
-      setClientProfile((prev) => (prev === undefined ? prev : baseUser));
-      setEditedUser(baseUser);
-      alert(t("user.saveProfileError"));
-    }
-  };
-
   const handleSaveProfile = async () => {
-    if (!editedUser) return;
+    if (!editedUser || !editSection) return;
     try {
-      const savedProfile = await saveProfile({
-        ...editedUser,
-        locationPreferences: selectedLocations,
-      });
+      const savedProfile = await saveProfile(editedUser, editSection);
+      clearSession();
       setClientProfile(savedProfile);
       setEditedUser(savedProfile);
-      setSelectedLocations(savedProfile.locationPreferences);
       setIsEditModalOpen(false);
     } catch (error) {
       console.error(error);
@@ -380,6 +334,16 @@ export default function UserPage({ user }: Props) {
             {visitedTabs.includes(kind) && <CareerHistory kind={kind} />}
           </section>
         ))}
+        <section id="profile-panel-preferences" role="tabpanel" aria-labelledby="profile-tab-preferences" hidden={activeTab !== 'preferences'} tabIndex={0}>
+          {visitedTabs.includes('preferences') && <JobPreferences
+            profile={clientProfile}
+            onSaved={profile => {
+              const mapped = mapProfileToUser(profile);
+              setClientProfile(mapped);
+              clearSession();
+            }}
+          />}
+        </section>
         <section id="profile-panel-overview" role="tabpanel" aria-labelledby="profile-tab-overview" hidden={activeTab !== 'overview'} tabIndex={0}>
         {/* Two column layout */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
@@ -415,52 +379,6 @@ export default function UserPage({ user }: Props) {
               <p className="text-gray-700 dark:text-white/70 leading-relaxed">
                 {(clientProfile && clientProfile.bio) || t("user.noBioAvailable")}
               </p>
-            </div>
-
-            {/* Location Preferences */}
-            <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-6 border border-gray-200 dark:border-white/5 shadow-sm">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-500/10 flex items-center justify-center">
-                  <MapPin className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                </div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                  {t("user.locationPreferences")}
-                </h2>
-              </div>
-              <div className="flex gap-3 flex-wrap">
-                {locationFilterItems.map((f) => {
-                  const isSelected = selectedLocations.includes(f.value);
-                  return (
-                    <button
-                      key={f.value}
-                      onClick={() => toggleLocation(f.value)}
-                      className={`px-5 py-2.5 rounded-full border font-medium transition-all ${
-                        isSelected
-                          ? "bg-purple-100 dark:bg-purple-500/20 border-purple-500 dark:border-purple-500/50 text-purple-700 dark:text-purple-300"
-                          : "border-gray-200 dark:border-white/10 text-gray-700 dark:text-white/70 hover:bg-gray-50 dark:hover:bg-white/5"
-                      }`}
-                    >
-                      {f.label}
-                      {isSelected && (
-                        <span className="ml-2 text-purple-600 dark:text-purple-400">
-                          ✓
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-              {selectedLocations.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10">
-                  <p className="text-sm text-gray-600 dark:text-white/60">
-                    {t("user.selected", {
-                      value: selectedLocations
-                        .map((v) => locationFilterItems.find((f) => f.value === v)?.label ?? v)
-                        .join(", "),
-                    })}
-                  </p>
-                </div>
-              )}
             </div>
 
             {/* Tech stack */}
@@ -502,44 +420,6 @@ export default function UserPage({ user }: Props) {
               </div>
             </div>
 
-            {/* Desired Roles */}
-            <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-6 border border-gray-200 dark:border-white/5 shadow-sm">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-10 h-10 rounded-xl bg-orange-100 dark:bg-orange-500/10 flex items-center justify-center">
-                  <Briefcase className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-                </div>
-                <div className="flex items-center justify-between w-full">
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                    {t("user.desiredRoles")}
-                  </h2>
-                  <Button
-                    onClick={() => {
-                      setEditedUser(
-                        clientProfile ??
-                          editedUser ??
-                          emptyUser,
-                      );
-                      setEditSection("roles");
-                      setIsEditModalOpen(true);
-                    }}
-                    variant="secondary"
-                    className="h-auto px-3 py-1.5"
-                  >
-                    {t("user.edit")}
-                  </Button>
-                </div>
-              </div>
-              <div className="flex gap-3 flex-wrap">
-                {(clientProfile ? clientProfile.roles : []).map((role) => (
-                  <span
-                    key={role}
-                    className="px-4 py-2 bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 font-medium rounded-xl border border-orange-200 dark:border-orange-500/20"
-                  >
-                    {role}
-                  </span>
-                ))}
-              </div>
-            </div>
           </div>
 
           {/* Career facts remain visible together in the overview. */}
@@ -682,25 +562,6 @@ export default function UserPage({ user }: Props) {
                 </div>
               )}
 
-              {editSection === "roles" && (
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                    {t("user.rolesCommaSeparated")}
-                  </label>
-                  <input
-                    type="text"
-                    value={editedUser.roles.join(", ")}
-                    onChange={(e) =>
-                      setEditedUser({
-                        ...editedUser,
-                        roles: e.target.value.split(",").map((s) => s.trim()),
-                      })
-                    }
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder={t("user.rolesPlaceholder")}
-                  />
-                </div>
-              )}
             </div>
 
             {/* Modal Footer */}
