@@ -8,9 +8,10 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 
 ### Home Dashboard
 
-- loads local data from `backend/Data/jobs.json`
-- shows progression and match grades
-- requires a signed-in Supabase session before rendering the page
+- loads personalized JobTech matches through `ExternalJobsController.Matching.cs`, using desired roles, geographic preferences, and explicit profile/career skills
+- shows match grades; application progression counts are currently placeholders
+- requires a signed-in session when Supabase is configured
+- see [Job preferences and matching](job-preferences-matching.md) for scoring, caching, pagination, and verification
 
 ### External Job Search
 
@@ -33,6 +34,8 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 - Supabase stores profile data in `public.profiles`
 - work experience and education are stored in `public.profile_career_entries`
 - the overview displays all saved career details; separate tabs provide editing
+- the job preferences tab edits desired roles, home location, and geographic preferences; these details are no longer edited in the overview
+- see [Career history](profile-career-history.md) and [Job preferences and matching](job-preferences-matching.md)
 
 ## Architecture
 
@@ -47,7 +50,7 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 ### Backend
 
 - ASP.NET Core Web API on .NET 10
-- JSON-backed local endpoints for dashboard data
+- JSON-backed local demo endpoints for jobs and user data, separate from personalized dashboard matching
 - integration with Arbetsformedlingen for external jobs
 - integration with Gemini and Groq for cover letter generation
 - optional Supabase client setup during startup
@@ -67,9 +70,9 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 
 ## Current Known Limitations
 
-- the backend CORS policy is restricted to localhost origins
-- profile image upload is only client-side preview and is not persisted yet
-- the job detail page still exposes a debug toggle for raw API output
+- backend CORS is configuration-driven, with localhost defaults; deployments must configure their allowed origins
+- profile images are initials-only; file uploads are disabled
+- the job detail page has no raw-response debug toggle
 - job and profile extraction logic contains some silent catches, which makes failures harder to diagnose
 
 ## Folder Map
