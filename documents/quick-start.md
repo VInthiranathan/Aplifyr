@@ -6,7 +6,7 @@ This guide covers local development for the runnable app inside `Aplifyr/`.
 
 ## Prerequisites
 
-- Node.js 20 or newer
+- Node.js 24.x (also required for the deployed frontend)
 - npm 10 or newer
 - .NET SDK 10.0 preview or newer, because the backend targets `net10.0`
 - a Supabase project
@@ -158,3 +158,23 @@ Set backend-only `GEMINI_CV_API_KEY` and `GEMINI_CV_NOTICE_VERSION` (the reviewe
 notice covering CV/career processing). `GEMINI_API_KEY` remains for letters; CV has no key fallback.
 Existing `GEMINI_MODEL`, `AI_ALLOWED_PROVIDERS=gemini` and backend Supabase credentials are required.
 See [CV generation](cv-generation.md) for consent renewal, limits and staging checks.
+
+## Frontend runtime on Vercel
+
+Both root and frontend `package.json` pin `engines.node` to `24.x`, so local
+development and Vercel use the same supported major version regardless of which
+directory is configured as the project root. Vercel applies this override on the
+next deployment; existing deployments do not change. See
+[Vercel Node.js versions](https://vercel.com/docs/functions/runtimes/node-js/node-js-versions).
+
+The locked `sanitize-html` 2.17.7 requires Node >=22.12.0 and loads the ESM
+`htmlparser2` 12 dependency via CommonJS `require()`. An incompatible runtime
+can crash `/jobs/[id]` during module loading with `ERR_REQUIRE_ESM`, before any
+job data is fetched. Keep HTML sanitization enabled and do not disable Node's
+require-ESM support through `NODE_OPTIONS`.
+
+Validation on Node 24: run `npm ci`, `node --test tests/security.test.cjs`, and
+`npm run build` from `frontend/`. After deployment, confirm Node 24 in the build
+logs, then open a job while signed in, both by direct URL and through the job
+list. Verify that the page and its `/_next/data/.../jobs/<id>.json` request no
+longer return 500. A successful build alone does not verify the live runtime.
