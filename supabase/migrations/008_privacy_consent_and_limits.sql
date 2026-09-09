@@ -8,6 +8,8 @@
 -- Säkerhetsbranchen måste också driftsättas; SQL ensam inför inte appens samtyckes-UI.
 -- Behåll AI avstängt tills nedanstående operatörsuppgifter faktiskt är verifierade.
 begin;
+set local lock_timeout = '5s';
+set local statement_timeout = '60s';
 do $$ begin
   if to_regclass('public.profiles') is null or to_regclass('public.profile_career_entries') is null then
     raise exception 'Requires existing profiles and profile_career_entries (migrations 001-005).';
@@ -34,6 +36,9 @@ do $$ begin
   end if;
   if to_regprocedure('public.profiles_updated_at()') is not null then
     alter function public.profiles_updated_at() set search_path='';
+  end if;
+  if to_regprocedure('public.rls_auto_enable()') is not null then
+    revoke execute on function public.rls_auto_enable() from public,anon,authenticated;
   end if;
 end $$;
 
@@ -129,6 +134,7 @@ create table if not exists public.ai_consents (
  primary key(user_id,provider),
  foreign key(provider,notice_version) references public.ai_privacy_notices(provider,version)
 );
+revoke all on function public.aplifyr_immutable_notice() from public,anon,authenticated;
 alter table public.ai_consents enable row level security;
 revoke all on public.ai_consents from public,anon,authenticated;
 grant select on public.ai_consents to authenticated;
