@@ -164,3 +164,20 @@ export interface MatchProfileRequest {
   location?: string;
   locationPreferences?: string[];
 }
+
+export interface CvFact { sourceFactId: string; sourceFactIds?: string[]; text: string }
+export interface CvEntry {
+  sourceId: string; title: string; organization: string; qualification: string;
+  startMonth: string; endMonth: string; isCurrent: boolean; bullets: CvFact[];
+}
+export interface CvContent {
+  schemaVersion: 1; template: 'ats-basic'; name: string; title: string; location: string;
+  professionalSummary: CvFact[]; skills: string[]; experience: CvEntry[]; education: CvEntry[];
+  analysis: { keywords: string[]; responsibilities: string[]; mandatory: string[]; desirable: string[]; domain: string };
+}
+export interface CvJobContext { id: string; title: string; company: string; location: string }
+export interface GeneratedCv {
+  job_id: string; content: CvContent; job_context: CvJobContext;
+  metadata: { sourceLimited: boolean; sourceHash: string; jobHash: string };
+  created_at: string; updated_at: string;
+}

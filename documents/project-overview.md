@@ -6,6 +6,13 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 
 ## Main User Flows
 
+### Job-specific CV
+
+- `/jobs/[id]/cv` maintains job context and renders a saved ATS preview.
+- Gemini rewrites profile, work and education text for the job, with source references and a separate factual review using the CV key.
+- See [CV generation](cv-generation.md) for contracts, migration 009, source-validation limits and configuration.
+
+
 ### Home Dashboard
 
 - loads personalized JobTech matches through `ExternalJobsController.Matching.cs`, using desired roles, geographic preferences, and explicit profile/career skills

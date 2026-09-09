@@ -47,7 +47,7 @@ builder.Services.AddHttpClient("supabase-auth", client => client.Timeout = TimeS
 builder.Services.AddRateLimiter(options => {
     options.RejectionStatusCode = 429;
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context => {
-        var ai = context.Request.Path.StartsWithSegments("/api/coverletters");
+        var ai = context.Request.Path.StartsWithSegments("/api/coverletters") || context.Request.Path.StartsWithSegments("/api/cvs");
         return RateLimitPartition.GetFixedWindowLimiter(ai ? "ai" : "api", _ => new FixedWindowRateLimiterOptions {
             PermitLimit = ai ? 10 : 120, Window = TimeSpan.FromMinutes(1), QueueLimit = 0,
         });

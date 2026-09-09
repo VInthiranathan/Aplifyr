@@ -29,6 +29,8 @@ jobs:
         run: dotnet run --project tests/Aplifyr.SecurityTests --configuration Release
       - name: Matching regression tests
         run: dotnet run --project tests/Aplifyr.Matching.Tests --configuration Release
+      - name: CV regression tests
+        run: dotnet run --project tests/Aplifyr.CvTests --configuration Release
       - name: Docker build
         run: docker build -f backend/Dockerfile .
 

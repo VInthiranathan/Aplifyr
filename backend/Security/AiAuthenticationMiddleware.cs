@@ -9,7 +9,7 @@ public sealed class AiAuthenticationMiddleware(RequestDelegate next)
 {
     public async Task InvokeAsync(HttpContext context, IHttpClientFactory clients, IConfiguration configuration)
     {
-        if (!context.Request.Path.StartsWithSegments("/api/coverletters"))
+        if (!context.Request.Path.StartsWithSegments("/api/coverletters") && !context.Request.Path.StartsWithSegments("/api/cvs"))
         {
             await next(context);
             return;
