@@ -30,6 +30,7 @@ function api({user={id:'owner'}, data={id:'owner'}, error=null} = {}) {
   for (const method of ['from','insert','update','upsert','eq','select']) query[method]=(...args)=>{calls.push([method,...args]); return query;};
   query.maybeSingle = query.single = async()=>({data,error});
   const handler=load('pages/api/profile.ts', {
+    '../../lib/apiSecurity':load('lib/apiSecurity.ts'),
     '../../lib/jobPreferences':validation,
     '@supabase/auth-helpers-nextjs':{createServerClient:()=>({...query,auth:{getUser:async()=>({data:{user}})}}), parseCookieHeader:()=>[], serializeCookieHeader:()=>''},
   }, {process:{env:{NEXT_PUBLIC_SUPABASE_URL:'https://example.test',NEXT_PUBLIC_SUPABASE_ANON_KEY:'test'}}}).default;
@@ -57,8 +58,12 @@ test('preference writes reject unauthenticated, invalid, stale and cross-site re
   assert.equal(unavailable.code,503);assert.ok(!JSON.stringify(unavailable.body).includes('private details'));
 });
 test('editing only a bio preserves preference fields',async()=>{
-  const app=api();assert.equal((await app.invoke({bio:'New bio'},'PUT')).code,200);
-  assert.deepEqual(plain(app.calls.find(c=>c[0]==='upsert')[1]),{id:'owner',bio:'New bio'});
+  const app=api();assert.equal((await app.invoke({bio:'New bio',updatedAt:profile.updatedAt},'PUT')).code,200);
+  assert.deepEqual(plain(app.calls.find(c=>c[0]==='update')[1]),{bio:'New bio'});
+  assert.ok(app.calls.some(c=>c[0]==='eq' && c[1]==='id' && c[2]==='owner'));
+  assert.ok(app.calls.some(c=>c[0]==='eq' && c[1]==='updated_at' && c[2]===profile.updatedAt));
+  assert.equal((await api({data:null}).invoke({bio:'New bio',updatedAt:profile.updatedAt},'PUT')).code,409);
+  assert.equal((await api().invoke({bio:'New bio'},'PUT')).code,400);
 });
 function editor(fetch, initial=profile) {
   const Component=load('components/JobPreferences.tsx',{

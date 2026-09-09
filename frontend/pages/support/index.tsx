@@ -5,7 +5,8 @@ import { useState } from 'react'
 import { ChevronDown, Mail, MessageSquare, FileQuestion } from 'lucide-react'
 
 export const getServerSideProps: GetServerSideProps = async ({ locale }) => ({
-  props: { ...(await serverSideTranslations(locale ?? 'en', ['common'])) },
+  props: { contact: /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(process.env.PRIVACY_CONTACT_EMAIL??'') ? process.env.PRIVACY_CONTACT_EMAIL : null,
+    ...(await serverSideTranslations(locale ?? 'en', ['common'])) },
 })
 
 const faqs = [
@@ -39,15 +40,8 @@ function FaqItem({ q, a }: { q: string; a: string }) {
   )
 }
 
-export default function SupportPage() {
+export default function SupportPage({contact}:{contact:string|null}) {
   const { t } = useTranslation('common')
-  const [sent, setSent] = useState(false)
-  const [form, setForm] = useState({ name: '', email: '', message: '' })
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setSent(true)
-  }
 
   return (
     <div className="app-page-shell max-w-3xl">
@@ -87,59 +81,9 @@ export default function SupportPage() {
         </div>
       </div>
 
-      {/* Contact form */}
-      <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-6 border border-slate-200 dark:border-white/5 shadow-sm dark:shadow-none">
-        <h2 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">{t('support.formTitle')}</h2>
-        {sent ? (
-          <div className="text-center py-8 space-y-2">
-            <p className="text-2xl">✅</p>
-            <p className="font-medium text-slate-800 dark:text-white">{t('support.formSuccess')}</p>
-            <p className="text-sm text-slate-500 dark:text-white/40">{t('support.formSuccessDesc')}</p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-slate-500 dark:text-white/50">{t('support.formName')}</label>
-                <input
-                  required
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#111] text-slate-800 dark:text-white text-sm px-3 py-2 outline-none focus:ring-2 focus:ring-sky-500/50 transition"
-                  placeholder={t('support.formNamePlaceholder')}
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-slate-500 dark:text-white/50">{t('support.formEmail')}</label>
-                <input
-                  required
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  className="rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#111] text-slate-800 dark:text-white text-sm px-3 py-2 outline-none focus:ring-2 focus:ring-sky-500/50 transition"
-                  placeholder={t('support.formEmailPlaceholder')}
-                />
-              </div>
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-slate-500 dark:text-white/50">{t('support.formMessage')}</label>
-              <textarea
-                required
-                rows={4}
-                value={form.message}
-                onChange={(e) => setForm({ ...form, message: e.target.value })}
-                className="rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#111] text-slate-800 dark:text-white text-sm px-3 py-2 outline-none focus:ring-2 focus:ring-sky-500/50 transition resize-none"
-                placeholder={t('support.formMessagePlaceholder')}
-              />
-            </div>
-            <button
-              type="submit"
-              className="app-primary-button px-6 py-2.5 text-sm"
-            >
-              {t('support.formSubmit')}
-            </button>
-          </form>
-        )}
+      <div className="app-card-base p-4 space-y-2">
+        <h2 className="text-lg font-semibold">{t('support.formTitle')}</h2>
+        {contact ? <><p>{t('consent.emailNote')}</p><a className="underline" href={`mailto:${encodeURIComponent(contact)}`}>{t('consent.email')}: {contact}</a></> : <p role="status">{t('privacy.contactPending')}</p>}
       </div>
     </div>
   )

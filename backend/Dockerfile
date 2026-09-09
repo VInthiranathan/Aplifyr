@@ -13,4 +13,6 @@ WORKDIR /app
 
 COPY --from=build /app/publish .
 
+USER $APP_UID
+
 ENTRYPOINT ["sh", "-c", "dotnet Aplifyr.Api.dll --urls http://0.0.0.0:${PORT:-10000}"]

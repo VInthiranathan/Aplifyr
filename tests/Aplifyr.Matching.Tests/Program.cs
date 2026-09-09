@@ -26,6 +26,17 @@ static class Program
     static async Task Main()
     {
         var tests = new (string Name, Func<Task> Run)[] {
+            ("Oversized match pools fail explicitly without publishing partial additions", async () => {
+                var c = new Fake((q,o) => Page(1001,Enumerable.Range(0,1001).Select(i=>Job(i.ToString())).ToArray()));
+                c.ControllerContext=new ControllerContext{HttpContext=new DefaultHttpContext()};
+                Equal(422,((ObjectResult)await c.Match(new(){Roles=["Backend developer"]})).StatusCode);
+                Equal(422,((ObjectResult)await c.MatchContinue(new(){Roles=["Backend developer"]})).StatusCode);
+            }),
+            ("Non-numeric upstream totals are retryable errors", async () => {
+                var c = new Fake((q,o) => "{\"hits\":[],\"total\":{\"value\":\"invalid\"}}");
+                c.ControllerContext=new ControllerContext{HttpContext=new DefaultHttpContext()};
+                Equal(502,((ObjectResult)await c.Match(new(){Roles=["Backend developer"]})).StatusCode);
+            }),
             ("Empty profile and zero-hit responses include complete stats", async () => {
                 var c = new Fake((q,o) => Page(0));
                 var empty = await Match(c, new());

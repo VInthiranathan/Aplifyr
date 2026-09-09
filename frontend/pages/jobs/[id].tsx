@@ -1,3 +1,5 @@
+import { safeHtml, safeExternalUrl } from "../../lib/safeHtml";
+import AiConsent from '../../components/AiConsent';
 import { useRouter } from "next/router";
 import type { GetServerSideProps } from "next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
@@ -45,6 +47,15 @@ export default function JobDetailPage() {
   const [letter, setLetter] = useState<string | null>(null);
   // debug toggle removed
   const [showModal, setShowModal] = useState(false);
+  const [career, setCareer] = useState<any[]>([]);
+  const [selectedCareer, setSelectedCareer] = useState<string[]>([]);
+  const [careerError, setCareerError] = useState(false);
+  const [careerLoaded, setCareerLoaded] = useState(false);
+  async function loadCareer() {
+    setCareerError(false);
+    try { const r=await fetch('/api/career');if(!r.ok)throw Error();setCareer((await r.json()).entries);setCareerLoaded(true); }
+    catch {setCareerError(true);}
+  }
 
   useEffect(() => {
     // If `data` param exists (old behavior) prefer it, else fetch by id from backend
@@ -65,8 +76,7 @@ export default function JobDetailPage() {
         const res = await fetch(`${BACKEND}/api/externaljobs/${id}`);
         const text = await res.text();
         if (!res.ok) {
-          setFetchError(`Status ${res.status}: ${text}`);
-          console.error("Job fetch failed", res.status, text);
+          setFetchError(t('consent.jobError'));
           return;
         }
         let data: any = null;
@@ -95,7 +105,7 @@ export default function JobDetailPage() {
           typeof data === "object" &&
           (data.error || data.tracking_id)
         ) {
-          setFetchError(JSON.stringify(data));
+          setFetchError(t('consent.jobError'));
           setJob(null);
           setJobHtml(null);
           return;
@@ -118,7 +128,7 @@ export default function JobDetailPage() {
         else setJob(data);
       } catch (e) {
         console.error("Could not fetch job", e);
-        setFetchError((e as Error).message);
+        setFetchError(t('consent.jobError'));
       } finally {
         setFetching(false);
       }
@@ -128,7 +138,7 @@ export default function JobDetailPage() {
   }, [data, id]);
 
   const generate = async () => {
-    if (!job) return;
+    if (!job || generating) return;
     setGenerating(true);
     setLetter(null);
     try {
@@ -154,6 +164,7 @@ export default function JobDetailPage() {
                 bio: profileData.profile.bio,
                 tech_stack: profileData.profile.tech_stack,
                 roles: profileData.profile.roles,
+                career: career.filter(e=>selectedCareer.includes(e.id)).slice(0,3).map(e=>({kind:e.kind,title:e.title,organization:e.organization,start_month:e.start_month,end_month:e.end_month,skills:e.skills})),
               };
             }
           }
@@ -166,42 +177,34 @@ export default function JobDetailPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token ?? ""}`,
         },
         body: JSON.stringify({
-          jobs: [job],
+          jobs: [{title:String(job.headline??job.title??'').slice(0,200),employer:{name:String(job.employer?.name??'').slice(0,200)},workplace_address:{municipality:String(job.workplace_address?.municipality??'').slice(0,200)},description:{text:String(typeof job.description==='string'?job.description:job.description?.text??'').slice(0,16000)}}],
           user: userProfile,
         }),
       });
 
       if (!res.ok) {
-        const errorText = await res.text();
-        try {
-          const errorData = JSON.parse(errorText);
-          setLetter(`Fel: ${errorData.error || `Status ${res.status}`}`);
-        } catch {
-          setLetter(`Fel: Status ${res.status} - ${errorText}`);
-        }
+        setLetter(t('consent.generateError'));
         setShowModal(true);
         return;
       }
 
       const data = await res.json();
-      console.log("Cover letter response:", data);
 
       if (Array.isArray(data) && data[0]?.coverLetter) {
         setLetter(data[0].coverLetter);
         setShowModal(true);
       } else if (Array.isArray(data) && data[0]?.error) {
-        setLetter(`Fel: ${data[0].error}\n\n${data[0].detail || ""}`);
+        setLetter(t('consent.generateError'));
         setShowModal(true);
       } else {
-        setLetter(
-          `No data received.\n\nCheck that GEMINI_API_KEY or GROQ_API_KEY is configured in backend/.env.\n\nBackend response: ${JSON.stringify(data, null, 2)}`,
-        );
+        setLetter(t('consent.generateError'));
         setShowModal(true);
       }
     } catch (e) {
-      setLetter((e as Error).message);
+      setLetter(t('consent.generateError'));
       setShowModal(true);
     } finally {
       setGenerating(false);
@@ -266,7 +269,7 @@ export default function JobDetailPage() {
           </div>
 
           <div className="prose max-w-none text-sm text-slate-700 dark:text-white bg-white dark:bg-[#111] p-4 rounded-lg">
-            <div dangerouslySetInnerHTML={{ __html: jobHtml ?? "" }} />
+            <div dangerouslySetInnerHTML={{ __html: safeHtml(jobHtml ?? "") }} />
           </div>
         </div>
       ) : (
@@ -274,15 +277,7 @@ export default function JobDetailPage() {
           <div className="max-w-6xl mx-auto">
             <div className="flex flex-wrap items-start gap-4">
               <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg bg-slate-100 dark:bg-white/5 flex items-center justify-center flex-shrink-0">
-                {job.logo_url ? (
-                  <img
-                    src={job.logo_url}
-                    alt=""
-                    className="w-full h-full object-contain p-1"
-                  />
-                ) : (
-                  <Briefcase />
-                )}
+                <Briefcase />
               </div>
               <div className="flex-1">
                 <div className="flex items-start justify-between gap-4">
@@ -403,7 +398,7 @@ export default function JobDetailPage() {
                         return (
                           <Button asChild variant="external" className="h-auto w-full px-4 py-2.5">
                             <a
-                              href={externalUrl}
+                              href={safeExternalUrl(externalUrl)}
                               target="_blank"
                               rel="noopener noreferrer"
                             >
@@ -419,7 +414,7 @@ export default function JobDetailPage() {
                           {renderApplicationInstructions(job, t)}
                           <Button asChild variant="external" className="h-auto w-full px-4 py-2.5">
                             <a
-                              href={getAfUrl(job)}
+                              href={safeExternalUrl(getAfUrl(job))}
                               target="_blank"
                               rel="noopener noreferrer"
                             >
@@ -433,6 +428,17 @@ export default function JobDetailPage() {
                 </div>
 
                 <div className="mt-4">
+                  <AiConsent />
+                  <div className="my-3 space-y-2">
+                    <p>{t('consent.careerScope')}</p>
+                    {!careerLoaded && <Button variant="secondary" onClick={loadCareer}>{t('consent.chooseFacts')}</Button>}
+                    {careerError && <p role="alert">{t('consent.error')}</p>}
+                    {careerLoaded && career.map(entry=><label key={entry.id} className="flex gap-2">
+                      <input type="checkbox" checked={selectedCareer.includes(entry.id)} disabled={generating || (!selectedCareer.includes(entry.id)&&selectedCareer.length>=3)}
+                        onChange={e=>setSelectedCareer(ids=>e.target.checked?[...ids,entry.id]:ids.filter(id=>id!==entry.id))}/>
+                      {entry.title} — {entry.organization}
+                    </label>)}
+                  </div>
                   <Button
                     onClick={generate}
                     disabled={generating}
@@ -465,7 +471,7 @@ export default function JobDetailPage() {
           letter={letter}
           jobTitle={job?.headline || job?.title || t("jobDetail.defaultJobTitle")}
           company={job?.employer?.name || job?.advertiser || ""}
-          applicationUrl={getApplicationUrl()}
+          applicationUrl={safeExternalUrl(getApplicationUrl())}
           onRegenerate={generate}
           isRegenerating={generating}
         />
@@ -633,15 +639,15 @@ function renderAFDescription(
     const normalized = unescapeHtml(html)
       .replace(/\\n/g, "\n")
       .replace(/\r\n/g, "\n");
-    // If server already provided HTML markup, render it verbatim.
+    // Sanitize formatted HTML immediately before rendering.
     if (containsHtml(normalized))
-      return <div dangerouslySetInnerHTML={{ __html: normalized }} />;
+      return <div dangerouslySetInnerHTML={{ __html: safeHtml(normalized) }} />;
 
     // Preserve newlines exactly: convert each newline to a <br/>,
     // so double newlines become two <br/> (visual blank line) instead
     // of being collapsed into a single paragraph.
     const converted = convertDescriptionText(normalized);
-    return <div dangerouslySetInnerHTML={{ __html: converted }} />;
+    return <div dangerouslySetInnerHTML={{ __html: safeHtml(converted) }} />;
   }
 
   if (typeof text === "string" && text.trim().length > 0) {
@@ -649,18 +655,18 @@ function renderAFDescription(
       .replace(/\\n/g, "\n")
       .replace(/\r\n/g, "\n");
     const converted = convertDescriptionText(normalized);
-    return <div dangerouslySetInnerHTML={{ __html: converted }} />;
+    return <div dangerouslySetInnerHTML={{ __html: safeHtml(converted) }} />;
   }
 
   if (
     typeof job.description === "object" &&
-    typeof job.description.text === "string"
+    typeof job.description?.text === "string"
   ) {
     const normalized = unescapeHtml(job.description.text)
       .replace(/\\n/g, "\n")
       .replace(/\r\n/g, "\n");
     const converted = convertDescriptionText(normalized);
-    return <div dangerouslySetInnerHTML={{ __html: converted }} />;
+    return <div dangerouslySetInnerHTML={{ __html: safeHtml(converted) }} />;
   }
 
   return <div>{t("jobDetail.noDescription")}</div>;
@@ -698,7 +704,7 @@ function renderQualifications(
           <h2 className="text-2xl font-semibold mb-4">{t("jobDetail.qualifications")}</h2>
           <div
             className="prose max-w-none text-sm text-slate-700 dark:text-white"
-            dangerouslySetInnerHTML={{ __html: normalized }}
+            dangerouslySetInnerHTML={{ __html: safeHtml(normalized) }}
           />
         </section>
       );
@@ -708,7 +714,7 @@ function renderQualifications(
         <h2 className="text-2xl font-semibold mb-4">{t("jobDetail.qualifications")}</h2>
         <div
           className="prose max-w-none text-sm text-slate-700 dark:text-white"
-          dangerouslySetInnerHTML={{ __html: converted }}
+          dangerouslySetInnerHTML={{ __html: safeHtml(converted) }}
         />
       </section>
     );
@@ -724,7 +730,7 @@ function renderQualifications(
         <h2 className="text-2xl font-semibold mb-4">{t("jobDetail.qualifications")}</h2>
         <div
           className="prose max-w-none text-sm text-slate-700 dark:text-white"
-          dangerouslySetInnerHTML={{ __html: converted }}
+          dangerouslySetInnerHTML={{ __html: safeHtml(converted) }}
         />
       </section>
     );
@@ -743,7 +749,7 @@ function renderQualifications(
         <h2 className="text-2xl font-semibold mb-4">{t("jobDetail.qualifications")}</h2>
         <div
           className="prose max-w-none text-sm text-slate-700 dark:text-white"
-          dangerouslySetInnerHTML={{ __html: converted }}
+          dangerouslySetInnerHTML={{ __html: safeHtml(converted) }}
         />
       </section>
     );
@@ -781,7 +787,7 @@ function renderOtherInformation(
           <h2 className="text-2xl font-semibold mb-4">{t("jobDetail.otherInformation")}</h2>
           <div
             className="prose max-w-none text-sm text-slate-700 dark:text-white"
-            dangerouslySetInnerHTML={{ __html: normalized }}
+            dangerouslySetInnerHTML={{ __html: safeHtml(normalized) }}
           />
         </section>
       );
@@ -791,7 +797,7 @@ function renderOtherInformation(
         <h2 className="text-2xl font-semibold mb-4">{t("jobDetail.otherInformation")}</h2>
         <div
           className="prose max-w-none text-sm text-slate-700 dark:text-white"
-          dangerouslySetInnerHTML={{ __html: converted }}
+          dangerouslySetInnerHTML={{ __html: safeHtml(converted) }}
         />
       </section>
     );
@@ -807,7 +813,7 @@ function renderOtherInformation(
         <h2 className="text-2xl font-semibold mb-4">{t("jobDetail.otherInformation")}</h2>
         <div
           className="prose max-w-none text-sm text-slate-700 dark:text-white"
-          dangerouslySetInnerHTML={{ __html: converted }}
+          dangerouslySetInnerHTML={{ __html: safeHtml(converted) }}
         />
       </section>
     );
@@ -815,7 +821,7 @@ function renderOtherInformation(
 
   if (
     typeof job.additionalInformation === "object" &&
-    typeof job.additionalInformation.text === "string"
+    typeof job.additionalInformation?.text === "string"
   ) {
     const normalized = unescapeHtml(job.additionalInformation.text)
       .replace(/\\n/g, "\n")
@@ -823,10 +829,10 @@ function renderOtherInformation(
     const converted = convertDescriptionText(normalized);
     return (
       <section className="bg-white dark:bg-[#111] p-6 rounded-lg">
-        <h2 className="text-2xl font-semibold mb-4">Övrig information</h2>
+        <h2 className="text-2xl font-semibold mb-4">{t('jobDetail.otherInformation')}</h2>
         <div
           className="prose max-w-none text-sm text-slate-700 dark:text-white"
-          dangerouslySetInnerHTML={{ __html: converted }}
+          dangerouslySetInnerHTML={{ __html: safeHtml(converted) }}
         />
       </section>
     );

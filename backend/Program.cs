@@ -1,3 +1,6 @@
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
+using Aplifyr.Api.Security;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
@@ -27,9 +30,9 @@ if (!string.IsNullOrWhiteSpace(supabaseUrl) && !string.IsNullOrWhiteSpace(supaba
         await supabaseClient.InitializeAsync();
         builder.Services.AddSingleton(supabaseClient);
     }
-    catch (Exception ex)
+    catch (Exception)
     {
-        Console.WriteLine($"[Startup] Supabase initialization skipped: {ex.Message}");
+        Console.WriteLine("[Startup] Supabase initialization skipped.");
     }
 }
 else
@@ -37,7 +40,26 @@ else
     Console.WriteLine("[Startup] Supabase credentials not configured. Running with local JSON/API-only features.");
 }
 
-builder.Services.AddMemoryCache();
+builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 128 * 1024);
+builder.Services.AddHttpClient("supabase-auth", client => client.Timeout = TimeSpan.FromSeconds(10))
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+// Fixed process-wide partitions bound anonymous traffic and AI costs without trusting forwarded IPs.
+builder.Services.AddRateLimiter(options => {
+    options.RejectionStatusCode = 429;
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context => {
+        var ai = context.Request.Path.StartsWithSegments("/api/coverletters");
+        return RateLimitPartition.GetFixedWindowLimiter(ai ? "ai" : "api", _ => new FixedWindowRateLimiterOptions {
+            PermitLimit = ai ? 10 : 120, Window = TimeSpan.FromMinutes(1), QueueLimit = 0,
+        });
+    });
+    options.GlobalLimiter = PartitionedRateLimiter.CreateChained(options.GlobalLimiter,
+        PartitionedRateLimiter.Create<HttpContext, string>(_ => RateLimitPartition.GetConcurrencyLimiter("requests",
+            _ => new ConcurrencyLimiterOptions { PermitLimit = 8, QueueLimit = 0 })));
+});
+builder.Services.AddMemoryCache(options => options.SizeLimit = 32);
+builder.Services.AddHttpClient("privacy-db", client => { client.Timeout = TimeSpan.FromSeconds(5); client.MaxResponseContentBufferSize = 32768; })
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+builder.Services.AddSingleton<AiPrivacyGate>();
 builder.Services.AddControllers();
 
 var configuredOrigins = builder.Configuration
@@ -69,7 +91,6 @@ if (configuredOrigins == null || configuredOrigins.Length == 0)
     {
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        "https://nice-ground-071fe1e03.7.azurestaticapps.net",
     };
 }
 
@@ -81,6 +102,8 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 app.UseCors("AllowFrontend");
+app.UseRateLimiter();
+app.UseMiddleware<AiAuthenticationMiddleware>();
 app.MapControllers();
 app.MapGet("/", () => Results.Ok(new { status = "OK", service = "Aplifyr.Api" }));
 app.Run();

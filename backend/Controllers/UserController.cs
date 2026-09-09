@@ -17,6 +17,8 @@ public class UserController : ControllerBase
     [HttpGet]
     public IActionResult GetUser()
     {
+        if (!_env.IsDevelopment()) return NotFound();
+        Response.Headers.CacheControl = "private, no-store";
         var path = Path.Combine(_env.ContentRootPath, "Data", "user.json");
         if (!System.IO.File.Exists(path))
             return NotFound(new { error = "user.json not found" });

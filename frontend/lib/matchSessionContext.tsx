@@ -1,4 +1,5 @@
-import { createContext, useContext, useRef, useCallback } from "react";
+import { getSupabaseBrowserClient, isSupabaseConfigured } from "./supabaseClient";
+import { createContext, useContext, useRef, useCallback, useEffect } from "react";
 import type { ReactNode } from "react";
 import type { MatchedJob } from "../types/api";
 
@@ -41,6 +42,16 @@ export function MatchSessionProvider({ children }: { children: ReactNode }) {
   const clearSession = useCallback(() => {
     ref.current = { ...INITIAL_SESSION };
   }, []);
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    let owner: string | null = null;
+    const { data: { subscription } } = getSupabaseBrowserClient().auth.onAuthStateChange((_event, session) => {
+      const nextOwner = session?.user.id ?? null;
+      if (nextOwner !== owner || !nextOwner) clearSession();
+      owner = nextOwner;
+    });
+    return () => subscription.unsubscribe();
+  }, [clearSession]);
   return (
     <MatchSessionContext.Provider value={{ getSession, updateSession, clearSession }}>
       {children}

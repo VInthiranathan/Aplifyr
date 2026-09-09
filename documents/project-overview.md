@@ -25,7 +25,9 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 - frontend page: `frontend/pages/jobs/[id].tsx`
 - backend controller: `backend/Controllers/CoverLettersController.cs`
 - the frontend fetches supported user profile fields for personalization
-- the backend detects the language from the job description and then calls Gemini first, with Groq as fallback
+- the backend verifies the Supabase bearer token and detects the job language; only explicitly approved providers may be called (Gemini first, Groq fallback if both are enabled)
+- AI is disabled until `AI_ALLOWED_PROVIDERS` is configured; Gemini also requires `GEMINI_MODEL`
+- job HTML is sanitized; the user is informed before sharing profile facts with external AI
 
 ### User Profile and Career History
 
@@ -38,6 +40,15 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 - see [Career history](profile-career-history.md) and [Job preferences and matching](job-preferences-matching.md)
 
 ## Architecture
+
+### Privacy controls
+
+- Follow-up migration 008 adds per-provider consent and withdrawal, immutable notice receipts, distributed AI reservations and career quotas. Nonce CSP and bounded matching capacity are now implemented. See the current enforcement section in [Privacy controls](privacy-controls.md).
+
+- Public `/privacy` page links to an authenticated, owner-scoped JSON export and configured rights contact.
+- General profile edits now require an optimistic version; career reads use bounded keyset pagination.
+- External employer logos are replaced with local icons to avoid automatic third-party image requests.
+- See [Privacy controls](privacy-controls.md) for contracts and limitations, and the Swedish [Supabase/GDPR runbook](gdpr-supabase-runbook.md) for deployment and organizational actions.
 
 ### Frontend
 
@@ -59,14 +70,14 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 
 - auth for sign-in and session handling
 - `profiles` table for user-facing profile data
-- owner-only career history protected by row-level security
+- owner-only profiles (migration 006) and career history (migration 004), protected by row-level security
 
 ## Important Runtime Behavior
 
 - `frontend/next.config.js` rewrites `/api/:path*` to the backend base URL
 - some frontend pages still read `BACKEND_URL`, while client-side job pages use `NEXT_PUBLIC_BACKEND_URL`
 - backend startup works without a `.env`, but Supabase-backed features then become unavailable
-- cover letter generation fails fast if both AI keys are missing
+- cover letter generation fails closed without configured Auth or approved AI providers; see [Security and EU privacy audit](security-gdpr-audit-2026-09-08.md) for configuration and deployment checks
 
 ## Current Known Limitations
 
@@ -74,6 +85,10 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 - profile images are initials-only; file uploads are disabled
 - the job detail page has no raw-response debug toggle
 - job and profile extraction logic contains some silent catches, which makes failures harder to diagnose
+- support uses a configured mailto contact; sending occurs in the user's mail application and requires a real monitored mailbox
+- favorites are browser-local and account-scoped; legacy unowned favorites are cleared rather than assigned to another login
+- backend demo `/api/user` is Development-only; general limits are process-local, while AI reservations and quotas are shared through Supabase migration 008
+- GDPR operational tasks and remaining code limitations are listed in the [security and EU privacy audit](security-gdpr-audit-2026-09-08.md)
 
 ## Folder Map
 

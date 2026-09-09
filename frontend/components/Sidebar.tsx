@@ -1,3 +1,4 @@
+import { signOut } from "../lib/signOut";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useTranslation } from "next-i18next";
@@ -22,6 +23,7 @@ const navItemDefs = [
   { key: "nav.favorites", href: "/favorites", icon: Bookmark },
   { key: "nav.allJobs", href: "/jobs", icon: Briefcase },
   { key: "nav.support", href: "/support", icon: HelpCircle },
+  { key: "privacy.title", href: "/privacy", icon: User },
 ];
 
 export default function Sidebar() {
@@ -171,7 +173,7 @@ export default function Sidebar() {
 
         {/* sign out button */}
         <Button
-          onClick={() => (window.location.href = "/api/auth/signout")}
+          onClick={signOut}
           variant="ghost"
           className="justify-start rounded-lg px-3 py-2 text-sm"
           title={t("auth.signOut")}

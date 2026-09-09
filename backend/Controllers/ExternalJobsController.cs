@@ -10,7 +10,7 @@ namespace Aplifyr.Api.Controllers;
 [Route("api/[controller]")]
 public partial class ExternalJobsController : ControllerBase
 {
-    private static readonly HttpClient _http = new();
+    private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(20), MaxResponseContentBufferSize = 4 * 1024 * 1024 };
     private readonly IMemoryCache _cache;
     private readonly ILogger<ExternalJobsController> _logger;
 
@@ -327,18 +327,17 @@ public partial class ExternalJobsController : ControllerBase
                 foreach (var mappedMunicipality in mappedMunicipalities) qs.Add("municipality", mappedMunicipality);
                 qs.Remove("region");
             }
-            catch (HttpRequestException ex) { _logger.LogWarning(ex, "Municipality resolution failed for filters {Filters} with regions {Regions}", municipalityFilters, resolvedRegionCodes); return Content(JsonSerializer.Serialize(new { total = new { value = 0 }, hits = Array.Empty<object>() }), "application/json"); }
-            catch (Exception ex) { _logger.LogWarning(ex, "Municipality resolution failed for filters {Filters} with regions {Regions}", municipalityFilters, resolvedRegionCodes); return Content(JsonSerializer.Serialize(new { total = new { value = 0 }, hits = Array.Empty<object>() }), "application/json"); }
+            catch (Exception) { return StatusCode(502, new { error = "Could not resolve search filters" }); }
         }
         if (remote.HasValue) qs["remote"] = remote.Value.ToString().ToLower();
         if (!string.IsNullOrWhiteSpace(workingHoursType)) qs["working_hours_type"] = workingHoursType;
         ApplyEmploymentTypeFilter(qs, employmentType);
         ApplyOccupationFilters(qs, occupation);
-        qs["limit"] = limit.ToString();
-        qs["offset"] = offset.ToString();
+        qs["limit"] = Math.Clamp(limit, 1, 100).ToString();
+        qs["offset"] = Math.Clamp(offset, 0, 2000).ToString();
         var url = $"{AF_BASE}/{AF_SEARCH_PATH}?{qs}";
-        try { var response = await _http.GetAsync(url); var content = await response.Content.ReadAsStringAsync(); return Content(content, "application/json"); }
-        catch (Exception ex) { return StatusCode(502, new { error = "Could not reach Arbetsförmedlingen API", detail = ex.Message }); }
+        try { using var response = await _http.GetAsync(url, HttpContext.RequestAborted); response.EnsureSuccessStatusCode(); var content = await response.Content.ReadAsStringAsync(HttpContext.RequestAborted); return Content(content, "application/json"); }
+        catch (Exception) { return StatusCode(502, new { error = "Could not reach Arbetsförmedlingen API" }); }
     }
 
     [HttpGet("occupations")]
@@ -358,7 +357,7 @@ public partial class ExternalJobsController : ControllerBase
                 foreach (var mappedMunicipality in mappedMunicipalities) qs.Add("municipality", mappedMunicipality);
                 qs.Remove("region");
             }
-            catch (Exception ex) { return StatusCode(502, new { error = "Could not reach Arbetsförmedlingen API", detail = ex.Message }); }
+            catch (Exception) { return StatusCode(502, new { error = "Could not reach Arbetsförmedlingen API" }); }
         }
         if (remote.HasValue) qs["remote"] = remote.Value.ToString().ToLower();
         ApplyEmploymentTypeFilter(qs, employmentType);
@@ -371,7 +370,7 @@ public partial class ExternalJobsController : ControllerBase
             var values = document.RootElement.GetProperty("stats").EnumerateArray().FirstOrDefault(stat => string.Equals(stat.GetProperty("type").GetString(), "occupation-name", StringComparison.OrdinalIgnoreCase)).GetProperty("values").EnumerateArray().Select(value => new { code = value.TryGetProperty("code", out var codeElement) ? codeElement.GetString() : null, label = value.TryGetProperty("term", out var termElement) ? termElement.GetString() : null, count = value.TryGetProperty("count", out var countElement) && countElement.TryGetInt32(out var count) ? count : 0 }).Where(value => !string.IsNullOrWhiteSpace(value.code) && !string.IsNullOrWhiteSpace(value.label)).GroupBy(value => value.label!, StringComparer.OrdinalIgnoreCase).Select(group => new { label = group.First().label, codes = group.Select(value => value.code!).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(), count = group.Sum(value => value.count) }).OrderByDescending(value => value.count).ThenBy(value => value.label).ToArray();
             return Ok(values);
         }
-        catch (Exception ex) { _logger.LogWarning(ex, "Occupation municipality resolution failed for filters {Filters} with regions {Regions}", municipalityFilters, resolvedRegionCodes); return StatusCode(502, new { error = "Could not reach Arbetsförmedlingen API", detail = ex.Message }); }
+        catch (Exception ex) { _logger.LogWarning(ex, "Occupation municipality resolution failed for filters {Filters} with regions {Regions}", municipalityFilters, resolvedRegionCodes); return StatusCode(502, new { error = "Could not reach Arbetsförmedlingen API" }); }
     }
 
     private static void ApplyEmploymentTypeFilter(System.Collections.Specialized.NameValueCollection qs, string? employmentType)
@@ -433,9 +432,9 @@ public partial class ExternalJobsController : ControllerBase
             var response = await _http.GetAsync(adUrl); var content = await response.Content.ReadAsStringAsync(); _logger.LogInformation("ExternalJobsController.GetById: direct status={StatusCode}", response.StatusCode);
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
-                var qs = System.Web.HttpUtility.ParseQueryString(string.Empty); qs["q"] = id; qs["limit"] = "1"; var searchUrl = $"{AF_BASE}?{qs}"; var searchRes = await _http.GetAsync(searchUrl); var searchContent = await searchRes.Content.ReadAsStringAsync();
+                var qs = System.Web.HttpUtility.ParseQueryString(string.Empty); qs["q"] = id; qs["limit"] = "1"; var searchUrl = $"{AF_BASE}?{qs}"; using var searchRes = await _http.GetAsync(searchUrl, HttpContext.RequestAborted); searchRes.EnsureSuccessStatusCode(); var searchContent = await searchRes.Content.ReadAsStringAsync();
                 try { using var sdoc = JsonDocument.Parse(searchContent); if (sdoc.RootElement.TryGetProperty("hits", out var hits) && hits.GetArrayLength() > 0) return Content(searchContent, "application/json"); } catch (JsonException ex) { _logger.LogDebug(ex, "ExternalJobsController.GetById: could not parse fallback search response for {Id}", id); }
-                try { var publicUrl = $"https://arbetsformedlingen.se/platsbanken/annonser/{System.Web.HttpUtility.UrlEncode(id)}"; var req = new HttpRequestMessage(HttpMethod.Get, publicUrl); req.Headers.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"); req.Headers.Accept.ParseAdd("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"); var publicRes = await _http.SendAsync(req); var publicHtml = await publicRes.Content.ReadAsStringAsync(); var json = JsonSerializer.Serialize(new { html = publicHtml }); return Content(json, "application/json"); } catch (Exception exPublic) { _logger.LogWarning(exPublic, "ExternalJobsController.GetById: public fetch failed for {Id}", id); }
+                try { var publicUrl = $"https://arbetsformedlingen.se/platsbanken/annonser/{System.Web.HttpUtility.UrlEncode(id)}"; var req = new HttpRequestMessage(HttpMethod.Get, publicUrl); req.Headers.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"); req.Headers.Accept.ParseAdd("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"); using var publicRes = await _http.SendAsync(req, HttpContext.RequestAborted); publicRes.EnsureSuccessStatusCode(); var publicHtml = await publicRes.Content.ReadAsStringAsync(); var json = JsonSerializer.Serialize(new { html = publicHtml }); return Content(json, "application/json"); } catch (Exception exPublic) { _logger.LogWarning(exPublic, "ExternalJobsController.GetById: public fetch failed for {Id}", id); }
                 return Content(searchContent, "application/json");
             }
             try
@@ -443,16 +442,17 @@ public partial class ExternalJobsController : ControllerBase
                 using var doc = JsonDocument.Parse(content);
                 if (doc.RootElement.TryGetProperty("cause", out var cause) && cause.ValueKind == JsonValueKind.Object && cause.TryGetProperty("code", out var codeEl) && codeEl.GetString() == "404")
                 {
-                    var qs = System.Web.HttpUtility.ParseQueryString(string.Empty); qs["q"] = id; qs["limit"] = "1"; var searchUrl = $"{AF_BASE}/{AF_SEARCH_PATH}?{qs}"; var searchRes = await _http.GetAsync(searchUrl); var searchContent = await searchRes.Content.ReadAsStringAsync();
+                    var qs = System.Web.HttpUtility.ParseQueryString(string.Empty); qs["q"] = id; qs["limit"] = "1"; var searchUrl = $"{AF_BASE}/{AF_SEARCH_PATH}?{qs}"; using var searchRes = await _http.GetAsync(searchUrl, HttpContext.RequestAborted); searchRes.EnsureSuccessStatusCode(); var searchContent = await searchRes.Content.ReadAsStringAsync();
                     try { using var sdoc = JsonDocument.Parse(searchContent); if (sdoc.RootElement.TryGetProperty("hits", out var hits) && hits.GetArrayLength() > 0) return Content(searchContent, "application/json"); } catch (JsonException ex) { _logger.LogDebug(ex, "ExternalJobsController.GetById: could not parse search response for {Id}", id); }
-                    try { var publicUrl = $"https://arbetsformedlingen.se/platsbanken/annonser/{System.Web.HttpUtility.UrlEncode(id)}"; var req = new HttpRequestMessage(HttpMethod.Get, publicUrl); req.Headers.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"); req.Headers.Accept.ParseAdd("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"); var publicRes = await _http.SendAsync(req); var publicHtml = await publicRes.Content.ReadAsStringAsync(); var json = JsonSerializer.Serialize(new { html = publicHtml }); return Content(json, "application/json"); } catch (Exception exPublic) { _logger.LogWarning(exPublic, "ExternalJobsController.GetById: public fetch failed for {Id}", id); }
+                    try { var publicUrl = $"https://arbetsformedlingen.se/platsbanken/annonser/{System.Web.HttpUtility.UrlEncode(id)}"; var req = new HttpRequestMessage(HttpMethod.Get, publicUrl); req.Headers.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"); req.Headers.Accept.ParseAdd("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"); using var publicRes = await _http.SendAsync(req, HttpContext.RequestAborted); publicRes.EnsureSuccessStatusCode(); var publicHtml = await publicRes.Content.ReadAsStringAsync(); var json = JsonSerializer.Serialize(new { html = publicHtml }); return Content(json, "application/json"); } catch (Exception exPublic) { _logger.LogWarning(exPublic, "ExternalJobsController.GetById: public fetch failed for {Id}", id); }
                     return Content(searchContent, "application/json");
                 }
             }
             catch (JsonException ex) { _logger.LogDebug(ex, "ExternalJobsController.GetById: could not parse direct response for {Id}", id); }
+            response.EnsureSuccessStatusCode();
             return Content(content, "application/json");
         }
-        catch (Exception ex) { return StatusCode(502, new { error = "Could not reach Arbetsförmedlingen API", detail = ex.Message }); }
+        catch (Exception) { return StatusCode(502, new { error = "Could not reach Arbetsförmedlingen API" }); }
     }
 
 }

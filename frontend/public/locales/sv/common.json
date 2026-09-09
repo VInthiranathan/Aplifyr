@@ -1,4 +1,32 @@
 {
+  "consent": {
+    "poolLimit": "Sökningen har nått sin kapacitetsgräns. Resultaten är inte fullständiga. Precisera dina jobbpreferenser för en ny sökning.",
+    "title": "Valfri AI för personliga brev",
+    "explanation": "Välj separat vilka leverantörer som får behandla din profil och annons för att skapa brev. Jobbsökning och profil fungerar även om du säger nej. Du kan när som helst återkalla här eller på integritetssidan. Återkallelse stoppar nya anrop, men kan inte ta tillbaka redan skickade uppgifter. Kontakta oss för radering hos mottagaren.",
+    "allow": "Jag samtycker till den beskrivna behandlingen hos denna leverantör.",
+    "withdraw": "Återkalla samtycke",
+    "unavailable": "Leverantören är inte aktiverad med granskad information.",
+    "changed": "Informationen har ändrats eller leverantören är avstängd. Tidigare samtycke tillåter inte nya anrop.",
+    "error": "Uppgifterna kunde inte hämtas eller sparas. Kontrollera inloggningen och ladda om för att försöka igen. Inget nytt samtycke har bekräftats.",
+    "generateError": "Brevet kunde inte skapas. Kontrollera samtycket ovan och försök igen senare. Leverantören kan vara otillgänglig eller användningsgränsen nådd.",
+    "jobError": "Annonsen kunde inte hämtas. Försök igen senare.",
+    "careerScope": "Valfritt: välj högst tre karriärposter. Endast typ, titel, organisation, datum och färdigheter skickas tillsammans med din profil. Beskrivningar och övrig fritext från karriärposterna skickas inte.",
+    "chooseFacts": "Välj karriärfakta",
+    "email": "Öppna e-postprogrammet",
+    "emailNote": "Meddelandet skickas först när du själv skickar det i ditt e-postprogram. Undvik känsliga uppgifter."
+  },
+  "privacy": {
+    "title": "Integritet och personuppgifter",
+    "pending": "Fullständig integritetsinformation är ännu inte publicerad. Tjänsten är inte redo för publik lansering innan ansvarig verksamhet har kompletterat informationen.",
+    "exportScope": "Inloggade användare kan hämta kontoidentitet, profil och karriäruppgifter samt favoriter i denna webbläsare. Exporten omfattar inte leverantörsloggar, säkerhetskopior eller data i andra webbläsare. Kontakta oss för ett fullständigt tillgångsärende.",
+    "export": "Hämta mina uppgifter (JSON)",
+    "exportError": "Exporten kunde inte slutföras. Kontrollera att du är inloggad och försök igen, eller kontakta oss.",
+    "rights": "Dina rättigheter",
+    "rightsDetails": "Kontakta ansvarig verksamhet för frågor om tillgång, rättelse, radering, begränsning, invändning och dataportabilitet. Du kan också lämna klagomål till Integritetsskyddsmyndigheten. Vilka rättigheter som gäller beror på behandlingen.",
+    "contactPending": "Kontakt för integritetsärenden är ännu inte konfigurerad. Detta måste åtgärdas före publik lansering.",
+    "profileConflict": "Profilen har ändrats sedan du öppnade den. Kopiera dina ändringar och ladda om sidan innan du sparar igen.",
+    "close": "Stäng"
+  },
   "nav": {
     "userDetails": "Användarinfo",
     "home": "Hem",
@@ -139,7 +167,8 @@
     "contact": "Kontakt:",
     "externalInstructions": "Ansök via den externa webbplats som anges i annonsen (öppna annonsen på Arbetsförmedlingen nedan).",
     "genericInstructions": "Ansökningsinstruktioner finns i annonsen. Öppna annonsen nedan.",
-    "deadlineLabel": "Sista ansökningsdag: {{date}}"
+    "deadlineLabel": "Sista ansökningsdag: {{date}}",
+    "aiDisclosure": "Skapa ett utkast med extern AI? Din profil (namn, titel, ort, biografi, färdigheter och roller) och jobbannonsen skickas till en aktiverad leverantör: Gemini eller Groq. Om båda är aktiverade kan Groq användas när Gemini misslyckas. Ta inte med känsliga uppgifter. Granska resultatet innan du använder det."
   },
   "coverLetter": {
     "title": "Personligt brev",
@@ -213,7 +242,8 @@
     "formMessagePlaceholder": "Beskriv ditt ärende...",
     "formSubmit": "Skicka",
     "formSuccess": "Meddelandet skickat!",
-    "formSuccessDesc": "Vi återkommer inom 24 timmar."
+    "formSuccessDesc": "Vi återkommer inom 24 timmar.",
+    "unavailable": "Kontaktformuläret är inte anslutet ännu. Meddelanden kan inte skickas här."
   },
   "auth": {
     "welcomeBack": "Välkommen tillbaka",

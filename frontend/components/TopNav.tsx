@@ -1,9 +1,11 @@
 import Link from "next/link";
+import {useTranslation} from 'next-i18next';
 import { useState } from "react";
 import { Menu } from "lucide-react";
 import SettingsDrawer from "./SettingsDrawer";
 
 export default function TopNav() {
+  const {t}=useTranslation('common');
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
@@ -19,7 +21,7 @@ export default function TopNav() {
         <button
           onClick={() => setDrawerOpen(true)}
           className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 text-slate-600 dark:text-white/60 transition-colors"
-          aria-label="Open settings"
+          aria-label={t('nav.settings')}
         >
           <Menu size={20} />
         </button>

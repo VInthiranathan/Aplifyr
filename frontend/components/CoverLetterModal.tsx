@@ -1,3 +1,5 @@
+import { safeExternalUrl } from "../lib/safeHtml";
+import {useDialogFocus} from '../lib/useDialogFocus';
 import { X, Copy, RefreshCw, Edit2, Send, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTranslation } from "next-i18next";
@@ -25,6 +27,7 @@ export default function CoverLetterModal({
   isRegenerating = false,
 }: CoverLetterModalProps) {
   const { t } = useTranslation("common");
+  const dialog=useDialogFocus(isOpen,onClose);
   const [isEditing, setIsEditing] = useState(false);
   const [editedLetter, setEditedLetter] = useState(letter);
   const [copied, setCopied] = useState(false);
@@ -45,10 +48,11 @@ export default function CoverLetterModal({
   };
 
   const handleApply = () => {
-    if (applicationUrl) {
+    const url = safeExternalUrl(applicationUrl);
+    if (url) {
       handleCopy();
       setTimeout(() => {
-        window.open(applicationUrl, "_blank");
+        window.open(url, "_blank", "noopener,noreferrer");
       }, 500);
     }
   };
@@ -57,7 +61,7 @@ export default function CoverLetterModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4">
-      <div className="relative w-full sm:max-w-3xl bg-gray-50 dark:bg-[#0d0d0d] border border-gray-200 dark:border-white/10 rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[92dvh] flex flex-col">
+      <div ref={dialog} tabIndex={-1} role="dialog" aria-modal="true" aria-label={t('coverLetter.title')} className="relative w-full sm:max-w-3xl bg-gray-50 dark:bg-[#0d0d0d] border border-gray-200 dark:border-white/10 rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[92dvh] flex flex-col">
         {/* Header */}
         <div className="flex items-start justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-white/10">
           <div>
@@ -70,6 +74,7 @@ export default function CoverLetterModal({
           </div>
           <Button
             onClick={onClose}
+            aria-label={t('privacy.close')}
             variant="ghost"
             size="icon"
             className="text-gray-500 dark:text-white/60"

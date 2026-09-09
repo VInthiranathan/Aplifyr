@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import type { GetStaticProps } from "next";
+import type { GetServerSideProps } from "next";
 import type { ExternalJob, AFSearchResult } from "../../types/api";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
@@ -22,7 +22,7 @@ import JobListCard from "../../components/JobListCard";
 import { Button } from "../../components/ui/button";
 import { useFavorites } from "../../lib/useFavorites";
 
-export const getStaticProps: GetStaticProps = async ({ locale }) => ({
+export const getServerSideProps: GetServerSideProps = async ({ locale }) => ({
   props: { ...(await serverSideTranslations(locale ?? "en", ["common"])) },
 });
 
@@ -581,12 +581,7 @@ export default function AllJobsPage() {
               }
               leading={
                 <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-300 dark:text-white/20 overflow-hidden">
-                  {job.logo_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={job.logo_url} alt="" className="w-full h-full object-contain p-1.5" />
-                  ) : (
-                    <Briefcase size={20} />
-                  )}
+                  <Briefcase size={20} />
                 </div>
               }
               subtitle={job.employer?.name}

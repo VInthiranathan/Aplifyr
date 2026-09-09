@@ -1,4 +1,5 @@
 import type { GetServerSideProps } from "next";
+import {useDialogFocus} from '../../lib/useDialogFocus';
 import type { User } from "../../types/api";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
@@ -35,6 +36,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
   req,
   res,
 }) => {
+  res.setHeader("Cache-Control", "private, no-store");
   try {
     if (isSupabaseConfigured) {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
@@ -52,7 +54,8 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
             const setCookie = cookies.map(({ name, value, options }) =>
               serializeCookieHeader(name, value, options),
             );
-            setCookie.forEach((c) => res.setHeader("Set-Cookie", c));
+            const existing = res.getHeader("Set-Cookie");
+            res.setHeader("Set-Cookie", [...(typeof existing === "string" ? [existing] : Array.isArray(existing) ? existing : []), ...setCookie]);
           },
         },
       });
@@ -176,13 +179,13 @@ const saveProfile = async (nextUser: User, section: "profile" | "bio" | "skills"
     method: "PUT",
     credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(fields),
+    body: JSON.stringify({ ...fields, updatedAt: nextUser.updatedAt ?? null }),
   });
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     console.error("save profile failed", err);
-    throw new Error("save profile failed");
+    throw new Error(res.status === 409 ? "profileConflict" : "save profile failed");
   }
 
   const data = await res.json();
@@ -199,6 +202,7 @@ export default function UserPage({ user }: Props) {
     setVisitedTabs(previous => previous.includes(tab) ? previous : [...previous, tab]);
   };
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const editDialog=useDialogFocus(isEditModalOpen,()=>setIsEditModalOpen(false));
   const [editedUser, setEditedUser] = useState<User | null>(user);
   const [editSection, setEditSection] = useState<
     "profile" | "bio" | "skills" | null
@@ -249,7 +253,7 @@ export default function UserPage({ user }: Props) {
       setIsEditModalOpen(false);
     } catch (error) {
       console.error(error);
-      alert(t("user.saveProfileError"));
+      alert(t(error instanceof Error && error.message === "profileConflict" ? "privacy.profileConflict" : "user.saveProfileError"));
     }
   };
 
@@ -436,7 +440,7 @@ export default function UserPage({ user }: Props) {
       {/* Edit Profile Modal */}
       {isEditModalOpen && editedUser && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-white/5 shadow-2xl">
+          <div ref={editDialog} tabIndex={-1} role="dialog" aria-modal="true" aria-label={t('user.editModalTitle')} className="bg-white dark:bg-[#1a1a1a] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-white/5 shadow-2xl">
             {/* Modal Header */}
             <div className="sticky top-0 bg-white dark:bg-[#1a1a1a] border-b border-gray-200 dark:border-white/5 p-6 flex items-center justify-between">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -444,6 +448,7 @@ export default function UserPage({ user }: Props) {
               </h2>
               <Button
                 onClick={() => setIsEditModalOpen(false)}
+                aria-label={t('privacy.close')}
                 variant="ghost"
                 size="icon"
                 className="text-gray-500 dark:text-white/50"

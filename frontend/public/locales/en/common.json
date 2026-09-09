@@ -1,4 +1,32 @@
 {
+  "consent": {
+    "poolLimit": "The search reached its capacity limit. Results are incomplete. Narrow your job preferences to start a new search.",
+    "title": "Optional AI for cover letters",
+    "explanation": "Choose separately which providers may process your profile and the job ad to create letters. Job search and your profile work if you decline. Withdraw here or on the privacy page at any time. Withdrawal stops new calls but cannot recall data already sent. Contact us for erasure at the recipient.",
+    "allow": "I consent to the described processing by this provider.",
+    "withdraw": "Withdraw consent",
+    "unavailable": "This provider has not been enabled with reviewed information.",
+    "changed": "The notice has changed or the provider is disabled. Previous consent does not allow new calls.",
+    "error": "Could not load or save your choices. Check your sign-in and reload to retry. No new consent has been confirmed.",
+    "generateError": "The letter could not be created. Check your consent above and try again later. The provider may be unavailable or the usage limit reached.",
+    "jobError": "Could not load the job ad. Please try again later.",
+    "careerScope": "Optional: select up to three career entries. Only type, title, organization, dates and skills are sent with your profile. Descriptions and other narrative career fields are not sent.",
+    "chooseFacts": "Choose career facts",
+    "email": "Open email application",
+    "emailNote": "The message is sent only when you send it in your email application. Avoid sensitive information."
+  },
+  "privacy": {
+    "title": "Privacy and personal data",
+    "pending": "The complete privacy notice has not been published yet. The service is not ready for public launch until the responsible organization completes this information.",
+    "exportScope": "Signed-in users can download account identity, profile and career facts, plus favorites in this browser. The export excludes provider logs, backups and data in other browsers. Contact us for a complete access request.",
+    "export": "Download my data (JSON)",
+    "exportError": "The export could not be completed. Check that you are signed in and try again, or contact us.",
+    "rights": "Your rights",
+    "rightsDetails": "Contact the responsible organization about access, correction, erasure, restriction, objection and data portability. You may also complain to the Swedish Authority for Privacy Protection. Applicable rights depend on the processing.",
+    "contactPending": "The privacy contact has not been configured yet. This must be resolved before public launch.",
+    "profileConflict": "The profile changed after you opened it. Copy your changes and reload the page before saving again.",
+    "close": "Close"
+  },
   "nav": {
     "userDetails": "User Details",
     "home": "Home",
@@ -139,7 +167,8 @@
     "contact": "Contact:",
     "externalInstructions": "Apply via the external website described in the ad (open the ad on Arbetsformedlingen below).",
     "genericInstructions": "Application instructions are available in the ad. Open the ad below.",
-    "deadlineLabel": "Application deadline: {{date}}"
+    "deadlineLabel": "Application deadline: {{date}}",
+    "aiDisclosure": "Create a draft with external AI? Your profile (name, title, location, biography, skills and roles) and the job ad are sent to an enabled provider: Gemini or Groq. If both are enabled, Groq can be used when Gemini fails. Do not include sensitive information. Review the result before use."
   },
   "coverLetter": {
     "title": "Cover Letter",
@@ -213,7 +242,8 @@
     "formMessagePlaceholder": "Describe your issue...",
     "formSubmit": "Send",
     "formSuccess": "Message sent!",
-    "formSuccessDesc": "We'll get back to you within 24 hours."
+    "formSuccessDesc": "We'll get back to you within 24 hours.",
+    "unavailable": "The contact form is not connected yet. Messages cannot be sent here."
   },
   "auth": {
     "welcomeBack": "Welcome back",
