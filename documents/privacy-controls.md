@@ -57,3 +57,11 @@ In staging test signup/tokenrefresh, anonymous access, two-user direct Data API 
 The owner explicitly elected to proceed without a backup. Live inspection confirmed the expected 001–005 schema, owner policies and cascade constraints; the hosted migrations ledger was empty. A rollback-only test with two synthetic Auth identities verified the signup profile trigger, own-profile updates, career CRUD and cross-owner denial under the authenticated database role. This is a database-role test, not a browser login or direct HTTP API test. No test fixtures were retained.
 
 CI run 34310446353 passed frontend tests/build, backend Release build, security/matching tests and Docker build. Migration 008 now also revokes direct client execution of the existing optional rls_auto_enable event-trigger function and the immutable-notice trigger, and uses a 5-second lock timeout and 60-second statement timeout. Its PostgreSQL consent/quota regression passed after these changes. Production migration and post-migration verification are tracked in PR #13. Hosted environment variables, browser login/consent flows and processor/notice decisions still require operational verification; optional AI remains disabled until configured and approved.
+
+## CV generation extension (migration 009)
+
+See [CV generation](cv-generation.md). CV shares selected career statements with Gemini for job-specific rewriting and a separate source-only factual review, then
+stores validated content plus job context. Both calls reserve independently through the existing privacy gate. This broader disclosure requires a reviewed notice
+version configured in `GEMINI_CV_NOTICE_VERSION`; the existing reservation and withdrawal rules
+remain mandatory. Export now includes `generatedCvs`. New records cascade on Auth account deletion;
+provider/backups and retention remain operational responsibilities. No new legal basis is asserted.

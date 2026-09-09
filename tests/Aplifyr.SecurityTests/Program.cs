@@ -6,8 +6,10 @@ using Microsoft.Extensions.Configuration;
 var passed = 0;
 async Task Check(string name, string? token, string? url, HttpStatusCode remoteStatus, string body, int expected, bool proceeds = false)
 {
+    foreach (var protectedPath in new[] { "/api/coverletters/generate-all", "/api/cvs/123/generate" })
+    {
     var context = new DefaultHttpContext();
-    context.Request.Path = "/api/coverletters/generate-all";
+    context.Request.Path = protectedPath;
     if (token != null) context.Request.Headers.Authorization = token;
     var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> {
         ["SUPABASE_URL"] = url, ["SUPABASE_ANON_KEY"] = "public-test-key"
@@ -21,6 +23,7 @@ async Task Check(string name, string? token, string? url, HttpStatusCode remoteS
     if (context.Response.Headers.CacheControl != "private, no-store") throw new Exception("Missing cache guard");
     if (factory.Handler.Request != null && factory.Handler.Request != "https://example.supabase.co/auth/v1/user") throw new Exception("Unexpected auth destination");
     passed++;
+    }
 }
 await Check("missing configuration", "Bearer x", null, HttpStatusCode.OK, "{}", 503);
 await Check("insecure auth origin", "Bearer x", "http://example.supabase.co", HttpStatusCode.OK, "{}", 503);

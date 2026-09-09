@@ -150,3 +150,11 @@ npm run build
 - the profile page depends on Supabase auth and the `profiles` table
 - career entries persist through `/api/career` and require migration 004
 - migration 006 represents the repository's profile RLS baseline; reconcile with existing live policies before deployment
+
+## Job-specific CV configuration
+
+Apply migration `009_generated_cvs.sql` after 008 and before deploying the new account export.
+Set backend-only `GEMINI_CV_API_KEY` and `GEMINI_CV_NOTICE_VERSION` (the reviewed active Gemini
+notice covering CV/career processing). `GEMINI_API_KEY` remains for letters; CV has no key fallback.
+Existing `GEMINI_MODEL`, `AI_ALLOWED_PROVIDERS=gemini` and backend Supabase credentials are required.
+See [CV generation](cv-generation.md) for consent renewal, limits and staging checks.

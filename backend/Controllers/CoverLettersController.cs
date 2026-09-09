@@ -347,54 +347,8 @@ public class CoverLettersController : ControllerBase
                 : "You are an expert at writing professional and personal cover letters in English. You tailor each letter to the job's specific requirements and the user's background.";
 
             systemPrompt += "\n" + SafeInstructions(language);
-            var payload = new
-            {
-                systemInstruction = new { parts = new[] { new { text = systemPrompt } } },
-                contents = new[] {
-                    new {
-                        parts = new[] {
-                            new { text = prompt }
-                        }
-                    }
-                },
-                generationConfig = new {
-                    temperature = 0.7,
-                    maxOutputTokens = 1000
-                }
-            };
-
-            var model = Environment.GetEnvironmentVariable("GEMINI_MODEL");
-            if (string.IsNullOrWhiteSpace(model)) return "";
-            using var req = new HttpRequestMessage(HttpMethod.Post, $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(model)}:generateContent");
-            req.Headers.Add("x-goog-api-key", apiKey);
-            req.Content = new StringContent(JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
-
-            using var res = await _http.SendAsync(req, HttpContext.RequestAborted);
-            if (!res.IsSuccessStatusCode)
-            {
-                _logger.LogWarning("Gemini API error: Status {StatusCode}", res.StatusCode);
-                return "";
-            }
-
-            var content = await res.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(content);
-
-            if (doc.RootElement.TryGetProperty("candidates", out var candidates) && candidates.GetArrayLength() > 0)
-            {
-                var firstCandidate = candidates[0];
-                if (firstCandidate.TryGetProperty("content", out var contentObj) &&
-                    contentObj.TryGetProperty("parts", out var parts) && parts.GetArrayLength() > 0)
-                {
-                    var firstPart = parts[0];
-                    if (firstPart.TryGetProperty("text", out var textProp))
-                    {
-                        return textProp.GetString() ?? "";
-                    }
-                }
-            }
-
-            _logger.LogWarning("Gemini response missing expected structure");
-            return "";
+            return await new Aplifyr.Api.Cv.GeminiProvider().Generate(
+                Aplifyr.Api.Cv.AiFeature.CoverLetter, systemPrompt, prompt, null, HttpContext.RequestAborted);
         }
         catch (Exception ex)
         {

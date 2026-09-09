@@ -62,4 +62,4 @@ entries intact and retires legacy document storage; see `retire-file-storage.md`
 
 Migration 007 limits profile name/title/location to 200 characters, bio to 5,000, and profile lists to 50 non-null items of at most 100 characters. Career skill items receive the same per-item constraint. Older invalid rows are preserved until reviewed; new writes are checked. Total career count is not limited by this migration. See [the runbook](gdpr-supabase-runbook.md) before applying or validating constraints. Existing production RLS must be inspected, not assumed missing or replaced blindly.
 
-If the project later needs application history, generated document archives, or structured job tracking, those tables still need real migrations before they can be treated as part of the live system.
+Migration 009 adds `generated_cvs`, keyed by `(user_id, job_id)`, with owner-only SELECT/DELETE, backend-only validated writes, bounded JSON and account-deletion cascade. See [CV generation](cv-generation.md). It stores the latest result, not version history. Application history and structured user-owned job tracking remain future work.

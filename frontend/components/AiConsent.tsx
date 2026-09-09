@@ -4,7 +4,7 @@ import {useTranslation} from 'next-i18next';
 import Link from 'next/link';
 type Notice={provider:string;version:string;notice_sv:string;notice_en:string;enabled:boolean};
 type Consent={provider:string;notice_version:string;granted:boolean};
-export default function AiConsent() {
+export default function AiConsent({providers=['gemini','groq']}: {providers?: string[]}) {
  const {t}=useTranslation('common');const {locale}=useRouter();
  const [data,setData]=useState<{notices:Notice[];consents:Consent[]}|null>(null);
  const [busy,setBusy]=useState(true);const [error,setError]=useState('');
@@ -21,7 +21,7 @@ export default function AiConsent() {
   <h2 className="text-lg font-semibold">{t('consent.title')}</h2>
   <p>{t('consent.explanation')}</p><Link href="/privacy" className="underline">{t('privacy.title')}</Link>
   {error && <p role="alert">{error}</p>}
-  {data && ['gemini','groq'].map(provider=>{
+  {data && providers.map(provider=>{
    const saved=data.consents.find(c=>c.provider===provider);
    const notice=data.notices.find(n=>n.provider===provider&&n.enabled);
    const current=!!saved?.granted;

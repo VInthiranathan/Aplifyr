@@ -254,6 +254,13 @@ public partial class ExternalJobsController
             return nearby ? (LOCATION_SCORE_NO_PREFERENCE, "same_region_nearby") : (0, "same_region_strict");
         return (0, "out_of_region");
     }
+    // Shared explicit-skill matching for CV relevance; retains original profile labels.
+    public static string[] CvMatchedSkills(JsonElement job, IReadOnlyList<string> skills)
+    {
+        var matched = ScoreTechBoost(job, skills.Select(NormalizeTech).ToArray()).matchedTerms;
+        return skills.Where(skill => matched.Contains(NormalizeTech(skill))).ToArray();
+    }
+
     private static (int boost, string[] matchedTerms) ScoreTechBoost(JsonElement job, IReadOnlyList<string> normalizedUserTags)
     {
         var headline = job.TryGetProperty("headline", out var hl) && hl.ValueKind == JsonValueKind.String ? hl.GetString() : "";

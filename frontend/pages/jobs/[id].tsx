@@ -341,6 +341,7 @@ export default function JobDetailPage() {
               </div>
             </div>
 
+            {typeof id === 'string' && <Button asChild className="mt-6"><Link href={`/jobs/${encodeURIComponent(id)}/cv`}>{t('cv.generate')}</Link></Button>}
             <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="col-span-2 space-y-6">
                 <section className="bg-white dark:bg-[#111] p-6 rounded-lg">
