@@ -99,3 +99,22 @@ Paid API access means using a Cloud project with active billing. See
 notice activation, user consent grant or live provider call was performed here.
 New CV output is temporary and downloaded locally; the old database notice draft
 about storing new CVs must be replaced with reviewed text before activation.
+
+### Subsequent development activation — 2026-09-13
+
+After the status above, the operator explicitly authorized activation for development
+and testing despite continuing to use unpaid Gemini projects, with contact email
+left empty. This is not a public-launch or compliance approval. The unused disabled
+`2026-09-cv-v1` draft had no consent receipts; its Swedish/English text was replaced
+and enabled transactionally in Supabase. Verification returned Gemini as the only
+enabled provider. No user consent was granted by the operator action. The text
+explains both generation flows, temporary new CV output, historical records, Google
+processing, withdrawal and the missing contact email. Existing consent/version/quota
+checks remain mandatory. Activation is provider-wide, not an account allowlist.
+
+CI run 34752948672 passed frontend tests/build, backend Release build, security,
+matching and CV tests, and Docker build. Backend settings still need verification:
+`AI_ALLOWED_PROVIDERS=gemini`, `GEMINI_CV_NOTICE_VERSION=2026-09-cv-v1`, a working
+`GEMINI_MODEL`, both feature keys and Supabase server credentials. The Render tool
+requires explicit workspace selection before service inspection or changes. No
+real Gemini generation has been verified in this session.

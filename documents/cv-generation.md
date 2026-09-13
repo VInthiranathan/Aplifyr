@@ -220,3 +220,11 @@ four-page synthetic export was rendered and its text extracted through the final
 bullet. Production dependency audit reported zero vulnerabilities. The .NET SDK
 is unavailable in this environment, so the changed backend requires CI Release
 build/tests before deployment. No live AI requests or database mutations were made.
+
+### Development activation update
+
+The owner subsequently authorized development/test activation with unpaid Gemini
+projects and empty contact email. `2026-09-cv-v1` is now enabled with updated
+Swedish/English disclosures for transient output. No user consent was pre-granted.
+See [privacy controls](privacy-controls.md) for activation scope and outstanding
+backend environment/live-generation checks. CI run 34752948672 passed all jobs.
