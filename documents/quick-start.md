@@ -178,3 +178,23 @@ Validation on Node 24: run `npm ci`, `node --test tests/security.test.cjs`, and
 logs, then open a job while signed in, both by direct URL and through the job
 list. Verify that the page and its `/_next/data/.../jobs/<id>.json` request no
 longer return 500. A successful build alone does not verify the live runtime.
+
+### Job page serverless module compatibility
+
+Node 24 alone is not sufficient if the host disables `require(ESM)`.
+`next.config.js` now bundles `sanitize-html` and `htmlparser2` using
+`transpilePackages`, preserving sanitization while removing their native CommonJS
+to ESM loading boundary from the job route. The former build reproduces the
+reported `ERR_REQUIRE_ESM` under `--no-experimental-require-module`; the bundled
+build loads both job and CV route modules successfully under the same flag.
+
+After `npm run build`, run:
+
+```sh
+node --no-experimental-require-module scripts/check-job-runtime.cjs
+```
+
+CI runs this regression after building. The script turns asynchronous module
+rejections into a nonzero exit status; a successful `require()` return alone is
+not sufficient. This verifies route module initialization, not authenticated live
+job data fetching. Production logs still require authorized Vercel team access.

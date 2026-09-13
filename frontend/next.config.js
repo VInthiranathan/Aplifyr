@@ -16,6 +16,8 @@ const backendBaseUrl = ensureProtocol(
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Bundle the sanitizer so serverless runtime require(ESM) flags cannot break job pages.
+  transpilePackages: ['sanitize-html', 'htmlparser2'],
   poweredByHeader: false,
   async headers() {
     return [{ source: '/:path*', headers: [
