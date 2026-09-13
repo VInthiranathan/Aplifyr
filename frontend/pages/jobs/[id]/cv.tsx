@@ -6,7 +6,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
-import AiConsent from '../../../components/AiConsent';
+import AiGenerationConsent from '../../../components/AiGenerationConsent';
 import CvPreview from '../../../components/CvPreview';
 import { getPublicBackendUrl } from '../../../lib/backendUrl';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
@@ -19,6 +19,10 @@ export default function CvPage() {
   const [job, setJob] = useState<CvJobContext | null>(null);
   const [cv, setCv] = useState<GeneratedCv | null>(null);
   const [loading, setLoading] = useState(true); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
+  const [downloading, setDownloading] = useState(false);
+  const downloads = useRef(0);
+  const downloadingRef = useRef(false);
+  const [consentOpen, setConsentOpen] = useState(false);
   const request = useRef<AbortController | null>(null);
   const generating = useRef(false);
   const owner = useRef<string | null>(null);
@@ -44,11 +48,12 @@ export default function CvPage() {
   useEffect(() => {
     if (!router.isReady) return;
     const controller = new AbortController(); request.current = controller;
-    setJob(null); setCv(null); setError(''); setLoading(true); setBusy(false); generating.current = false;
+    downloads.current = 0;
+    setConsentOpen(false); setJob(null); setCv(null); setError(''); setLoading(true); setBusy(false); generating.current = false;
     if (!/^[A-Za-z0-9_-]{1,100}$/.test(id)) { setError(t('cv.errors.invalidJob')); setLoading(false); return; }
     call(false, controller).catch(e => { if (!controller.signal.aborted) displayError(e); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
     const { data: { subscription } } = getSupabaseBrowserClient().auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT' || (owner.current !== null && session?.user.id !== owner.current)) { request.current?.abort(); setCv(null); setJob(null); setError(t('cv.errors.authentication')); }
+      if (event === 'SIGNED_OUT' || (owner.current !== null && session?.user.id !== owner.current)) { request.current?.abort(); setConsentOpen(false); setCv(null); setJob(null); setError(t('cv.errors.authentication')); }
     });
     return () => { controller.abort(); request.current?.abort(); subscription.unsubscribe(); };
   }, [id, router.isReady]);
@@ -58,6 +63,16 @@ export default function CvPage() {
     const controller = new AbortController(); request.current = controller;
     try { await call(true, controller); } catch (e) { if (!controller.signal.aborted) displayError(e); }
     finally { if (!controller.signal.aborted) { setBusy(false); generating.current = false; } }
+  }
+  async function download() {
+    if (!cv || !job || downloadingRef.current) return;
+    downloadingRef.current = true; setDownloading(true); setError('');
+    try {
+      const { downloadCv } = await import('../../../lib/downloadCv.js');
+      await downloadCv(cv.content, job.company, downloads.current + 1, t, request.current?.signal);
+      downloads.current += 1;
+    } catch { setError(t('cv.downloadError')); }
+    finally { downloadingRef.current = false; setDownloading(false); }
   }
   const grade = getSession().matched.find(j => j.id === id)?.matchGrade;
   return <div className="app-page-shell space-y-6">
@@ -72,13 +87,14 @@ export default function CvPage() {
     {loading && <p role="status">{t('cv.loading')}</p>}
     {error && <p role="alert" className="app-card-base p-4">{error}</p>}
     {job && <>
-      <p>{t('cv.disclosure')}</p><AiConsent providers={['gemini']} />
+      <p>{t('cv.disclosure')}</p>
+      {consentOpen && <AiGenerationConsent key={id} onClose={()=>setConsentOpen(false)} onConfirm={()=>{setConsentOpen(false);void generate();}} />}
       <div className="flex flex-wrap gap-3 items-center">
-        <Button disabled={busy} onClick={generate}>{busy && <Loader2 className="animate-spin mr-2" size={16} />}{t(busy ? 'cv.generating' : cv ? 'cv.regenerate' : 'cv.generate')}</Button>
+        <Button disabled={busy || downloading} onClick={()=>setConsentOpen(true)}>{busy && <Loader2 className="animate-spin mr-2" size={16} />}{t(busy ? 'cv.generating' : cv ? 'cv.regenerate' : 'cv.generate')}</Button>
         <Link className="underline" href="/user">{t('cv.profile')}</Link>
       </div>
       <p role="status" aria-live="polite">{busy ? t('cv.progress') : cv ? t('cv.saved') : t('cv.ready')}</p>
-      {cv && <><p>{t('cv.review')}</p>{cv.metadata.sourceLimited && <p>{t('cv.limited')}</p>}<CvPreview content={cv.content} /></>}
+      {cv && <><Button disabled={downloading || busy} onClick={download}>{t(downloading ? 'cv.downloading' : 'cv.download')}</Button><p>{t('cv.review')}</p>{cv.metadata.sourceLimited && <p>{t('cv.limited')}</p>}<CvPreview content={cv.content} /></>}
     </>}
   </div>;
 }

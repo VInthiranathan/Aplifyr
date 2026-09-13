@@ -12,13 +12,13 @@ Gemini **rewrites** the professional summary, work-experience bullets and educat
 bullets to emphasize the facts relevant to the job. It can summarize, combine evidence
 and improve wording without changing meaning. Employer names, titles, qualifications,
 dates and the skills list remain deterministically sourced. Generated prose must cite
-supporting profile facts and pass a separate source-only factual review before saving.
+supporting profile facts and pass a separate source-only factual review before returning the result.
 
 Generation uses the shared consent UI (Gemini only), preserves the old preview while
-regenerating and after failure, and saves one latest CV per user/job. The progress
+regenerating and after failure, and returns the validated CV only to the requesting browser. The progress
 message describes the combined operation; it does not pretend to stream individual
-backend stages. Refresh retrieves the saved result. A canceled request is not a durable
-background task: after refreshing, inspect the saved result before retrying.
+backend stages. The preview exists only in React memory. Refresh or navigation removes it; download it first.
+A canceled request is not a durable background task.
 
 ## Pipeline and source boundaries
 
@@ -30,8 +30,7 @@ including under a hosted row limit below 100; oversized legacy profiles fail exp
 
 Jobs are public JobTech resources, not user-owned database jobs. Generation fetches
 `/ad/{id}` from the fixed JobTech host and verifies the exact response ID. It never
-falls back to fuzzy search hits or arbitrary URLs. Deleted/unavailable jobs cannot be
-regenerated; saved CVs retain their original job context and remain readable.
+falls back to fuzzy search hits or arbitrary URLs. Deleted/unavailable jobs cannot be generated. The page fetches live job context, never a stored CV.
 
 No persisted AI job analysis existed before this feature. Existing deterministic
 `ScoreTechBoost` logic is reused via `ExternalJobsController.CvMatchedSkills`. It ranks
@@ -68,7 +67,7 @@ evidence only, without the ad or generation conversation. The separate Gemini re
 must explicitly approve every claim. It checks changed meaning, negation, responsibility,
 seniority, technologies, qualifications, achievements and academic/professional context.
 Missing/duplicate decisions, rejection, quota, malformed JSON or provider failures prevent
-saving; the old CV remains. Each call independently reserves through `AiPrivacyGate`
+returning a result; the current in-memory preview remains. Each call independently reserves through `AiPrivacyGate`
 and uses `GEMINI_CV_API_KEY`. Reviews are bounded to 90,000 input characters. Normally
 two paid attempts are used; if there is no generated prose, the review is skipped.
 No automatic correction loop or retry is added.
@@ -80,16 +79,16 @@ application's rejection paths with synthetic reviewer decisions, not real-model 
 
 The JSON job analysis contains keywords, responsibilities, mandatory/desirable
 requirements and domain; these describe the job only. It is not rendered as applicant
-qualifications. Matching job hashes reuse the previously saved analysis in the prompt.
-A full-source hash is checked again before saving to reject profile edits during
+qualifications. No saved analysis is read or reused.
+A full-source hash is checked again before returning to reject profile edits during
 most of the generation window. This is an optimistic check, not a cross-table SQL
 snapshot: a concurrent edit after the final check is still possible.
 
 ## API contracts and failures
 
 - `GET /api/cvs/{jobId}` -> `{ job: { id, title, company, location }, cv: GeneratedCv | null }`.
-  Saved job context is authoritative for an existing preview; otherwise fetch live job.
-- `POST /api/cvs/{jobId}/generate` -> the same shape after validation and saving.
+  `cv` is always null; the endpoint fetches live job context.
+- `POST /api/cvs/{jobId}/generate` -> the same shape after validation, without a database write.
   No JSON payload or `user_id` is accepted/needed.
 - Response headers are `private, no-store`.
 - 400 invalid ID; 401 missing/invalid authentication; 403 CV notice consent missing;
@@ -103,27 +102,35 @@ snapshot: a concurrent edit after the final check is still possible.
   share per-user/global reservations and budgets with letters. Distinct API keys
   do not guarantee distinct Google project quotas; configure Google usage budgets.
 
-## Persistence and RLS
+## No new CV persistence
 
-Migration `009_generated_cvs.sql` creates `public.generated_cvs`:
+Generation never reads or writes `generated_cvs` or calls `save_generated_cv`.
+The response retains `job_id`, `content`, `job_context`, `metadata`, `created_at` and
+`updated_at` for renderer compatibility; timestamps describe generation, not storage.
+Responses remain private/no-store. The preview is not written to browser storage.
+Profile reads, consent receipts and privacy quota reservations still use Supabase.
+Google's processing/retention is separate from Aplifyr's no-CV-storage behavior.
 
-- composite primary key `(user_id, job_id)`; `user_id` cascades from `auth.users`
-- bounded `content`, `job_context`, `metadata` JSONB; schema version 1
-- created/updated timestamps; regeneration retains created_at
-- authenticated owner-only SELECT/DELETE policies; no client INSERT/UPDATE grants
-- anon/PUBLIC have no table access
-- backend-only `save_generated_cv` RPC uses SECURITY INVOKER with a fixed search path;
-  EXECUTE is granted only to service_role, never public/anon/authenticated
-- the verified backend supplies the owner. A per-owner transaction advisory lock serializes the
-  100-CV capacity check. Existing user/job is updated atomically; failures preserve it.
+Historical migration 009 and existing records are retained; no destructive cleanup
+is applied as part of this change. Account export still includes any historical CV
+records, and existing owner RLS and account-deletion cascade remain intact.
+A separate, explicitly authorized cleanup would be required to remove historical data.
 
-The migration is additive, transactional, uses bounded lock/statement timeouts and
-changes no existing policies. Apply 008 first. It has not been applied in production.
-The existing account export now includes paginated `generatedCvs`; migration 009 must
-therefore be installed before deploying this frontend. No new retention policy is
-invented. Account deletion cascades database records, but provider copies/backups
-remain subject to the existing operational rights process. Individual owners may
-DELETE their records through the Data API; no CV management/delete UI is added yet.
+## PDF download
+
+The download button creates a text-based A4 PDF in the browser using jsPDF and a
+same-origin, embedded DejaVu Sans font (license in `public/fonts`). No CV content is
+sent to a PDF service. Long text wraps and paginates in a single column. Users review
+the preview and explicitly download; no automatic download or paid regeneration.
+
+Filename: full profile name, company, and download sequence, for example
+`Jonas_Axelsson_sigma_1.pdf`. Unicode letters/numbers and hyphens are preserved;
+other runs become underscores, empty parts have fallbacks and lengths are bounded.
+The sequence increases after download initiation within the current page; refreshing
+resets it. The browser controls disk conflict handling and may modify the filename.
+The app cannot inspect existing files or confirm that a user finished saving.
+A failed PDF export preserves the preview for retry. Download assets use request
+cancellation, so navigation/sign-out prevents a pending download from starting.
 
 ## Configuration and consent
 
@@ -134,7 +141,7 @@ Backend only:
 - **`GEMINI_MODEL`**: configured shared model supporting structured JSON responses.
 - **`AI_ALLOWED_PROVIDERS`** must include `gemini`.
 - **`GEMINI_CV_NOTICE_VERSION`**: exact active reviewed notice version covering CV
-  generation and factual review, selected career descriptions/achievements/learning and CV storage.
+  generation and factual review, selected career descriptions/achievements/learning and temporary browser preview/download.
 - existing `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
 
 Do not reuse a letter-only notice as consent for broader CV disclosure. Configure a
@@ -147,19 +154,11 @@ automatically enabled and no legal/processor terms are invented by this migratio
 are resolved only server-side and sent in `x-goog-api-key`; never persisted or returned.
 Provider response bodies and personal source text are not logged by this code.
 
-## Renderer and future work
+## Renderer
 
-`CvContent` in shared frontend API types is versioned. `CvPreview` consumes deterministic
-plain content using semantic headings/lists and a single-column paper preview. It is
-responsive and lives in the existing light/dark application shell; the CV paper stays
-white. No external image/font assets or multi-column ATS layout are added.
-
-Future PDF exporters/templates should consume this validated content, not the model
-response. A future editing API must retain source provenance and define what counts
-as user-added facts. History requires extending persistence rather than treating the
-current upsert as history. Section regeneration/language selection/export are not
-implemented. Original profile language is retained. ATS parsing results vary by ATS;
-there is no external ATS score or certification.
+`CvContent` is versioned structured plain text shared by preview and PDF export.
+The preview uses semantic headings/lists in a single column. No external images or
+fonts are fetched. ATS parsing varies; no external score or certification is claimed.
 
 ## Verification
 
@@ -169,7 +168,7 @@ there is no external ATS score or certification.
 - existing backend security/matching tests and Release build; CI includes CV tests
 
 Local tests use synthetic fixtures and PGlite for grants, ownership, constraints,
-regeneration and deletion cascade. Provider tests inject a fake HTTP transport and
+historical regeneration and deletion cascade. Provider tests inject a fake HTTP transport and
 verify credentials/errors without real secrets or paid requests. UI tests remount
 the page to verify URL recovery and preserve previews after failed regeneration.
 
@@ -193,3 +192,39 @@ browser visual checks were performed. Live read-only inspection confirmed existi
 profile/career owner policies, absence of generated_cvs and absence of service_role
 SELECT/UPDATE privileges on auth.users; the migration therefore uses an advisory
 lock rather than requiring new Auth privileges. No live migration was applied.
+
+## Generation consent dialog
+
+Clicking generate or regenerate opens `AiGenerationConsent` before making an AI
+request. It reloads the Gemini notice and saved consent on each opening. The user
+can cancel; continuing is disabled while loading, after a failed consent write,
+when Gemini has no enabled notice, or when the saved consent is revoked/stale.
+A successful explicit checkbox update enables a separate continue button. Existing
+current consent is shown as saved; it is never fabricated or granted automatically.
+The shared dialog uses the existing focus trap, Escape dismissal and focus restoration.
+The backend still verifies consent/version and reserves every provider call, including
+CV factual review, so client UI is not an authorization boundary. Withdrawal remains
+available on `/privacy`. No Groq fallback is enabled by this UI.
+
+Live inspection on 2026-09-13 confirmed that `generated_cvs` exists, but all Gemini
+notices are disabled. `2026-09-cv-v1` contains an explicitly incomplete draft.
+Activation requires completing and reviewing the operator/contact/retention/provider
+processing facts and matching backend `GEMINI_CV_NOTICE_VERSION`; this UI change
+does not enable those incomplete notices or grant consent for any user.
+
+### Local download verification — 2026-09-13
+
+57 frontend/database tests and the frontend production build passed. PDF tests cover
+full-name filenames, unsafe characters, Swedish glyphs and multi-page output. A
+four-page synthetic export was rendered and its text extracted through the final
+bullet. Production dependency audit reported zero vulnerabilities. The .NET SDK
+is unavailable in this environment, so the changed backend requires CI Release
+build/tests before deployment. No live AI requests or database mutations were made.
+
+### Development activation update
+
+The owner subsequently authorized development/test activation with unpaid Gemini
+projects and empty contact email. `2026-09-cv-v1` is now enabled with updated
+Swedish/English disclosures for transient output. No user consent was pre-granted.
+See [privacy controls](privacy-controls.md) for activation scope and outstanding
+backend environment/live-generation checks. CI run 34752948672 passed all jobs.

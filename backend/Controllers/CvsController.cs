@@ -29,8 +29,6 @@ public sealed class CvsController(IConfiguration configuration, AiPrivacyGate pr
     [HttpGet("{jobId}")]
     public Task<IActionResult> Get(string jobId) => Run(async () => {
         if (!ValidId(jobId)) throw new CvFailure(400, "invalidJob");
-        var saved = await new CvStore(HttpContext, configuration).Saved(jobId);
-        if (saved != null) return Ok(new { job = saved.Value.GetProperty("job_context"), cv = saved });
         var job = await Job(jobId);
         return Ok(new { job = Context(job), cv = (object?)null });
     });
@@ -41,7 +39,7 @@ public sealed class CvsController(IConfiguration configuration, AiPrivacyGate pr
         if (!ValidId(jobId)) throw new CvFailure(400, "invalidJob");
         GeminiProvider.CheckConfiguration(AiFeature.Cv);
         var store = new CvStore(HttpContext, configuration);
-        // A reviewed notice version specifically covering full career facts and CV storage is required.
+        // A reviewed notice version specifically covering full career facts and transient CV generation is required.
         var noticeVersion = configuration["GEMINI_CV_NOTICE_VERSION"];
         if (string.IsNullOrWhiteSpace(noticeVersion)) throw new CvFailure(503, "configuration");
         var consent = await store.Request($"ai_consents?user_id=eq.{store.UserId}&provider=eq.gemini&select=notice_version,granted&limit=1");
@@ -63,11 +61,7 @@ public sealed class CvsController(IConfiguration configuration, AiPrivacyGate pr
             .OrderBy(f => f.SourceId == "profile" ? -1 : Array.FindIndex(ranked, e => CvContent.Text(e, "id") == f.SourceId)).Take(100).ToList();
         var sourceHash = CvContent.Hash(new { profile, career });
         var jobHash = CvContent.Hash(job);
-        var saved = await store.Saved(jobId);
-        object? cachedAnalysis = null;
-        if (saved is { } previous && CvContent.Text(previous.GetProperty("metadata"), "jobHash") == jobHash)
-            cachedAnalysis = previous.GetProperty("content").GetProperty("analysis");
-        var data = JsonSerializer.Serialize(new { externalJob = new { context = Context(job), description }, matchedSkills, cachedAnalysis,
+        var data = JsonSerializer.Serialize(new { externalJob = new { context = Context(job), description }, matchedSkills,
             verifiedProfile = new { facts = selectedFacts, explicitSkills = skills.Take(100), career = ranked.Select(e => new { id = CvContent.Text(e, "id"), kind = CvContent.Text(e, "kind"), title = CvContent.Text(e, "title"), organization = CvContent.Text(e, "organization") }) } });
         if (data.Length > 90000) throw new CvFailure(422, "profileLarge");
         var content = await CvGeneration.Generate(data, profile, ranked, selectedFacts, skills.Take(100).ToArray(),
@@ -77,13 +71,14 @@ public sealed class CvsController(IConfiguration configuration, AiPrivacyGate pr
                 if (lease == null) throw new CvFailure(429, "consentOrQuota");
                 return await new GeminiProvider().Generate(AiFeature.Cv, instructions, input, schema, HttpContext.RequestAborted);
             });
-        // Reject stale saves when the profile changed during generation.
+        // Reject stale results when the profile changed during generation.
         var latest = await store.Profile();
         if (CvContent.Hash(new { profile = latest.Profile, career = latest.Career }) != sourceHash) throw new CvFailure(409, "profileChanged");
         var metadata = new { schemaVersion = CvContent.Version, promptVersion = 2, groundingVersion = 1, provider = "gemini", model = Environment.GetEnvironmentVariable("GEMINI_MODEL"),
             sourceHash, jobHash, noticeVersion, sourceLimited = ranked.Length < career.Length || selectedFacts.Count < facts.Count || skills.Length > 100 || CvContent.Text(profile, "bio").Length > 800 || career.Any(e => new[] { "description", "achievements", "learned", "strengths" }.Any(field => CvContent.Text(e, field).Length > 800)) };
-        await store.Request("rpc/save_generated_cv", HttpMethod.Post, new { p_user = store.UserId, p_job = jobId, p_content = content, p_context = Context(job), p_metadata = metadata }, service: true);
-        return Ok(new { job = Context(job), cv = await store.Saved(jobId) });
+        var generatedAt = DateTimeOffset.UtcNow;
+        return Ok(new { job = Context(job), cv = new { job_id = jobId, content, job_context = Context(job), metadata,
+            created_at = generatedAt, updated_at = generatedAt } });
     });
 
     private async Task<IActionResult> Run(Func<Task<IActionResult>> action)

@@ -61,7 +61,60 @@ CI run 34310446353 passed frontend tests/build, backend Release build, security/
 ## CV generation extension (migration 009)
 
 See [CV generation](cv-generation.md). CV shares selected career statements with Gemini for job-specific rewriting and a separate source-only factual review, then
-stores validated content plus job context. Both calls reserve independently through the existing privacy gate. This broader disclosure requires a reviewed notice
+returns validated content plus job context for a temporary browser preview and local PDF download.
+New CVs are not stored in the database or browser storage. Historical CV records remain
+exportable until separately removed; this change does not delete them. Both calls reserve independently through the existing privacy gate. This broader disclosure requires a reviewed notice
 version configured in `GEMINI_CV_NOTICE_VERSION`; the existing reservation and withdrawal rules
-remain mandatory. Export now includes `generatedCvs`. New records cascade on Auth account deletion;
+remain mandatory. Export now includes `generatedCvs`. Historical records cascade on Auth account deletion;
 provider/backups and retention remain operational responsibilities. No new legal basis is asserted.
+
+## Generation consent dialog
+
+Clicking generate or regenerate opens `AiGenerationConsent` before making an AI
+request. It reloads the Gemini notice and saved consent on each opening. The user
+can cancel; continuing is disabled while loading, after a failed consent write,
+when Gemini has no enabled notice, or when the saved consent is revoked/stale.
+A successful explicit checkbox update enables a separate continue button. Existing
+current consent is shown as saved; it is never fabricated or granted automatically.
+The shared dialog uses the existing focus trap, Escape dismissal and focus restoration.
+The backend still verifies consent/version and reserves every provider call, including
+CV factual review, so client UI is not an authorization boundary. Withdrawal remains
+available on `/privacy`. No Groq fallback is enabled by this UI.
+
+Live inspection on 2026-09-13 confirmed that `generated_cvs` exists, but all Gemini
+notices are disabled. `2026-09-cv-v1` contains an explicitly incomplete draft.
+Activation requires completing and reviewing the operator/contact/retention/provider
+processing facts and matching backend `GEMINI_CV_NOTICE_VERSION`; this UI change
+does not enable those incomplete notices or grant consent for any user.
+
+## Activation status — 2026-09-13
+
+The operator requests that contact email remain empty temporarily. Do not invent an
+address. AI activation is still pending: the operator reports unpaid Gemini API
+projects. Google's Gemini API terms (effective 2026-03-23, checked 2026-09-13)
+require Paid Services when making API clients available to EEA users. The EEA
+data-use exception for unpaid quota is separate from that availability requirement.
+Paid API access means using a Cloud project with active billing. See
+[Google terms](https://ai.google.dev/gemini-api/terms). No billing configuration,
+notice activation, user consent grant or live provider call was performed here.
+New CV output is temporary and downloaded locally; the old database notice draft
+about storing new CVs must be replaced with reviewed text before activation.
+
+### Subsequent development activation — 2026-09-13
+
+After the status above, the operator explicitly authorized activation for development
+and testing despite continuing to use unpaid Gemini projects, with contact email
+left empty. This is not a public-launch or compliance approval. The unused disabled
+`2026-09-cv-v1` draft had no consent receipts; its Swedish/English text was replaced
+and enabled transactionally in Supabase. Verification returned Gemini as the only
+enabled provider. No user consent was granted by the operator action. The text
+explains both generation flows, temporary new CV output, historical records, Google
+processing, withdrawal and the missing contact email. Existing consent/version/quota
+checks remain mandatory. Activation is provider-wide, not an account allowlist.
+
+CI run 34752948672 passed frontend tests/build, backend Release build, security,
+matching and CV tests, and Docker build. Backend settings still need verification:
+`AI_ALLOWED_PROVIDERS=gemini`, `GEMINI_CV_NOTICE_VERSION=2026-09-cv-v1`, a working
+`GEMINI_MODEL`, both feature keys and Supabase server credentials. The Render tool
+requires explicit workspace selection before service inspection or changes. No
+real Gemini generation has been verified in this session.

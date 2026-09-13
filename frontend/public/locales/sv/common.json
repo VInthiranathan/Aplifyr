@@ -13,7 +13,9 @@
     "careerScope": "Valfritt: välj högst tre karriärposter. Endast typ, titel, organisation, datum och färdigheter skickas tillsammans med din profil. Beskrivningar och övrig fritext från karriärposterna skickas inte.",
     "chooseFacts": "Välj karriärfakta",
     "email": "Öppna e-postprogrammet",
-    "emailNote": "Meddelandet skickas först när du själv skickar det i ditt e-postprogram. Undvik känsliga uppgifter."
+    "emailNote": "Meddelandet skickas först när du själv skickar det i ditt e-postprogram. Undvik känsliga uppgifter.",
+    "cancelGeneration": "Avbryt",
+    "continueGeneration": "Fortsätt och generera"
   },
   "privacy": {
     "title": "Integritet och personuppgifter",
@@ -398,7 +400,7 @@
     "regenerate": "Generera CV igen",
     "generating": "Genererar…",
     "progress": "Anpassar formuleringarna till jobbet och faktagranskar ditt CV mot din profil…",
-    "saved": "Ditt CV är sparat för det här jobbet.",
+    "saved": "Ditt CV är klart. Ladda ner det innan du lämnar eller laddar om sidan. Det sparas inte på ditt konto.",
     "ready": "Din aktuella profil används när du genererar.",
     "preview": "Förhandsvisning av CV",
     "summary": "Profil",
@@ -407,7 +409,7 @@
     "education": "Utbildning",
     "present": "Pågående",
     "profile": "Uppdatera profil",
-    "disclosure": "CV-genereringen delar utvalda profil- och karriäruppgifter med Google Gemini. Ditt namn och din plats läggs till av Aplifyr. Resultatet sparas på ditt konto för det här jobbet.",
+    "disclosure": "CV-genereringen delar utvalda profil- och karriäruppgifter med Google Gemini. Ditt namn och din plats läggs till av Aplifyr. Resultatet finns tillfälligt på denna sida och sparas inte på ditt konto.",
     "review": "AI:n har anpassat formuleringarna efter jobbet och kontrollerat dem mot din profil. Granska ändå uppgifterna innan du ansöker.",
     "limited": "Din profil var omfattande. CV:t använder ett begränsat urval av fakta. Kontrollera att relevanta uppgifter finns med.",
     "errors": {
@@ -421,13 +423,16 @@
       "provider": "AI-tjänsten kunde inte slutföra genereringen. Ditt sparade CV har inte ändrats.",
       "invalidOutput": "AI-svaret kunde inte valideras. Försök igen.",
       "unsupportedFact": "Svaret hänvisade till uppgifter utan stöd i profilen och avvisades. Försök igen.",
-      "timeout": "Begäran tog för lång tid. Ladda om för att kontrollera om ett CV sparades innan du försöker igen.",
-      "storage": "CV:t kunde inte hämtas eller sparas. Försök igen senare.",
+      "timeout": "Begäran tog för lång tid. En tidigare förhandsvisning finns kvar på sidan. Försök igen när du är redo.",
+      "storage": "Profil- eller samtyckesuppgifter kunde inte hämtas. Försök igen senare.",
       "quota": "Gränsen för AI-användning har nåtts. Försök igen senare.",
       "consent": "Läs och godkänn den aktuella Gemini-informationen innan du genererar CV.",
       "consentOrQuota": "Genereringen är tillfälligt blockerad. Kontrollera ditt Gemini-samtycke och försök senare. En användningsgräns kan ha nåtts.",
       "profileChanged": "Din profil ändrades under genereringen. Generera igen för att använda senaste versionen.",
       "unavailable": "CV-genereringen är tillfälligt otillgänglig. Försök igen senare."
-    }
+    },
+    "download": "Ladda ner PDF",
+    "downloading": "Skapar PDF…",
+    "downloadError": "PDF-filen kunde inte skapas. Ditt CV finns kvar på sidan; försök igen."
   }
 }
