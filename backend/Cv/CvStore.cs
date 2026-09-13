@@ -24,11 +24,6 @@ public sealed class CvStore(HttpContext context, IConfiguration configuration)
         using var json = JsonDocument.Parse(string.IsNullOrWhiteSpace(text) ? "null" : text);
         return json.RootElement.Clone();
     }
-    public async Task<JsonElement?> Saved(string jobId)
-    {
-        var rows = await Request($"generated_cvs?user_id=eq.{UserId}&job_id=eq.{Uri.EscapeDataString(jobId)}&select=job_id,content,job_context,metadata,created_at,updated_at&limit=1");
-        return rows.GetArrayLength() == 0 ? null : rows[0];
-    }
     public async Task<(JsonElement Profile, JsonElement[] Career)> Profile()
     {
         var profiles = await Request($"profiles?id=eq.{UserId}&select=full_name,title,location,bio,tech_stack,updated_at&limit=1");

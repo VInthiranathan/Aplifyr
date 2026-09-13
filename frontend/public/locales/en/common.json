@@ -13,7 +13,9 @@
     "careerScope": "Optional: select up to three career entries. Only type, title, organization, dates and skills are sent with your profile. Descriptions and other narrative career fields are not sent.",
     "chooseFacts": "Choose career facts",
     "email": "Open email application",
-    "emailNote": "The message is sent only when you send it in your email application. Avoid sensitive information."
+    "emailNote": "The message is sent only when you send it in your email application. Avoid sensitive information.",
+    "cancelGeneration": "Cancel",
+    "continueGeneration": "Continue and generate"
   },
   "privacy": {
     "title": "Privacy and personal data",
@@ -398,7 +400,7 @@
     "regenerate": "Regenerate CV",
     "generating": "Generating…",
     "progress": "Tailoring the wording to the job and checking your CV against your profile…",
-    "saved": "Your CV is saved for this job.",
+    "saved": "Your CV is ready. Download it before leaving or refreshing this page. It is not saved to your account.",
     "ready": "Your current profile will be used when you generate.",
     "preview": "CV preview",
     "summary": "Professional summary",
@@ -407,7 +409,7 @@
     "education": "Education",
     "present": "Present",
     "profile": "Update profile",
-    "disclosure": "CV generation shares selected profile and career facts with Google Gemini. Your name and location are added by Aplifyr. The result is stored in your account for this job.",
+    "disclosure": "CV generation shares selected profile and career information with Google Gemini. Aplifyr adds your name and location. The result exists temporarily on this page and is not saved to your account.",
     "review": "AI has tailored the wording to the job and checked it against your profile. Review the facts before applying.",
     "limited": "Your profile was large. The CV uses a bounded selection of facts; review that the relevant details are included.",
     "errors": {
@@ -421,13 +423,16 @@
       "provider": "The AI service could not complete the request. Your saved CV has not changed.",
       "invalidOutput": "The AI response could not be validated. Please try again.",
       "unsupportedFact": "The response referenced unsupported facts and was rejected. Please try again.",
-      "timeout": "The request timed out. Reload to check whether a CV was saved before trying again.",
-      "storage": "The CV could not be read or saved. Please try again later.",
+      "timeout": "The request timed out. Any previous preview remains on this page. Try again when ready.",
+      "storage": "Profile or consent information could not be read. Please try again later.",
       "quota": "The AI usage limit has been reached. Try again later.",
       "consent": "Review and accept the current Gemini notice before generating a CV.",
       "consentOrQuota": "Generation is temporarily blocked. Check your Gemini consent and try again later; a usage limit may apply.",
       "profileChanged": "Your profile changed during generation. Generate again to use the latest version.",
       "unavailable": "CV generation is temporarily unavailable. Please try again later."
-    }
+    },
+    "download": "Download PDF",
+    "downloading": "Creating PDF…",
+    "downloadError": "The PDF could not be created. Your CV remains on this page; try again."
   }
 }

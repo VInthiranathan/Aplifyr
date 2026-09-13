@@ -176,6 +176,7 @@ export interface CvContent {
   analysis: { keywords: string[]; responsibilities: string[]; mandatory: string[]; desirable: string[]; domain: string };
 }
 export interface CvJobContext { id: string; title: string; company: string; location: string }
+/** Transient generation response; dates describe generation, not database persistence. */
 export interface GeneratedCv {
   job_id: string; content: CvContent; job_context: CvJobContext;
   metadata: { sourceLimited: boolean; sourceHash: string; jobHash: string };

@@ -1,5 +1,5 @@
 import { safeHtml, safeExternalUrl } from "../../lib/safeHtml";
-import AiConsent from '../../components/AiConsent';
+import AiGenerationConsent from '../../components/AiGenerationConsent';
 import { useRouter } from "next/router";
 import type { GetServerSideProps } from "next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
@@ -46,6 +46,9 @@ export default function JobDetailPage() {
   const [generating, setGenerating] = useState(false);
   const [letter, setLetter] = useState<string | null>(null);
   // debug toggle removed
+  const [consentOpen, setConsentOpen] = useState(false);
+  const requestGeneration = () => { if (!generating) { setShowModal(false); setConsentOpen(true); } };
+  useEffect(() => { setConsentOpen(false); }, [id]);
   const [showModal, setShowModal] = useState(false);
   const [career, setCareer] = useState<any[]>([]);
   const [selectedCareer, setSelectedCareer] = useState<string[]>([]);
@@ -429,7 +432,7 @@ export default function JobDetailPage() {
                 </div>
 
                 <div className="mt-4">
-                  <AiConsent />
+
                   <div className="my-3 space-y-2">
                     <p>{t('consent.careerScope')}</p>
                     {!careerLoaded && <Button variant="secondary" onClick={loadCareer}>{t('consent.chooseFacts')}</Button>}
@@ -441,7 +444,7 @@ export default function JobDetailPage() {
                     </label>)}
                   </div>
                   <Button
-                    onClick={generate}
+                    onClick={requestGeneration}
                     disabled={generating}
                     className="h-auto w-full px-4 py-2.5"
                   >
@@ -464,6 +467,7 @@ export default function JobDetailPage() {
         </>
       )}
 
+      {consentOpen && <AiGenerationConsent key={String(id)} onClose={()=>setConsentOpen(false)} onConfirm={()=>{setConsentOpen(false);void generate();}} />}
       {/* Cover Letter Modal */}
       {letter && (
         <CoverLetterModal
@@ -473,7 +477,7 @@ export default function JobDetailPage() {
           jobTitle={job?.headline || job?.title || t("jobDetail.defaultJobTitle")}
           company={job?.employer?.name || job?.advertiser || ""}
           applicationUrl={safeExternalUrl(getApplicationUrl())}
-          onRegenerate={generate}
+          onRegenerate={requestGeneration}
           isRegenerating={generating}
         />
       )}
