@@ -442,6 +442,7 @@
     },
     "download": "Ladda ner PDF",
     "downloading": "Skapar PDF…",
-    "downloadError": "PDF-filen kunde inte skapas. Ditt CV finns kvar på sidan; försök igen."
+    "downloadError": "PDF-filen kunde inte skapas. Ditt CV finns kvar på sidan; försök igen.",
+    "omissions": "Vissa AI-formuleringar eller uppgifter kunde inte bekräftas mot din profil och har utelämnats. Granska CV:t före användning. Förtydliga gärna profilen om viktig information saknas."
   }
 }

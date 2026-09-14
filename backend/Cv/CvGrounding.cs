@@ -38,20 +38,52 @@ public static class CvGrounding
 
     public static void Validate(string output, JsonElement claims)
     {
+        if (Rejected(output, claims).Count > 0) throw new CvFailure(502, "unsupportedFact");
+    }
+
+    private static HashSet<string> Rejected(string output, JsonElement claims)
+    {
         using var doc = JsonDocument.Parse(output, new JsonDocumentOptions { MaxDepth = 8 });
         var root = doc.RootElement;
         if (root.ValueKind != JsonValueKind.Object || root.EnumerateObject().Count() != 1 ||
             !root.TryGetProperty("decisions", out var decisions) || decisions.ValueKind != JsonValueKind.Array ||
             decisions.GetArrayLength() != claims.GetArrayLength()) throw new CvFailure(502, "invalidOutput");
         var expected = claims.EnumerateArray().Select(c => c.GetProperty("id").GetString()!).ToHashSet();
+        var rejected = new HashSet<string>();
         foreach (var decision in decisions.EnumerateArray())
         {
             if (decision.ValueKind != JsonValueKind.Object || decision.EnumerateObject().Count() != 2 ||
                 !decision.TryGetProperty("id", out var id) || id.ValueKind != JsonValueKind.String || !expected.Remove(id.GetString()!) ||
                 !decision.TryGetProperty("supported", out var supported) || supported.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
                 throw new CvFailure(502, "invalidOutput");
-            if (supported.ValueKind != JsonValueKind.True) throw new CvFailure(502, "unsupportedFact");
+            if (supported.ValueKind != JsonValueKind.True) rejected.Add(id.GetString()!);
         }
         if (expected.Count != 0) throw new CvFailure(502, "invalidOutput");
+        return rejected;
+    }
+
+    /// <summary>Only remove explicitly rejected prose after validating the entire review.</summary>
+    public static object Filter(string output, JsonElement claims, object content)
+    {
+        var rejected = Rejected(output, claims);
+        if (rejected.Count == 0) return content;
+        var root = System.Text.Json.Nodes.JsonNode.Parse(JsonSerializer.Serialize(content))!;
+        var index = 0;
+        void Prune(System.Text.Json.Nodes.JsonArray statements)
+        {
+            var remove = new List<int>();
+            for (var i = 0; i < statements.Count; i++, index++)
+                if (rejected.Contains(index.ToString(System.Globalization.CultureInfo.InvariantCulture))) remove.Add(i);
+            foreach (var i in remove.AsEnumerable().Reverse()) statements.RemoveAt(i);
+        }
+        Prune(root["professionalSummary"]!.AsArray());
+        foreach (var section in new[] { "experience", "education" })
+            foreach (var entry in root[section]!.AsArray()) Prune(entry!["bullets"]!.AsArray());
+        // No generated replacement, ad text or unreviewed prose is introduced.
+        root["omittedUnsupportedContent"] = true;
+        if (root["professionalSummary"]!.AsArray().Count + root["skills"]!.AsArray().Count
+            + root["experience"]!.AsArray().Count + root["education"]!.AsArray().Count == 0)
+            throw new CvFailure(422, "unsupportedFact");
+        return JsonSerializer.SerializeToElement(root);
     }
 }

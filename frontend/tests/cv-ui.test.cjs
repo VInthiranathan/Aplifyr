@@ -15,13 +15,13 @@ function setup(fetch){
 }
 test('CV stays only in the current page; consent precedes generation and failures preserve preview',async()=>{
  const calls=[];let attempts=0;const job={id:'123',title:'Developer',company:'Company'};
- const Component=setup(async(url,options)=>{calls.push([url,options.method]);const generate=options.method==='POST';if(generate)attempts++;return {ok:!generate||attempts===1,status:502,json:async()=>!generate?{job,cv:null}:attempts===1?{job,cv:{job_id:'123',content:{name:'Jonas Axelsson'},metadata:{}}}:{error:'provider'}};});
+ const Component=setup(async(url,options)=>{calls.push([url,options.method]);const generate=options.method==='POST';if(generate)attempts++;return {ok:!generate||attempts===1,status:502,json:async()=>!generate?{job,cv:null}:attempts===1?{job,cv:{job_id:'123',content:{name:'Jonas Axelsson',omittedUnsupportedContent:true},metadata:{}}}:{error:'provider'}};});
  let view;await act(async()=>{view=create(React.createElement(Component));});
  assert.equal(view.root.findAllByType('article').length,0);
  const generate=()=>view.root.findAllByType('button').find(b=>b.children.some(c=>typeof c==='string'&&['cv.generate','cv.regenerate'].includes(c)));
  await act(async()=>generate().props.onClick());assert.equal(calls.length,1);
  await act(async()=>view.root.findByProps({role:'dialog'}).findAllByType('button')[0].props.onClick());
- assert.equal(view.root.findByType('article').children[0],'Jonas Axelsson');
+ assert.equal(view.root.findByType('article').children[0],'Jonas Axelsson');assert.equal(view.root.findByProps({'data-testid':'cv-omissions'}).children[0],'cv.omissions');
  await act(async()=>generate().props.onClick());
  await act(async()=>view.root.findByProps({role:'dialog'}).findAllByType('button')[0].props.onClick());
  assert.equal(view.root.findByType('article').children[0],'Jonas Axelsson');assert.ok(view.root.findByProps({role:'alert'}));

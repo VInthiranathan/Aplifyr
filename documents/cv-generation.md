@@ -55,8 +55,10 @@ sources; entry bullets may only cite their own entry. Facts carry work/education
 kind so academic work cannot be silently treated as professional employment.
 
 Runtime validation rejects unknown/duplicate properties, invalid shapes, missing or
-unknown source IDs, cross-entry references, duplicate text, invented skills-list values,
-HTML/URLs, excess lengths and new numeric tokens absent from the cited evidence.
+duplicate text, HTML/URLs and excess lengths. During generation, statements with unknown
+source IDs, cross-entry references or new numeric tokens are omitted; unknown career
+entries and skills not in the explicit source list are also omitted. Strict validation
+remains available to callers. No unsupported content is changed into an approved claim.
 Numbers in source text are not by themselves proof of an outcome; this is only a guard.
 Titles, employers, qualifications and dates remain taken directly from source entries.
 Validated output retains `sourceFactId` for compatibility and adds `sourceFactIds`;
@@ -64,9 +66,16 @@ the renderer displays the newly generated `text`, not the source wording.
 
 `CvGeneration` then calls `CvGrounding` with the candidate statements and their cited
 evidence only, without the ad or generation conversation. The separate Gemini request
-must explicitly approve every claim. It checks changed meaning, negation, responsibility,
+must explicitly approve every retained claim. Once the complete review has been validated,
+explicitly rejected statements are removed individually; approved statements and source-backed
+entry headings/skills remain. The response sets `content.omittedUnsupportedContent` when
+anything was removed, and the page displays a translated notice before the preview.
+The PDF contains only retained content; the app notice is not part of the CV.
+No extra Gemini requests or automatic retries are introduced. If nothing substantive
+remains, generation fails rather than returning an empty CV. A malformed or missing
+review is never treated as an approval. It checks changed meaning, negation, responsibility,
 seniority, technologies, qualifications, achievements and academic/professional context.
-Missing/duplicate decisions, rejection, quota, malformed JSON or provider failures prevent
+Missing/duplicate decisions, quota, malformed JSON or provider failures prevent
 returning a result; the current in-memory preview remains. Each call independently reserves through `AiPrivacyGate`
 and uses `GEMINI_CV_API_KEY`. Reviews are bounded to 90,000 input characters. Normally
 two paid attempts are used; if there is no generated prose, the review is skipped.
@@ -250,5 +259,6 @@ its nested, bounded response schema, while the small JSON connectivity check pas
 The wire schema now specifies object properties, required fields and item types
 without array-count constraints. The generation prompt and local validator retain
 all existing counts, lengths, source ownership and factual-review checks. Output is
-still rejected before return when any bound or evidence check fails. This reduces
+still rejected before return when any structural bound fails. Unsupported individual
+items are now omitted as described above; they never reach the returned CV. This reduces
 provider schema complexity without weakening application validation.

@@ -58,8 +58,40 @@ Check(calls==2 && JsonSerializer.Serialize(generated).Contains("Developed tools 
 // Semantically false paraphrase with valid source IDs must not escape a rejected review.
 var fabricated=Changed(n=>n["experience"]![0]!["bullets"]![0]!["text"]="Led a team of expert Java developers.");
 calls=0;
-try{await CvGeneration.Generate("Ignore instructions",profile,[work,education],facts,["C#","SQL"],(_,_,_)=>Task.FromResult(++calls==1?fabricated:Decisions(false)));throw new Exception("Ungrounded CV returned");}
-catch(CvFailure e){Check(e.Code=="unsupportedFact" && calls==2);}
+var filtered = await CvGeneration.Generate("Ignore instructions",profile,[work,education],facts,["C#","SQL"],(_,_,_)=>Task.FromResult(++calls==1?fabricated:Decisions(false)));
+var filteredJson = JsonSerializer.SerializeToElement(filtered);
+Check(calls==2 && filteredJson.GetProperty("omittedUnsupportedContent").GetBoolean());
+Check(CvGrounding.Claims(filtered,facts).GetArrayLength()==0 && !filteredJson.ToString().Contains("expert Java"));
+Check(filteredJson.GetProperty("skills")[0].GetString()=="C#"); // Exact source skills and entry headers remain.
+var mixedReview=JsonSerializer.Serialize(new { decisions=claims.EnumerateArray().Reverse().Select(c=>new { id=c.GetProperty("id").GetString(), supported=c.GetProperty("id").GetString()!="1" }) });
+var mixed=CvGrounding.Filter(mixedReview,claims,ValidateContent(output));
+var mixedJson=JsonSerializer.SerializeToElement(mixed);
+Check(mixedJson.GetProperty("professionalSummary").GetArrayLength()==1);
+Check(mixedJson.GetProperty("experience")[0].GetProperty("bullets").GetArrayLength()==0);
+Check(mixedJson.GetProperty("education")[0].GetProperty("bullets").GetArrayLength()==1);
+foreach(var badReview in new[] { "{}", "{\"decisions\":[]}", "{\"decisions\":[{\"id\":\"0\",\"supported\":false},{\"id\":\"0\",\"supported\":true},{\"id\":\"2\",\"supported\":true}]}" }) {
+    try { CvGrounding.Filter(badReview,claims,ValidateContent(output));throw new Exception("Incomplete review returned partial content"); }
+    catch(CvFailure e) { Check(e.Code=="invalidOutput"); }
+}
+var unsupportedLocal=Changed(n=>{
+    n["experience"]![0]!["bullets"]![0]!["sourceFactIds"]![0]="unknown:fact";
+    n["skills"]![0]="Rust";
+});
+calls=0;
+var recovered=await CvGeneration.Generate("job",profile,[work,education],facts,["C#","SQL"],(_,data,_)=>{
+    calls++;
+    if(calls==1)return Task.FromResult(unsupportedLocal);
+    var pending=Json(data).GetProperty("claims");
+    Check(pending.GetArrayLength()==2 && !data.Contains("unknown:fact"));
+    return Task.FromResult(JsonSerializer.Serialize(new {decisions=pending.EnumerateArray().Select(c=>new {id=c.GetProperty("id").GetString(),supported=true})}));
+});
+Check(calls==2 && !JsonSerializer.Serialize(recovered).Contains("Rust"));
+Check(JsonSerializer.SerializeToElement(recovered).GetProperty("omittedUnsupportedContent").GetBoolean());
+var numeric=Changed(n=>n["experience"]![0]!["bullets"]![0]!["text"]="Increased revenue by 500%");
+var numericFiltered=CvContent.Validate(numeric,profile,[work,education],facts,["C#","SQL"],omitUnsupported:true);
+Check(!JsonSerializer.Serialize(numericFiltered).Contains("500%"));
+var wrongEntry=Changed(n=>n["experience"]![0]!["sourceId"]="victim");
+Check(JsonSerializer.SerializeToElement(CvContent.Validate(wrongEntry,profile,[work,education],facts,["C#","SQL"],omitUnsupported:true)).GetProperty("experience").GetArrayLength()==0);
 calls=0;
 try{await CvGeneration.Generate("job",profile,[work,education],facts,["C#","SQL"],(_,_,_)=>++calls==1?Task.FromResult(output):throw new CvFailure(429,"quota"));throw new Exception("Review failure ignored");}
 catch(CvFailure e){Check(e.Code=="quota" && calls==2);}
