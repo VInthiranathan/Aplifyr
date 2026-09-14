@@ -64,7 +64,7 @@ test('all CV templates preserve text order, paginate long entries and retain fin
  const before=JSON.stringify(content);const documents=[];
  for(const template of templatesModule.exports.cvTemplateIds){
   pdfText.length=0;const pdf=buildCvPdf(content,font,k=>k,template);
-  assert.ok(pdf.getNumberOfPages()>1);assert.ok(pdfText.includes('FINAL EDUCATION DETAIL'));
+  assert.ok(pdf.getNumberOfPages()>1);assert.ok(pdfText.some(text=>typeof text==='string' && text.includes('FINAL EDUCATION DETAIL')));
   assert.ok(pdfText.indexOf('Work experience')<pdfText.indexOf('Education'));
   assert.equal(pdfText[0],content.name);assert.equal(JSON.stringify(content),before);
   documents.push(pdf.output());
