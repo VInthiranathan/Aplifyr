@@ -347,7 +347,7 @@ public class CoverLettersController : ControllerBase
                 : "You are an expert at writing professional and personal cover letters in English. You tailor each letter to the job's specific requirements and the user's background.";
 
             systemPrompt += "\n" + SafeInstructions(language);
-            return await new Aplifyr.Api.Cv.GeminiProvider().Generate(
+            return await new Aplifyr.Api.Cv.GeminiProvider(logger: _logger).Generate(
                 Aplifyr.Api.Cv.AiFeature.CoverLetter, systemPrompt, prompt, null, HttpContext.RequestAborted);
         }
         catch (Exception ex)
