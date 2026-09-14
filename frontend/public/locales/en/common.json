@@ -443,6 +443,22 @@
     "download": "Download PDF",
     "downloading": "Creating PDF…",
     "downloadError": "The PDF could not be created. Your CV remains on this page; try again.",
-    "omissions": "Some AI wording or details could not be verified against your profile and have been omitted. Review the CV before using it. Clarify your profile if important information is missing."
+    "omissions": "Some AI wording or details could not be verified against your profile and have been omitted. Review the CV before using it. Clarify your profile if important information is missing.",
+    "templates": {
+      "title": "Choose CV style",
+      "help": "Three single-column styles with clear headings and readable text. Switch before or after generation without new AI calls. The PDF uses the same style.",
+      "classic": {
+        "name": "Classic",
+        "description": "Timeless black-and-white design with clear dividers."
+      },
+      "modern": {
+        "name": "Modern",
+        "description": "Airy design with subtle dark-blue accents."
+      },
+      "compact": {
+        "name": "Compact",
+        "description": "Tighter spacing that leaves more room for your experience."
+      }
+    }
   }
 }
