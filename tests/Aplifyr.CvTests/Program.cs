@@ -79,6 +79,17 @@ foreach(var status in new[]{HttpStatusCode.BadRequest,HttpStatusCode.Unauthorize
  handler.Status=status;try{await provider.Generate(AiFeature.Cv,"instructions","{}",CvContent.Schema,CancellationToken.None);throw new Exception("Failure accepted");}
  catch(CvFailure e){Check(e.ProviderStatus==(int)status);Check(e.Code==((int)status is 400 or 401 or 403 or 404?"configuration":status==HttpStatusCode.TooManyRequests?"quota":"provider"));}
 }
+handler.Status=HttpStatusCode.Forbidden;
+foreach (var (body, reason) in new[] {
+    ("{\"error\":{\"message\":\"PRIVATE INPUT\",\"details\":[{\"reason\":\"API_KEY_INVALID\"}]}}", "API_KEY_INVALID"),
+    ("{\"error\":{\"message\":\"Your API key was reported as leaked.\"}}", "blockedKey"),
+    ("{\"error\":{\"status\":\"PRIVATE INPUT\",\"details\":[{\"reason\":\"PRIVATE KEY\"}]}}", "unknown"),
+    ("not json PRIVATE KEY", "unknown")
+}) {
+    handler.Body=body;
+    try { await provider.Generate(AiFeature.Cv,"instructions","{}",null,CancellationToken.None);throw new Exception("Failure accepted"); }
+    catch(CvFailure e) { Check(e.ProviderReason==reason && !e.ToString().Contains("PRIVATE")); }
+}
 handler.Status=HttpStatusCode.OK;handler.Body="{}";
 try{await provider.Generate(AiFeature.Cv,"instructions","{}",CvContent.Schema,CancellationToken.None);throw new Exception("Malformed provider response");}catch(CvFailure e){Check(e.Code=="invalidOutput");}
 Console.WriteLine($"PASS: {count} CV source, schema, provider and credential checks");

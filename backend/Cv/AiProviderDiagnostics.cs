@@ -27,8 +27,8 @@ public sealed class AiProviderDiagnostics(ILogger<AiProviderDiagnostics> logger)
             }
             catch (CvFailure failure)
             {
-                logger.LogWarning("AI diagnostic {Feature}: code={Code}, providerStatus={ProviderStatus}, model={Model}",
-                    feature, failure.Code, failure.ProviderStatus, safeModel);
+                logger.LogWarning("AI diagnostic {Feature}: code={Code}, providerStatus={ProviderStatus}, reason={Reason}, model={Model}",
+                    feature, failure.Code, failure.ProviderStatus, failure.ProviderReason, safeModel);
             }
             catch (Exception)
             {
