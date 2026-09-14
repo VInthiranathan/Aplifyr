@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using Aplifyr.Api.Security;
+using Aplifyr.Api.Cv;
 
 namespace Aplifyr.Api.Controllers;
 
@@ -26,7 +27,7 @@ public class CoverLettersController : ControllerBase
         if (request.ValueKind != JsonValueKind.Object) return BadRequest(new { error = "Expected an object" });
         var approvedProviders = (Environment.GetEnvironmentVariable("AI_ALLOWED_PROVIDERS") ?? "")
             .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        if (approvedProviders.Length == 0) return StatusCode(503, new { error = "AI generation is not enabled" });
+        if (approvedProviders.Length == 0) return StatusCode(503, new { error = "configuration" });
         var geminiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY");
         var groqKey = Environment.GetEnvironmentVariable("GROQ_API_KEY");
 
@@ -39,7 +40,7 @@ public class CoverLettersController : ControllerBase
         if (string.IsNullOrEmpty(geminiKey) && string.IsNullOrEmpty(groqKey))
         {
             _logger.LogError("[CoverLetters] ERROR: No API keys configured!");
-            return BadRequest(new { error = "Neither GEMINI_API_KEY nor GROQ_API_KEY is set in backend/.env" });
+            return StatusCode(503, new { error = "configuration" });
         }
 
         // Extract jobs and user profile from request
@@ -111,7 +112,21 @@ public class CoverLettersController : ControllerBase
             if (!string.IsNullOrEmpty(geminiKey))
             {
                 _logger.LogInformation("[CoverLetters] Provider or job-field processing status");
-                coverLetter = await TryGenerateWithGemini(geminiKey, prompt, language);
+                try
+                {
+                    coverLetter = await TryGenerateWithGemini(geminiKey, prompt, language);
+                }
+                catch (CvFailure failure)
+                {
+                    _logger.LogWarning("Cover letter failed: code={Code}, status={Status}", failure.Code, failure.Status);
+                    // Preserve successful array responses; report a single-job failure as an HTTP error.
+                    if (string.IsNullOrEmpty(groqKey))
+                    {
+                        if (jobs.GetArrayLength() == 1) return StatusCode(failure.Status, new { error = failure.Code });
+                        results.Add(new { title, error = failure.Code });
+                        continue;
+                    }
+                }
                 if (!string.IsNullOrEmpty(coverLetter))
                 {
                     _logger.LogInformation("[CoverLetters] Provider or job-field processing status");
@@ -337,9 +352,9 @@ public class CoverLettersController : ControllerBase
 
     private async Task<string> TryGenerateWithGemini(string apiKey, string prompt, string language)
     {
-        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GEMINI_MODEL"))) return "";
+        GeminiProvider.CheckConfiguration(AiFeature.CoverLetter);
         await using var lease = await _privacy.Reserve(HttpContext, "gemini");
-        if (lease is null) return "";
+        if (lease is null) throw new CvFailure(429, "consentOrQuota");
         try
         {
             var systemPrompt = language == "sv" 
@@ -350,10 +365,11 @@ public class CoverLettersController : ControllerBase
             return await new Aplifyr.Api.Cv.GeminiProvider(logger: _logger).Generate(
                 Aplifyr.Api.Cv.AiFeature.CoverLetter, systemPrompt, prompt, null, HttpContext.RequestAborted);
         }
+        catch (CvFailure) { throw; }
         catch (Exception ex)
         {
             _logger.LogWarning("Gemini request failed: {ExceptionType}", ex.GetType().Name);
-            return "";
+            throw new CvFailure(502, "provider");
         }
     }
 

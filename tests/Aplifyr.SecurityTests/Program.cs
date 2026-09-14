@@ -51,6 +51,23 @@ privacyFactory.Fail=true;
 if(await gate.Reserve(privacyContext,"gemini") is not null)throw new Exception("Privacy outage allowed");
 Console.WriteLine("PASS: AI privacy reservations require identity, consent response and healthy DB; leases release");
 
+// Single-job letter failures must be HTTP errors rather than successful empty letters.
+Environment.SetEnvironmentVariable("AI_ALLOWED_PROVIDERS", "gemini");
+Environment.SetEnvironmentVariable("GEMINI_API_KEY", "letter-fixture");
+Environment.SetEnvironmentVariable("GEMINI_MODEL", null);
+var letters = new Aplifyr.Api.Controllers.CoverLettersController(
+ Microsoft.Extensions.Logging.Abstractions.NullLogger<Aplifyr.Api.Controllers.CoverLettersController>.Instance, gate) {
+ ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext { HttpContext = privacyContext }
+};
+using var letterRequest = System.Text.Json.JsonDocument.Parse("{\"jobs\":[{\"title\":\"Synthetic role\",\"description\":\"Synthetic job\"}]}");
+var missingModel = (Microsoft.AspNetCore.Mvc.ObjectResult)await letters.GenerateAll(letterRequest.RootElement);
+if(missingModel.StatusCode != 503 || !System.Text.Json.JsonSerializer.Serialize(missingModel.Value).Contains("configuration")) throw new Exception("Letter configuration failure hidden");
+Environment.SetEnvironmentVariable("GEMINI_MODEL", "fixture-model");
+privacyFactory.Enabled=false;privacyFactory.Fail=false;
+var deniedLetter = (Microsoft.AspNetCore.Mvc.ObjectResult)await letters.GenerateAll(letterRequest.RootElement);
+if(deniedLetter.StatusCode != 429 || !System.Text.Json.JsonSerializer.Serialize(deniedLetter.Value).Contains("consentOrQuota")) throw new Exception("Letter reservation failure hidden");
+Console.WriteLine("PASS: Letter configuration and reservation failures return explicit HTTP errors");
+
 sealed class PrivacyFactory : HttpMessageHandler,IHttpClientFactory
 {
  public int Calls;public int Releases;public bool Enabled;public bool Fail;

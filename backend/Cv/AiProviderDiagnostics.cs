@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace Aplifyr.Api.Cv;
 
 /// <summary>Operator-only, time-limited smoke check using fixed synthetic data.</summary>
@@ -17,12 +19,27 @@ public sealed class AiProviderDiagnostics(ILogger<AiProviderDiagnostics> logger)
             if (stoppingToken.IsCancellationRequested || DateTimeOffset.UtcNow >= until) return;
             try
             {
-                object? schema = feature == AiFeature.Cv ? new {
-                    type = "OBJECT", properties = new { status = new { type = "STRING" } }, required = new[] { "status" }
-                } : null;
-                _ = await new GeminiProvider(logger: logger).Generate(feature,
-                    "This is a synthetic connectivity check. Return the word OK, or a JSON object with status OK when a JSON schema is supplied.",
-                    "Synthetic test. No personal data.", schema, stoppingToken);
+                var provider = new GeminiProvider(logger: logger);
+                if (feature == AiFeature.Cv)
+                {
+                    using var profile = JsonDocument.Parse("""{"full_name":"Synthetic Applicant","title":"Developer","bio":"Built internal C# tools.","tech_stack":["C#"]}""");
+                    using var work = JsonDocument.Parse("""{"id":"synthetic-work","kind":"work","title":"Developer","organization":"Synthetic Company","description":"Implemented APIs in C#.","skills":["C#"]}""");
+                    var facts = CvContent.Facts(profile.RootElement, [work.RootElement]);
+                    var data = JsonSerializer.Serialize(new {
+                        externalJob = new { description = "Synthetic job: maintain C# APIs and internal tools." },
+                        verifiedProfile = new { facts, explicitSkills = new[] { "C#" },
+                            career = new[] { new { id = "synthetic-work", kind = "work", title = "Developer", organization = "Synthetic Company" } } }
+                    });
+                    _ = await CvGeneration.Generate(data, profile.RootElement, [work.RootElement], facts, ["C#"],
+                        (instructions, input, schema) => provider.Generate(feature, instructions, input, schema, stoppingToken));
+                }
+                else
+                {
+                    var letter = await provider.Generate(feature,
+                        "Write a concise plain-text cover letter, 150 to 200 words. Use only the synthetic applicant facts. Do not invent qualifications.",
+                        "Synthetic applicant: developed internal C# tools. Synthetic role: maintain C# APIs. No personal data.", null, stoppingToken);
+                    if (string.IsNullOrWhiteSpace(letter)) throw new CvFailure(502, "invalidOutput");
+                }
                 logger.LogInformation("AI diagnostic {Feature}: success, model={Model}", feature, safeModel);
             }
             catch (CvFailure failure)

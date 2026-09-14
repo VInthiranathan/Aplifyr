@@ -15,7 +15,16 @@
     "email": "Öppna e-postprogrammet",
     "emailNote": "Meddelandet skickas först när du själv skickar det i ditt e-postprogram. Undvik känsliga uppgifter.",
     "cancelGeneration": "Avbryt",
-    "continueGeneration": "Fortsätt och generera"
+    "continueGeneration": "Fortsätt och generera",
+    "errors": {
+      "configuration": "AI-tjänstens inställningar avvisades eller är ofullständiga. Administratören behöver kontrollera modellen och API-nyckeln.",
+      "authentication": "Din inloggning har gått ut. Logga in igen och försök på nytt.",
+      "quota": "Gränsen för AI-användning har nåtts. Försök igen senare.",
+      "consentOrQuota": "Anropet kunde inte godkännas. Kontrollera ditt Gemini-samtycke och försök senare. En användningsgräns kan ha nåtts.",
+      "timeout": "AI-tjänsten tog för lång tid på sig att svara. Försök igen senare.",
+      "invalidOutput": "AI-tjänsten gav ett ofullständigt eller oläsbart svar. Försök igen.",
+      "provider": "AI-tjänsten kunde inte slutföra genereringen. Försök igen senare."
+    }
   },
   "privacy": {
     "title": "Integritet och personuppgifter",

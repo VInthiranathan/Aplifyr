@@ -160,10 +160,10 @@ Provider failures log only the feature, controlled error code and upstream HTTP
 status. Missing models (Google HTTP 404) are configuration failures. Credentials,
 raw error bodies and generated/source text are never logged or returned.
 `AI_DIAGNOSTICS_UNTIL` is an optional ISO UTC expiry within the next 30 minutes.
-When explicitly set by an operator, the backend performs at most one fixed synthetic
-generation per feature on process startup, including a small JSON schema for CV.
+When explicitly set by an operator, the backend performs a synthetic letter and the complete synthetic CV generation
+and factual-review pipeline on process startup (at most three provider calls).
 It logs success/failure and a validated model identifier. It does not access user
-data or grant consent. These two diagnostic calls use provider quota outside user
+data or grant consent. These diagnostic calls use provider quota outside user
 reservations; restart within the window repeats them. It is disabled when absent,
 expired or more than 30 minutes ahead. Clear it after troubleshooting.
 This verifies provider connectivity, not an authenticated user's complete CV flow.
