@@ -61,6 +61,7 @@ builder.Services.AddHttpClient("privacy-db", client => { client.Timeout = TimeSp
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddSingleton<AiPrivacyGate>();
 builder.Services.AddControllers();
+builder.Services.AddHostedService<Aplifyr.Api.Cv.AiProviderDiagnostics>();
 
 var configuredOrigins = builder.Configuration
     .GetSection("AllowedOrigins")

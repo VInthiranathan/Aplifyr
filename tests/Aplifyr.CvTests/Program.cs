@@ -75,9 +75,9 @@ Environment.SetEnvironmentVariable("AI_ALLOWED_PROVIDERS","gemini");
 var handler = new Fake(); var provider = new GeminiProvider(new HttpClient(handler));
 await provider.Generate(AiFeature.Cv,"instructions","{}",CvContent.Schema,CancellationToken.None);Check(handler.Key=="cv-fixture");
 await provider.Generate(AiFeature.CoverLetter,"instructions","{}",null,CancellationToken.None);Check(handler.Key=="letter-fixture");
-foreach(var status in new[]{HttpStatusCode.Forbidden,HttpStatusCode.TooManyRequests,HttpStatusCode.InternalServerError}) {
+foreach(var status in new[]{HttpStatusCode.BadRequest,HttpStatusCode.Unauthorized,HttpStatusCode.Forbidden,HttpStatusCode.NotFound,HttpStatusCode.TooManyRequests,HttpStatusCode.InternalServerError}) {
  handler.Status=status;try{await provider.Generate(AiFeature.Cv,"instructions","{}",CvContent.Schema,CancellationToken.None);throw new Exception("Failure accepted");}
- catch(CvFailure e){Check(e.Code==(status==HttpStatusCode.Forbidden?"configuration":status==HttpStatusCode.TooManyRequests?"quota":"provider"));}
+ catch(CvFailure e){Check(e.ProviderStatus==(int)status);Check(e.Code==((int)status is 400 or 401 or 403 or 404?"configuration":status==HttpStatusCode.TooManyRequests?"quota":"provider"));}
 }
 handler.Status=HttpStatusCode.OK;handler.Body="{}";
 try{await provider.Generate(AiFeature.Cv,"instructions","{}",CvContent.Schema,CancellationToken.None);throw new Exception("Malformed provider response");}catch(CvFailure e){Check(e.Code=="invalidOutput");}

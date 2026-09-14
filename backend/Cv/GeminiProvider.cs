@@ -3,14 +3,15 @@ using System.Text.Json;
 namespace Aplifyr.Api.Cv;
 
 public enum AiFeature { CoverLetter, Cv }
-public sealed class CvFailure(int status, string code) : Exception(code)
+public sealed class CvFailure(int status, string code, int? providerStatus = null) : Exception(code)
 {
     public int Status { get; } = status;
     public string Code { get; } = code;
+    public int? ProviderStatus { get; } = providerStatus;
 }
 
 /// <summary>One transport, explicit feature credentials, no credential/provider fallback.</summary>
-public sealed class GeminiProvider(HttpClient? transport = null)
+public sealed class GeminiProvider(HttpClient? transport = null, ILogger? logger = null)
 {
     private static readonly HttpClient Http = new(new HttpClientHandler { AllowAutoRedirect = false })
         { Timeout = TimeSpan.FromSeconds(30), MaxResponseContentBufferSize = 128 * 1024 };
@@ -41,12 +42,18 @@ public sealed class GeminiProvider(HttpClient? transport = null)
         {
             using var response = await (transport ?? Http).SendAsync(request, cancellation);
             if (!response.IsSuccessStatusCode) throw new CvFailure((int)response.StatusCode == 429 ? 429 : 502,
-                (int)response.StatusCode == 429 ? "quota" : (int)response.StatusCode is 400 or 401 or 403 ? "configuration" : "provider");
+                (int)response.StatusCode == 429 ? "quota" : (int)response.StatusCode is 400 or 401 or 403 or 404 ? "configuration" : "provider", (int)response.StatusCode);
             using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellation));
             var candidate = json.RootElement.GetProperty("candidates")[0];
             if (candidate.GetProperty("finishReason").GetString() != "STOP") throw new CvFailure(502, "invalidOutput");
             return candidate.GetProperty("content").GetProperty("parts")[0].GetProperty("text").GetString()
                 ?? throw new CvFailure(502, "invalidOutput");
+        }
+        catch (CvFailure failure)
+        {
+            // Never log credentials, provider response bodies, prompts or generated text.
+            logger?.LogWarning("Gemini {Feature} failed: code={Code}, providerStatus={ProviderStatus}", feature, failure.Code, failure.ProviderStatus);
+            throw;
         }
         catch (OperationCanceledException) { throw new CvFailure(504, "timeout"); }
         catch (HttpRequestException) { throw new CvFailure(502, "provider"); }

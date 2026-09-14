@@ -8,7 +8,7 @@ namespace Aplifyr.Api.Controllers;
 
 [ApiController]
 [Route("api/cvs")]
-public sealed class CvsController(IConfiguration configuration, AiPrivacyGate privacy) : ControllerBase
+public sealed class CvsController(IConfiguration configuration, AiPrivacyGate privacy, ILogger<CvsController> logger) : ControllerBase
 {
     private static readonly HttpClient Jobs = new(new HttpClientHandler { AllowAutoRedirect = false })
         { Timeout = TimeSpan.FromSeconds(15), MaxResponseContentBufferSize = 1024 * 1024 };
@@ -69,7 +69,7 @@ public sealed class CvsController(IConfiguration configuration, AiPrivacyGate pr
                 // Every external call, including factual review, checks current consent and reserves its own attempt.
                 await using var lease = await privacy.Reserve(HttpContext, "gemini");
                 if (lease == null) throw new CvFailure(429, "consentOrQuota");
-                return await new GeminiProvider().Generate(AiFeature.Cv, instructions, input, schema, HttpContext.RequestAborted);
+                return await new GeminiProvider(logger: logger).Generate(AiFeature.Cv, instructions, input, schema, HttpContext.RequestAborted);
             });
         // Reject stale results when the profile changed during generation.
         var latest = await store.Profile();
@@ -90,7 +90,10 @@ public sealed class CvsController(IConfiguration configuration, AiPrivacyGate pr
         var originalCancellation = HttpContext.RequestAborted;
         HttpContext.RequestAborted = timeout.Token;
         try { return await action(); }
-        catch (CvFailure e) { return StatusCode(e.Status, new { error = e.Code }); }
+        catch (CvFailure e) {
+            logger.LogWarning("CV generation failed: code={Code}, status={Status}", e.Code, e.Status);
+            return StatusCode(e.Status, new { error = e.Code });
+        }
         catch (OperationCanceledException) { return StatusCode(504, new { error = "timeout" }); }
         catch (Exception e) when (e is HttpRequestException or JsonException or InvalidOperationException or KeyNotFoundException)
         { return StatusCode(503, new { error = "unavailable" }); }

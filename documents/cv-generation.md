@@ -154,6 +154,20 @@ automatically enabled and no legal/processor terms are invented by this migratio
 are resolved only server-side and sent in `x-goog-api-key`; never persisted or returned.
 Provider response bodies and personal source text are not logged by this code.
 
+### Provider diagnostics
+
+Provider failures log only the feature, controlled error code and upstream HTTP
+status. Missing models (Google HTTP 404) are configuration failures. Credentials,
+raw error bodies and generated/source text are never logged or returned.
+`AI_DIAGNOSTICS_UNTIL` is an optional ISO UTC expiry within the next 30 minutes.
+When explicitly set by an operator, the backend performs at most one fixed synthetic
+generation per feature on process startup, including a small JSON schema for CV.
+It logs success/failure and a validated model identifier. It does not access user
+data or grant consent. These two diagnostic calls use provider quota outside user
+reservations; restart within the window repeats them. It is disabled when absent,
+expired or more than 30 minutes ahead. Clear it after troubleshooting.
+This verifies provider connectivity, not an authenticated user's complete CV flow.
+
 ## Renderer
 
 `CvContent` is versioned structured plain text shared by preview and PDF export.
