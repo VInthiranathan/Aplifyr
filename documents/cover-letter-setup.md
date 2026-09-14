@@ -1,95 +1,58 @@
-# Cover Letter Setup
+# Cover letter generation
 
-## What This Feature Depends On
+The job detail page calls `POST /api/coverletters/generate-all` on the backend.
+The generate button opens the shared consent dialog; saving consent and choosing
+continue are separate actions. Sign-in is verified server-side before generation.
 
-Cover letter generation is handled by `backend/Controllers/CoverLettersController.cs` and invoked from `frontend/pages/jobs/[id].tsx`.
+## Configuration
 
-The feature needs:
+The development deployment uses Gemini only:
 
-- at least one AI provider key in `backend/.env`
-- a reachable backend URL from the frontend
-- optional but recommended Supabase profile data so the prompt can include the user's bio, roles, tech stack
+- `AI_ALLOWED_PROVIDERS=gemini`
+- `GEMINI_API_KEY`: server-only letter key
+- `GEMINI_MODEL`: an available Gemini text model
+- `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+- an enabled Gemini notice and the user's current saved consent
 
-## Required Backend Configuration
+CV additionally requires its separate `GEMINI_CV_API_KEY` and exact
+`GEMINI_CV_NOTICE_VERSION`; see [CV generation](cv-generation.md).
+An API key alone does not enable processing. Do not configure Groq as a workaround.
+The legacy Groq path executes only when explicitly allowed, keyed and consented.
 
-Set at least one of the following in `backend/.env`:
+## Data and response
 
-```env
-GEMINI_API_KEY=your_gemini_api_key_here
-GROQ_API_KEY=your_groq_api_key_here
-```
+The request contains one to three job ads and allowlisted profile facts. The UI
+includes up to three explicitly selected career entries (kind, title, employer,
+dates and skills). Career narrative fields are excluded from letters. No uploads
+are used. The backend separates source data from instructions and reserves every
+provider call through the existing consent and quota checks.
 
-Recommended:
-
-- configure both keys so Gemini is used first and Groq can act as a fallback
-
-If neither key is configured, `POST /api/coverletters/generate-all` returns a `400` response.
-
-## Prompt Inputs Used by the App
-
-The frontend sends:
-
-- the selected job ad
-- profile fields such as name, title, location, bio, tech stack, and roles
-
-The backend allowlists supported profile fields, ignoring unknown legacy inputs. It does not use uploaded documents.
-
-The backend then:
-
-1. extracts job title, employer, description, and location from the request body
-2. detects whether the job description is Swedish or English
-3. builds a prompt using the job data plus supported profile data
-4. calls Gemini first when available
-5. falls back to Groq if Gemini fails
-
-## Local Test Flow
-
-1. Start backend and frontend.
-2. Sign in.
-3. Save profile data on `/user`.
-4. Open any job detail page.
-5. Click the cover letter generation action.
-
-## Expected Backend Response
-
-Successful responses are arrays and typically look like this:
+Successful responses retain the array shape:
 
 ```json
-[
-  {
-    "title": "Junior Developer",
-    "coverLetter": "...generated text...",
-    "provider": "Gemini"
-  }
-]
+[{"title":"Developer","coverLetter":"Generated draft","provider":"Gemini"}]
 ```
 
-If both providers fail, the response still returns an array entry, but with an error payload.
+For a single-job Gemini failure, the backend returns an HTTP error and a controlled
+`error` code: 503 `configuration`, 429 `quota` or `consentOrQuota`, 502
+`configuration` (upstream rejected settings), `provider` or `invalidOutput`, and
+504 `timeout`. Authentication can return 401 before the controller. Multi-job
+requests retain per-item error entries. Raw provider messages and keys are not
+returned. The frontend displays translated categories rather than claiming that
+every failure concerns consent; non-JSON responses receive a safe fallback.
 
-## Troubleshooting
+## Verification and diagnosis
 
-### Neither AI key is configured
+The security tests cover missing model and denied reservation as HTTP errors.
+Frontend error tests cover both payload shapes, middleware statuses and rejection
+of arbitrary error strings. Provider tests cover upstream errors and safe logging
+labels. See the opt-in, expiring synthetic provider check in [CV generation](cv-generation.md).
 
-Symptom:
-
-- the UI shows a backend error when trying to generate a cover letter
-
-Fix:
-
-- add `GEMINI_API_KEY` and or `GROQ_API_KEY` to `backend/.env`
-
-### User profile does not affect the letter
-
-Possible causes:
-
-- the user is not signed in
-- `/api/profile` is failing because Supabase is not configured
-- no profile data has been saved yet
-
-### Generated letter is too generic
-
-Current code risk:
-
-- the backend has several silent `catch {}` blocks while extracting job fields, so malformed job payloads can reduce prompt quality without obvious logs
-
-See `documents/app-review-2026-05-28.md` for the full review notes.
+Live diagnosis on 2026-09-14 returned Google HTTP 404 `NOT_FOUND` for
+`gemini-2.5-flash` with both feature keys. This proves that model was unavailable
+for those calls, not that user consent was rejected or that all Gemini API access
+was disabled. The backend model setting was changed to `gemini-3.5-flash-lite`,
+a stable model with structured output and free-tier availability according to
+[Google's model page](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite)
+and [pricing](https://ai.google.dev/gemini-api/docs/pricing).
+Live checks must confirm the keys and full pipeline after each model change.

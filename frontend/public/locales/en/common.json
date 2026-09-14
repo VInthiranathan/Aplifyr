@@ -15,7 +15,16 @@
     "email": "Open email application",
     "emailNote": "The message is sent only when you send it in your email application. Avoid sensitive information.",
     "cancelGeneration": "Cancel",
-    "continueGeneration": "Continue and generate"
+    "continueGeneration": "Continue and generate",
+    "errors": {
+      "configuration": "The AI service configuration was rejected or is incomplete. The administrator needs to check the model and API key.",
+      "authentication": "Your sign-in has expired. Sign in again and retry.",
+      "quota": "The AI usage limit has been reached. Try again later.",
+      "consentOrQuota": "The request could not be authorized. Check your Gemini consent and try again later; a usage limit may apply.",
+      "timeout": "The AI service took too long to respond. Try again later.",
+      "invalidOutput": "The AI service returned an incomplete or unreadable answer. Try again.",
+      "provider": "The AI service could not complete the request. Try again later."
+    }
   },
   "privacy": {
     "title": "Privacy and personal data",

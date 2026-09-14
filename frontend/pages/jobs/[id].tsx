@@ -1,4 +1,5 @@
 import { safeHtml, safeExternalUrl } from "../../lib/safeHtml";
+import { aiFailureCode } from '../../lib/aiFailure';
 import AiGenerationConsent from '../../components/AiGenerationConsent';
 import { useRouter } from "next/router";
 import type { GetServerSideProps } from "next";
@@ -188,19 +189,18 @@ export default function JobDetailPage() {
         }),
       });
 
+      const data = await res.json().catch(() => null);
       if (!res.ok) {
-        setLetter(t('consent.generateError'));
+        setLetter(t(`consent.errors.${aiFailureCode(data, res.status)}`));
         setShowModal(true);
         return;
       }
-
-      const data = await res.json();
 
       if (Array.isArray(data) && data[0]?.coverLetter) {
         setLetter(data[0].coverLetter);
         setShowModal(true);
       } else if (Array.isArray(data) && data[0]?.error) {
-        setLetter(t('consent.generateError'));
+        setLetter(t(`consent.errors.${aiFailureCode(data, res.status)}`));
         setShowModal(true);
       } else {
         setLetter(t('consent.generateError'));
