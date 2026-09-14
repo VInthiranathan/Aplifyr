@@ -171,6 +171,7 @@ export interface CvEntry {
   startMonth: string; endMonth: string; isCurrent: boolean; bullets: CvFact[];
 }
 export interface CvContent {
+  language?: 'en' | 'sv';
   omittedUnsupportedContent?: boolean;
   schemaVersion: 1; template: 'ats-basic'; name: string; title: string; location: string;
   professionalSummary: CvFact[]; skills: string[]; experience: CvEntry[]; education: CvEntry[];
