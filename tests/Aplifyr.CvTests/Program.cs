@@ -29,6 +29,7 @@ foreach (var invalid in new[] {
     Changed(n=>n["experience"]![0]!["bullets"]![0]!["sourceFactIds"]![0]="victim:description:0"),
     Changed(n=>n["experience"]![0]!["bullets"]![0]!["sourceFactIds"]![0]="education-a:description:0"),
     Changed(n=>n["skills"]![0]="Rust"),
+    Changed(n=>n["professionalSummary"]=new JsonArray(Enumerable.Range(0,4).Select(i=>JsonSerializer.SerializeToNode(Statement($"Summary statement {i}.", "profile:bio:0"))).ToArray())),
     Changed(n=>n["experience"]![0]!["sourceId"]="victim"),
     Changed(n=>n["experience"]![0]!["company"]="Invented"),
     Changed(n=>n["experience"]![0]!["bullets"]![0]!["text"]="Increased revenue by 500%"),

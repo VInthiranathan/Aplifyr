@@ -18,7 +18,7 @@ public static class CvGrounding
         Return exactly one {id, supported} decision per supplied claim. No extra decisions or explanations.
         """;
     public static object Schema => new { type = "OBJECT", properties = new {
-        decisions = new { type = "ARRAY", maxItems = 55, items = new { type = "OBJECT", properties = new {
+        decisions = new { type = "ARRAY", items = new { type = "OBJECT", properties = new {
             id = new { type = "STRING" }, supported = new { type = "BOOLEAN" }
         }, required = new[] { "id", "supported" } } }
     }, required = new[] { "decisions" } };
