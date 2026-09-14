@@ -94,7 +94,7 @@ export default function CvPage() {
         <Link className="underline" href="/user">{t('cv.profile')}</Link>
       </div>
       <p role="status" aria-live="polite">{busy ? t('cv.progress') : cv ? t('cv.saved') : t('cv.ready')}</p>
-      {cv && <><Button disabled={downloading || busy} onClick={download}>{t(downloading ? 'cv.downloading' : 'cv.download')}</Button><p>{t('cv.review')}</p>{cv.metadata.sourceLimited && <p>{t('cv.limited')}</p>}<CvPreview content={cv.content} /></>}
+      {cv && <><Button disabled={downloading || busy} onClick={download}>{t(downloading ? 'cv.downloading' : 'cv.download')}</Button><p>{t('cv.review')}</p>{cv.metadata.sourceLimited && <p>{t('cv.limited')}</p>}{cv.content.omittedUnsupportedContent && <p role="status" data-testid="cv-omissions" className="app-card-base p-4">{t('cv.omissions')}</p>}<CvPreview content={cv.content} /></>}
     </>}
   </div>;
 }

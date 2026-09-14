@@ -28,6 +28,15 @@ public static class CvContent
         Use job keywords only where they describe actual source experience; avoid keyword stuffing.
         Summary statements may combine sources; entry bullets must cite only that entry's facts.
         Prefer omission to speculation. Skills must be exact members of explicitSkills.
+        Plan each statement from evidence FIRST: choose existing fact Id values, then paraphrase only their Text.
+        Copy sourceFactIds exactly; never invent IDs or use a career entry ID as a fact ID.
+        Keep each statement to one narrow claim, using one or two facts when possible.
+        A senior job title does not make the applicant senior. Do not add leadership, expertise, years,
+        business results or technologies from the ad. Preserve internship, coursework and junior context.
+        For example, "built an API during an internship" may become "developed an API as an intern",
+        never "led API architecture". Do not put unsupported requirements in the applicant summary.
+        Keep source numeric values and technology names unchanged; do not calculate totals or durations.
+        If evidence is insufficient for a statement, omit that statement; do not guess.
         At most 20 skills, 8 work entries, 5 education entries, 4 bullets per entry and 3 summary statements.
         Each statement is at most 600 characters and cites 1–5 facts. Empty experience/education is valid.
         Analysis keywords describe the JOB only; they are not applicant qualifications. Keep analysis short.
@@ -80,20 +89,22 @@ public static class CvContent
         if (strings.Distinct(StringComparer.OrdinalIgnoreCase).Count() != strings.Length) throw new CvFailure(502, "invalidOutput");
         return strings;
     }
-    public static object Validate(string output, JsonElement profile, JsonElement[] career, List<Fact> facts, string[] skills)
+    public static object Validate(string output, JsonElement profile, JsonElement[] career, List<Fact> facts, string[] skills, bool omitUnsupported = false)
     {
         if (output.Length > 48000) throw new CvFailure(502, "invalidOutput");
         using var doc = JsonDocument.Parse(output, new JsonDocumentOptions { MaxDepth = 12 });
         var root = doc.RootElement;
         Keys(root, "professionalSummary", "skills", "experience", "education", "analysis");
         var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var omittedUnsupportedContent = false;
         object[] Resolve(JsonElement statements, int max, string? source)
         {
             return Items(statements, max).Select(statement => {
+                try {
                 Keys(statement, "text", "sourceFactIds");
                 var text = Text(statement, "text").Trim();
                 var ids = StringItems(statement.GetProperty("sourceFactIds"), 5);
-                if (text.Length is < 1 or > 600 || !used.Add(text) || ids.Length == 0 ||
+                if (text.Length is < 1 or > 600 || ids.Length == 0 ||
                     Regex.IsMatch(text, @"<[^>]+>|https?://", RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(100)))
                     throw new CvFailure(502, "invalidOutput");
                 var evidence = ids.Select(id => {
@@ -106,12 +117,21 @@ public static class CvContent
                     .Select(m => m.Value.Replace(" ", "")).ToHashSet();
                 if (Regex.Matches(text, @"\d+(?:[.,]\d+)?(?:\s?%)?", RegexOptions.None, TimeSpan.FromMilliseconds(100))
                     .Any(m => !numbers.Contains(m.Value.Replace(" ", "")))) throw new CvFailure(502, "unsupportedFact");
+                if (!used.Add(text)) throw new CvFailure(502, "invalidOutput");
                 return (object)new { sourceFactId = ids[0], sourceFactIds = ids, text };
-            }).ToArray();
+                } catch (CvFailure failure) when (omitUnsupported && failure.Code == "unsupportedFact") {
+                    omittedUnsupportedContent = true;
+                    return null;
+                }
+            }).Where(item => item is not null).Cast<object>().ToArray();
         }
         var summary = Resolve(root.GetProperty("professionalSummary"), 3, null);
         var selectedSkills = StringItems(root.GetProperty("skills"), 20, 100);
-        if (selectedSkills.Any(s => !skills.Contains(s, StringComparer.Ordinal))) throw new CvFailure(502, "unsupportedFact");
+        if (selectedSkills.Any(s => !skills.Contains(s, StringComparer.Ordinal))) {
+            if (!omitUnsupported) throw new CvFailure(502, "unsupportedFact");
+            omittedUnsupportedContent = true;
+            selectedSkills = selectedSkills.Where(s => skills.Contains(s, StringComparer.Ordinal)).ToArray();
+        }
         object[] Entries(string section, string kind, int max)
         {
             var seen = new HashSet<string>();
@@ -119,12 +139,17 @@ public static class CvContent
                 Keys(item, "sourceId", "bullets");
                 var id = Text(item, "sourceId");
                 var entry = career.SingleOrDefault(e => Text(e, "id") == id && Text(e, "kind") == kind);
-                if (entry.ValueKind != JsonValueKind.Object || !seen.Add(id)) throw new CvFailure(502, "unsupportedFact");
+                if (entry.ValueKind != JsonValueKind.Object) {
+                    if (!omitUnsupported) throw new CvFailure(502, "unsupportedFact");
+                    omittedUnsupportedContent = true;
+                    return null;
+                }
+                if (!seen.Add(id)) throw new CvFailure(502, "invalidOutput");
                 return (object)new { sourceId = id, title = Text(entry, "title"), organization = Text(entry, "organization"),
                     qualification = Text(entry, "qualification"), startMonth = Text(entry, "start_month"), endMonth = Text(entry, "end_month"),
                     isCurrent = entry.TryGetProperty("is_current", out var current) && current.ValueKind == JsonValueKind.True,
                     bullets = Resolve(item.GetProperty("bullets"), 4, id) };
-            }).ToArray();
+            }).Where(item => item is not null).Cast<object>().ToArray();
         }
         var experience = Entries("experience", "work", 8);
         var education = Entries("education", "education", 5);
@@ -132,8 +157,8 @@ public static class CvContent
         Keys(analysis, "keywords", "responsibilities", "mandatory", "desirable", "domain");
         foreach (var field in new[] { "keywords", "responsibilities", "mandatory", "desirable" }) StringItems(analysis.GetProperty(field), field == "keywords" ? 20 : field == "responsibilities" ? 8 : 10, 300);
         if (analysis.GetProperty("domain").ValueKind != JsonValueKind.String || Text(analysis, "domain").Length > 200) throw new CvFailure(502, "invalidOutput");
-        if (summary.Length + selectedSkills.Length + experience.Length + education.Length == 0) throw new CvFailure(422, "profileEmpty");
+        if (summary.Length + selectedSkills.Length + experience.Length + education.Length == 0) throw new CvFailure(422, omittedUnsupportedContent ? "unsupportedFact" : "profileEmpty");
         return new { schemaVersion = Version, template = "ats-basic", name = Text(profile, "full_name"), title = Text(profile, "title"), location = Text(profile, "location"),
-            professionalSummary = summary, skills = selectedSkills, experience, education, analysis = analysis.Clone() };
+            professionalSummary = summary, skills = selectedSkills, experience, education, omittedUnsupportedContent, analysis = analysis.Clone() };
     }
 }

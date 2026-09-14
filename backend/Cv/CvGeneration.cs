@@ -10,7 +10,7 @@ public static class CvGeneration
         try
         {
             var output = await call(CvContent.Instructions, data, CvContent.Schema);
-            var content = CvContent.Validate(output, profile, career, facts, skills);
+            var content = CvContent.Validate(output, profile, career, facts, skills, omitUnsupported: true);
             var claims = CvGrounding.Claims(content, facts);
             if (claims.GetArrayLength() > 0)
             {
@@ -18,7 +18,7 @@ public static class CvGeneration
                 var reviewData = JsonSerializer.Serialize(new { claims });
                 if (reviewData.Length > 90000) throw new CvFailure(422, "profileLarge");
                 var review = await call(CvGrounding.Instructions, reviewData, CvGrounding.Schema);
-                CvGrounding.Validate(review, claims);
+                content = CvGrounding.Filter(review, claims, content);
             }
             return content;
         }

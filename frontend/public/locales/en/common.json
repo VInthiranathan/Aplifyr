@@ -442,6 +442,7 @@
     },
     "download": "Download PDF",
     "downloading": "Creating PDF…",
-    "downloadError": "The PDF could not be created. Your CV remains on this page; try again."
+    "downloadError": "The PDF could not be created. Your CV remains on this page; try again.",
+    "omissions": "Some AI wording or details could not be verified against your profile and have been omitted. Review the CV before using it. Clarify your profile if important information is missing."
   }
 }
