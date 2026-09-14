@@ -1,11 +1,14 @@
 const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');const vm=require('node:vm');const ts=require('typescript');const React=require('react');const {create,act}=require('react-test-renderer');
+const templatesModule={exports:{}};
+vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname,'../lib/cvTemplates.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{module:templatesModule,exports:templatesModule.exports});
 function setup(fetch){
  const mocks={
+ '../../../lib/cvTemplates':templatesModule.exports,
  'next/router':{useRouter:()=>({query:{id:'123'},isReady:true})},
  'next-i18next':{useTranslation:()=>({t:k=>k})},'next-i18next/serverSideTranslations':{},
  'next/link':({href,children})=>React.createElement('a',{href},children),
  '../../../components/ui/button':{Button:props=>React.createElement('button',props)},
- '../../../components/AiGenerationConsent':({onConfirm,onClose})=>React.createElement('section',{role:'dialog'},React.createElement('button',{onClick:onConfirm},'confirm'),React.createElement('button',{onClick:onClose},'cancel')),'../../../components/CvPreview':({content})=>React.createElement('article',null,content.name),
+ '../../../components/AiGenerationConsent':({onConfirm,onClose})=>React.createElement('section',{role:'dialog'},React.createElement('button',{onClick:onConfirm},'confirm'),React.createElement('button',{onClick:onClose},'cancel')),'../../../components/CvPreview':({content,template})=>React.createElement('article',{'data-template':template},content.name),
  '../../../lib/backendUrl':{getPublicBackendUrl:()=>''},
  '../../../lib/supabaseClient':{getSupabaseBrowserClient:()=>({auth:{getSession:async()=>({data:{session:{access_token:'test-token',user:{id:'owner'}}}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})}})},
  '../../../lib/matchSessionContext':{useMatchSession:()=>({getSession:()=>({matched:[]})})},
@@ -21,6 +24,13 @@ test('CV stays only in the current page; consent precedes generation and failure
  const generate=()=>view.root.findAllByType('button').find(b=>b.children.some(c=>typeof c==='string'&&['cv.generate','cv.regenerate'].includes(c)));
  await act(async()=>generate().props.onClick());assert.equal(calls.length,1);
  await act(async()=>view.root.findByProps({role:'dialog'}).findAllByType('button')[0].props.onClick());
+ const requestsBeforeStyle=calls.length;
+ assert.equal(view.root.findAllByProps({type:'radio'}).length,3);
+ for(const style of ['modern','compact','classic']){
+  await act(async()=>view.root.findByProps({type:'radio',value:style}).props.onChange());
+  assert.equal(view.root.findByType('article').props['data-template'],style);
+  assert.equal(calls.length,requestsBeforeStyle);
+ }
  assert.equal(view.root.findByType('article').children[0],'Jonas Axelsson');assert.equal(view.root.findByProps({'data-testid':'cv-omissions'}).children[0],'cv.omissions');
  await act(async()=>generate().props.onClick());
  await act(async()=>view.root.findByProps({role:'dialog'}).findAllByType('button')[0].props.onClick());

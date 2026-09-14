@@ -287,3 +287,9 @@ all existing counts, lengths, source ownership and factual-review checks. Output
 still rejected before return when any structural bound fails. Unsupported individual
 items are now omitted as described above; they never reach the returned CV. This reduces
 provider schema complexity without weakening application validation.
+
+## CV design templates
+
+The CV page offers Classic (monochrome dividers), Modern (dark cyan accent and more whitespace), and Compact (tighter spacing, at least 10 pt body text). Native radio cards with illustrative previews support keyboard selection before or after generation. Selection is page-local, resets for a new job, and is disabled during PDF export. Switching styles never triggers AI, changes facts or writes to storage.
+
+`lib/cvTemplates.ts` shares allowlisted colors, sizes, margins and spacing across `CvPreview` and PDF export. The backend's `ats-basic` schema marker remains unchanged; design is an independent renderer option. Every design uses one column and the same semantic reading order, standard localized headings, selectable PDF text and the embedded Unicode font. No photos, skill bars, tables or document sidebars. Long content wraps and paginates without truncation. Preview is responsive continuous content; PDF uses A4 pagination, so screen line breaks need not match exactly. ATS compatibility varies by parser and is not certified.

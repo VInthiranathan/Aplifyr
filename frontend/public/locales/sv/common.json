@@ -443,6 +443,22 @@
     "download": "Ladda ner PDF",
     "downloading": "Skapar PDF…",
     "downloadError": "PDF-filen kunde inte skapas. Ditt CV finns kvar på sidan; försök igen.",
-    "omissions": "Vissa AI-formuleringar eller uppgifter kunde inte bekräftas mot din profil och har utelämnats. Granska CV:t före användning. Förtydliga gärna profilen om viktig information saknas."
+    "omissions": "Vissa AI-formuleringar eller uppgifter kunde inte bekräftas mot din profil och har utelämnats. Granska CV:t före användning. Förtydliga gärna profilen om viktig information saknas.",
+    "templates": {
+      "title": "Välj CV-stil",
+      "help": "Tre enkelspaltiga stilar med tydliga rubriker och läsbar text. Byt stil före eller efter generering utan nya AI-anrop. Samma stil används i PDF-filen.",
+      "classic": {
+        "name": "Klassisk",
+        "description": "Tidlös svartvit design med tydliga avdelare."
+      },
+      "modern": {
+        "name": "Modern",
+        "description": "Luftig design med diskreta mörkblå accenter."
+      },
+      "compact": {
+        "name": "Kompakt",
+        "description": "Tätare mellanrum som ger mer plats åt din erfarenhet."
+      }
+    }
   }
 }
