@@ -18,7 +18,7 @@ public static class CvContent
         When cachedAnalysis is supplied, copy it unchanged instead of analyzing the job again.
         Rank relevant career entries, education and explicit skills. Read the job requirements, responsibilities,
         mandatory versus desirable requirements and domain. Reuse matchedSkills and cachedAnalysis when supplied.
-        Return ONLY the supplied JSON schema, no HTML, Markdown or PDF. Keep original source language.
+        Return ONLY the supplied JSON schema, no HTML, Markdown or PDF. Follow the output language specified in the system instructions.
         Never add employers, dates, years of experience, technologies, projects, certificates or achievements.
         Write NEW natural, professional wording for the summary, work bullets and education bullets,
         tailored to the job's priorities. Summarize and combine relevant evidence; do not just copy source sentences.

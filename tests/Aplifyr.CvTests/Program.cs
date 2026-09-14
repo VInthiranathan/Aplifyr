@@ -50,7 +50,7 @@ foreach(var bad in new[]{Decisions(false),"{}","{\"decisions\":[]}","{\"decision
 var calls=0;
 var generated=await CvGeneration.Generate("JOB_AD_ONLY",profile,[work,education],facts,["C#","SQL"],(instructions,data,schema)=>{
     calls++;
-    if(calls==1){Check(instructions==CvContent.Instructions);return Task.FromResult(output);}
+    if(calls==1){Check(instructions==CvContent.Instructions + "\n" + JobLanguage.Instructions("en"));return Task.FromResult(output);}
     Check(instructions==CvGrounding.Instructions && !data.Contains("JOB_AD_ONLY") && data.Contains("evidence"));
     return Task.FromResult(Decisions(true));
 });
@@ -98,6 +98,46 @@ catch(CvFailure e){Check(e.Code=="quota" && calls==2);}
 calls=0;
 try{await CvGeneration.Generate("job",profile,[work,education],facts,["C#","SQL"],(_,_,_)=>{calls++;return Task.FromResult("not json");});throw new Exception("Malformed generation returned");}
 catch(CvFailure e){Check(e.Code=="invalidOutput" && calls==1);}
+
+// Both generation flows share ad-only selection; English substrings must not count as Swedish words.
+Check(JobLanguage.Detect("We provide innovative solutions. The candidate will work with our team and develop services.", "Utvecklare") == "en");
+Check(JobLanguage.Detect("Vi söker dig som har erfarenhet av utveckling. Du kommer att arbeta med våra tjänster och vårt team.", "Software Developer") == "sv");
+Check(JobLanguage.Detect("Available candidate provides evidence.", "Developer") == "en");
+Check(JobLanguage.Detect("VI SÖKER DIG MED ERFARENHET AV C# OCH SQL.", "Developer") == "sv");
+Check(JobLanguage.Detect("", "Software Developer") == "en");
+Check(JobLanguage.Detect("", "Utvecklare") == "sv");
+Check(JobLanguage.Detect("", "") == "sv");
+Check(JobLanguage.Detect("We are looking for a developer. You will work with our team and build services for our customers. Ansökan") == "en");
+foreach (var language in new[] { "sv", "en" })
+{
+    var oppositeProfile = language == "en"
+        ? Json("""{"full_name":"Applicant","title":"Utvecklare","bio":"Jag byggde interna verktyg.","tech_stack":["C#"]}""")
+        : profile;
+    var sourceFacts = CvContent.Facts(oppositeProfile, []);
+    var translatedText = language == "en" ? "Developed internal tools." : "Utvecklade interna verktyg.";
+    var translatedOutput = Changed(n => {
+        n["professionalSummary"]![0]!["text"] = translatedText;
+        n["experience"] = new JsonArray(); n["education"] = new JsonArray();
+    });
+    var attempts = 0;
+    var result = await CvGeneration.Generate("ad", oppositeProfile, [], sourceFacts, ["C#"], (instructions, data, schema) => {
+        attempts++;
+        if (attempts == 1)
+        {
+            Check(instructions.Contains(JobLanguage.Instructions(language)));
+            Check(!instructions.Contains("Keep original source language"));
+            return Task.FromResult(translatedOutput);
+        }
+        Check(instructions == CvGrounding.Instructions);
+        var pending = Json(data).GetProperty("claims");
+        Check(pending[0].GetProperty("text").GetString() == translatedText);
+        return Task.FromResult("""{"decisions":[{"id":"0","supported":true}]}""");
+    }, language);
+    var document = JsonSerializer.SerializeToElement(result);
+    Check(attempts == 2 && document.GetProperty("language").GetString() == language);
+    Check(document.GetProperty("professionalSummary")[0].GetProperty("text").GetString() == translatedText);
+}
+
 Environment.SetEnvironmentVariable("GEMINI_API_KEY","letter-fixture");
 Environment.SetEnvironmentVariable("GEMINI_CV_API_KEY",null);
 Check(GeminiProvider.Credential(AiFeature.CoverLetter)=="letter-fixture");

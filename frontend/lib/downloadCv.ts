@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import { cvDocumentT } from './cvDocumentLanguage';
 import type { CvContent, CvEntry } from '../types/api';
 
 export function cvFilename(name: string, company: string, sequence: number): string {
@@ -8,6 +9,7 @@ export function cvFilename(name: string, company: string, sequence: number): str
 
 /** Text-based PDF; no HTML interpretation, tracking images, or external rendering service. */
 export function buildCvPdf(content: CvContent, font: string, t: (key: string) => string): jsPDF {
+  t = cvDocumentT(content, t);
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
   pdf.addFileToVFS('DejaVuSans.ttf', font);
   pdf.addFont('DejaVuSans.ttf', 'CV', 'normal');

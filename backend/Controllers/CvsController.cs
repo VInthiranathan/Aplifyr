@@ -52,6 +52,7 @@ public sealed class CvsController(IConfiguration configuration, AiPrivacyGate pr
         if (facts.Count + skills.Length + career.Length == 0) throw new CvFailure(422, "profileEmpty");
         var description = job.TryGetProperty("description", out var desc) ? CvContent.Text(desc, "text") : "";
         if (description.Length == 0 || description.Length > 60000) throw new CvFailure(422, "jobLarge");
+        var language = JobLanguage.Detect(description, CvContent.Text(job, "headline"));
         var matchedSkills = ExternalJobsController.CvMatchedSkills(job, skills);
         skills = skills.OrderByDescending(s => matchedSkills.Contains(s)).ToArray();
         // Bound AI disclosure, keeping relevance before recency. Full profile never leaves the backend.
@@ -70,11 +71,11 @@ public sealed class CvsController(IConfiguration configuration, AiPrivacyGate pr
                 await using var lease = await privacy.Reserve(HttpContext, "gemini");
                 if (lease == null) throw new CvFailure(429, "consentOrQuota");
                 return await new GeminiProvider(logger: logger).Generate(AiFeature.Cv, instructions, input, schema, HttpContext.RequestAborted);
-            });
+            }, language);
         // Reject stale results when the profile changed during generation.
         var latest = await store.Profile();
         if (CvContent.Hash(new { profile = latest.Profile, career = latest.Career }) != sourceHash) throw new CvFailure(409, "profileChanged");
-        var metadata = new { schemaVersion = CvContent.Version, promptVersion = 2, groundingVersion = 1, provider = "gemini", model = Environment.GetEnvironmentVariable("GEMINI_MODEL"),
+        var metadata = new { schemaVersion = CvContent.Version, promptVersion = 3, groundingVersion = 1, provider = "gemini", model = Environment.GetEnvironmentVariable("GEMINI_MODEL"),
             sourceHash, jobHash, noticeVersion, sourceLimited = ranked.Length < career.Length || selectedFacts.Count < facts.Count || skills.Length > 100 || CvContent.Text(profile, "bio").Length > 800 || career.Any(e => new[] { "description", "achievements", "learned", "strengths" }.Any(field => CvContent.Text(e, field).Length > 800)) };
         var generatedAt = DateTimeOffset.UtcNow;
         return Ok(new { job = Context(job), cv = new { job_id = jobId, content, job_context = Context(job), metadata,

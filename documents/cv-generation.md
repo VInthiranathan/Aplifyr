@@ -20,6 +20,31 @@ message describes the combined operation; it does not pretend to stream individu
 backend stages. The preview exists only in React memory. Refresh or navigation removes it; download it first.
 A canceled request is not a durable background task.
 
+## Document language
+
+Both CV and cover-letter generation use `JobLanguage.Detect` on the advertisement
+body. Whole Unicode word counts distinguish Swedish and English; a tied/empty body
+uses the headline, with Swedish as the final fallback. For mixed advertisements the
+language with more recognized words wins. This is a heuristic for the two supported
+languages, not general multilingual detection. Profile language and UI locale are never inputs.
+
+System instructions explicitly require generated prose in the selected language,
+including faithful translation of profile facts. The CV factual review already accepts
+faithful translations and still checks the original evidence. Official source titles,
+qualifications, names, dates and explicit skill names remain unchanged to preserve identity
+and credentials. Generated summaries and bullets use the advertisement language.
+
+The backend assigns `content.language` (`en` or `sv`) after review; the model cannot
+supply this field. Preview headings and PDF labels (including Present/Pågående) use
+that language through shared translation resources, independently of the app language.
+Legacy content without the field keeps the UI-language fallback. No extra provider
+call, stored CV, consent change or environment variable is needed.
+
+Regression tests cover Swedish/English advertisements, misleading substrings, opposing
+profile/UI languages, prompt selection, translated statements surviving review, and
+preview/export label selection. They test application behavior with synthetic AI responses;
+model adherence still needs review of the generated document.
+
 ## Pipeline and source boundaries
 
 `CvsController` verifies identity through `AiAuthenticationMiddleware`. Only the route

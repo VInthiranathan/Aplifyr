@@ -9,7 +9,7 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 ### Job-specific CV
 
 - `/jobs/[id]/cv` maintains job context and renders a temporary ATS preview with a local PDF download; new CVs are not stored.
-- Gemini rewrites profile, work and education text for the job, with source references and a separate factual review using the CV key.
+- Gemini rewrites profile, work and education text in the advertisement's Swedish or English language, with source references and a separate factual review using the CV key. CV preview/PDF headings follow the same language.
 - See [CV generation](cv-generation.md) for contracts, migration 009, source-validation limits and configuration.
 
 
@@ -32,7 +32,7 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 - frontend page: `frontend/pages/jobs/[id].tsx`
 - backend controller: `backend/Controllers/CoverLettersController.cs`
 - the frontend fetches supported user profile fields for personalization
-- the backend verifies the Supabase bearer token and detects the job language; only explicitly approved providers may be called (Gemini first, Groq fallback if both are enabled)
+- the backend verifies the Supabase bearer token and uses the same ad-language selection as CV generation; only explicitly approved providers may be called (Gemini first, Groq fallback if both are enabled)
 - AI is disabled until `AI_ALLOWED_PROVIDERS` is configured; Gemini also requires `GEMINI_MODEL`
 - job HTML is sanitized; the user is informed before sharing profile facts with external AI
 

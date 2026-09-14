@@ -1,7 +1,13 @@
 const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');const vm=require('node:vm');const ts=require('typescript');
 const moduleUnderTest={exports:{}};
 const code=ts.transpileModule(fs.readFileSync(path.join(__dirname,'../lib/downloadCv.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;
-vm.runInNewContext(code,{module:moduleUnderTest,exports:moduleUnderTest.exports,require,Uint8Array,btoa,fetch});
+const languageModule={exports:{}};
+const languageCode=ts.transpileModule(fs.readFileSync(path.join(__dirname,'../lib/cvDocumentLanguage.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,esModuleInterop:true}}).outputText;
+vm.runInNewContext(languageCode,{module:languageModule,exports:languageModule.exports,require:n=>require(path.resolve(__dirname,'../lib',n))});
+const pdfText=[];
+const realJsPDF=require('jspdf').jsPDF;
+const pdfModule={jsPDF:class {constructor(options){const pdf=new realJsPDF(options);const original=pdf.text.bind(pdf);pdf.text=(value,...args)=>{pdfText.push(value);return original(value,...args);};return pdf;}}};
+vm.runInNewContext(code,{module:moduleUnderTest,exports:moduleUnderTest.exports,require:n=>n==='./cvDocumentLanguage'?languageModule.exports:n==='jspdf'?pdfModule:require(n),Uint8Array,btoa,fetch});
 const {cvFilename,buildCvPdf}=moduleUnderTest.exports;
 test('PDF filenames preserve full names and safely normalize company names',()=>{
  assert.equal(cvFilename('Jonas Axelsson','sigma',1),'Jonas_Axelsson_sigma_1.pdf');
@@ -15,4 +21,37 @@ test('long text-based CV exports across pages with an embedded Swedish font',()=
  const doc=buildCvPdf(content,font,k=>({'cv.summary':'Profil','cv.skills':'Kompetenser','cv.experience':'Arbetslivserfarenhet','cv.education':'Utbildning','cv.present':'Pågående'}[k]||k));
  assert.ok(doc.getNumberOfPages()>1);assert.ok(doc.output().startsWith('%PDF-'));
  if(process.env.CV_PDF_FIXTURE)fs.writeFileSync(process.env.CV_PDF_FIXTURE,Buffer.from(doc.output('arraybuffer')));
+});
+
+test('CV headings and current-date labels use the ad language despite the opposite UI language',()=>{
+ for(const language of ['en','sv']){
+  const target=require('../public/locales/'+language+'/common.json').cv;
+  const other=require('../public/locales/'+(language==='en'?'sv':'en')+'/common.json').cv;
+  const t=languageModule.exports.cvDocumentT({language},k=>other[k.slice(3)]);
+  for(const key of ['summary','skills','experience','education','present','preview'])assert.equal(t('cv.'+key),target[key]);
+ }
+ assert.equal(languageModule.exports.cvDocumentT({},k=>'legacy:'+k)('cv.summary'),'legacy:cv.summary');
+});
+test('PDF and preview consume the document language with an opposite UI locale',async()=>{
+ const React=require('react');const {create,act}=require('react-test-renderer');
+ const previewModule={exports:{}};
+ const previewCode=ts.transpileModule(fs.readFileSync(path.join(__dirname,'../components/CvPreview.tsx'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+ for(const language of ['en','sv']){
+  const target=require('../public/locales/'+language+'/common.json').cv;
+  const other=require('../public/locales/'+(language==='en'?'sv':'en')+'/common.json').cv;
+  const uiT=k=>other[k.slice(3)]||k;
+  vm.runInNewContext(previewCode,{module:previewModule,exports:previewModule.exports,require:n=>n==='../lib/cvDocumentLanguage'?languageModule.exports:n==='next-i18next'?{useTranslation:()=>({t:uiT})}:require(n)});
+  const content={language,name:'Applicant',title:'Developer',location:'Malmö',professionalSummary:[{text:'Summary',sourceFactId:'p'}],skills:['C#'],experience:[{sourceId:'w',title:'Developer',organization:'Sigma',qualification:'',startMonth:'2024-01',endMonth:'',isCurrent:true,bullets:[]}],education:[]};
+  let view;await act(async()=>{view=create(React.createElement(previewModule.exports.default,{content}));});
+  assert.equal(view.root.findByType('article').props.lang,language);
+  assert.deepEqual(view.root.findAllByType('h2').map(h=>h.children[0]),[target.summary,target.skills,target.experience]);
+  assert.ok(JSON.stringify(view.toJSON()).includes(target.present));await act(async()=>view.unmount());
+  const font=fs.readFileSync(path.join(__dirname,'../public/fonts/DejaVuSans.ttf')).toString('base64');
+  pdfText.length=0;
+  const pdf=buildCvPdf(content,font,uiT);
+  for(const key of ['summary','skills','experience'])assert.ok(pdfText.includes(target[key]));
+  assert.ok(pdfText.some(value=>typeof value==='string'&&value.includes(target.present)));
+  assert.ok(!pdfText.includes(other.summary));
+  assert.ok(pdf.output().startsWith('%PDF-'));
+ }
 });
