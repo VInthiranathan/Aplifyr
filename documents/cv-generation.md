@@ -242,3 +242,13 @@ projects and empty contact email. `2026-09-cv-v1` is now enabled with updated
 Swedish/English disclosures for transient output. No user consent was pre-granted.
 See [privacy controls](privacy-controls.md) for activation scope and outstanding
 backend environment/live-generation checks. CI run 34752948672 passed all jobs.
+
+### CV schema compatibility — 2026-09-14
+
+The full live synthetic pipeline exposed Google HTTP 400 `INVALID_ARGUMENT` with
+its nested, bounded response schema, while the small JSON connectivity check passed.
+The wire schema now specifies object properties, required fields and item types
+without array-count constraints. The generation prompt and local validator retain
+all existing counts, lengths, source ownership and factual-review checks. Output is
+still rejected before return when any bound or evidence check fails. This reduces
+provider schema complexity without weakening application validation.

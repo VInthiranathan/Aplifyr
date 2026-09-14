@@ -32,15 +32,16 @@ public static class CvContent
         Each statement is at most 600 characters and cites 1–5 facts. Empty experience/education is valid.
         Analysis keywords describe the JOB only; they are not applicant qualifications. Keep analysis short.
         """;
-    private static object ArrayOf(object item, int max) => new { type = "ARRAY", items = item, maxItems = max };
+    // Keep the provider schema compact; Validate below enforces every item/length limit.
+    private static object ArrayOf(object item) => new { type = "ARRAY", items = item };
     private static object Obj(object properties, params string[] required) => new { type = "OBJECT", properties, required };
     private static object Str => new { type = "STRING" };
-    private static object Statement => Obj(new { text = Str, sourceFactIds = ArrayOf(Str, 5) }, "text", "sourceFactIds");
+    private static object Statement => Obj(new { text = Str, sourceFactIds = ArrayOf(Str) }, "text", "sourceFactIds");
     public static object Schema => Obj(new {
-        professionalSummary = ArrayOf(Statement, 3), skills = ArrayOf(Str, 20),
-        experience = ArrayOf(Obj(new { sourceId = Str, bullets = ArrayOf(Statement, 4) }, "sourceId", "bullets"), 8),
-        education = ArrayOf(Obj(new { sourceId = Str, bullets = ArrayOf(Statement, 4) }, "sourceId", "bullets"), 5),
-        analysis = Obj(new { keywords = ArrayOf(Str, 20), responsibilities = ArrayOf(Str, 8), mandatory = ArrayOf(Str, 10), desirable = ArrayOf(Str, 10), domain = Str }, "keywords", "responsibilities", "mandatory", "desirable", "domain")
+        professionalSummary = ArrayOf(Statement), skills = ArrayOf(Str),
+        experience = ArrayOf(Obj(new { sourceId = Str, bullets = ArrayOf(Statement) }, "sourceId", "bullets")),
+        education = ArrayOf(Obj(new { sourceId = Str, bullets = ArrayOf(Statement) }, "sourceId", "bullets")),
+        analysis = Obj(new { keywords = ArrayOf(Str), responsibilities = ArrayOf(Str), mandatory = ArrayOf(Str), desirable = ArrayOf(Str), domain = Str }, "keywords", "responsibilities", "mandatory", "desirable", "domain")
     }, "professionalSummary", "skills", "experience", "education", "analysis");
 
     public record Fact(string Id, string SourceId, string Text, string Kind = "profile");
