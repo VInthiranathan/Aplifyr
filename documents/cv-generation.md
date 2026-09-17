@@ -243,16 +243,18 @@ lock rather than requiring new Auth privileges. No live migration was applied.
 
 ## Generation consent dialog
 
-Clicking generate or regenerate opens `AiGenerationConsent` before making an AI
-request. It reloads the Gemini notice and saved consent on each opening. The user
-can cancel; continuing is disabled while loading, after a failed consent write,
-when Gemini has no enabled notice, or when the saved consent is revoked/stale.
+Clicking generate or regenerate checks the current Gemini notice and saved consent
+before making an AI request. Valid saved consent continues directly without reopening
+the dialog. `AiGenerationConsent` opens only when consent is missing, withdrawn or
+stale because the active notice version changed. The user can cancel; continuing is
+disabled while loading, after a failed consent write, or when Gemini has no enabled notice.
 A successful explicit checkbox update enables a separate continue button. Existing
-current consent is shown as saved; it is never fabricated or granted automatically.
+current consent is stored server-side; it is never fabricated or granted automatically.
 The shared dialog uses the existing focus trap, Escape dismissal and focus restoration.
 The backend still verifies consent/version and reserves every provider call, including
 CV factual review, so client UI is not an authorization boundary. Withdrawal remains
-available on `/privacy`. No Groq fallback is enabled by this UI.
+available from the desktop and mobile menu at `/privacy#ai-consent`. No Groq fallback
+is enabled by this UI.
 
 Live inspection on 2026-09-13 confirmed that `generated_cvs` exists, but all Gemini
 notices are disabled. `2026-09-cv-v1` contains an explicitly incomplete draft.

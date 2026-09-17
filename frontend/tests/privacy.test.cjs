@@ -56,3 +56,10 @@ test('privacy translations match and remote employer images are not loaded',()=>
     assert.doesNotMatch(fs.readFileSync(path.join(__dirname,'../pages',page),'utf8'),/src=\{(?:safeExternalUrl\()?job\.logo_url/);
   }
 });
+test('desktop and mobile menus expose the saved AI consent settings',()=>{
+ for(const component of ['components/Sidebar.tsx','components/SettingsDrawer.tsx']) {
+  const source=fs.readFileSync(path.join(__dirname,'..',component),'utf8');
+  assert.match(source,/\/privacy#ai-consent/);
+  assert.match(source,/privacy\.menu/);
+ }
+});

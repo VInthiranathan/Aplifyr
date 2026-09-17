@@ -1,8 +1,8 @@
 {
   "consent": {
     "poolLimit": "The search reached its capacity limit. Results are incomplete. Narrow your job preferences to start a new search.",
-    "title": "Optional AI for cover letters",
-    "explanation": "Choose separately which providers may process your profile and the job ad to create letters. Job search and your profile work if you decline. Withdraw here or on the privacy page at any time. Withdrawal stops new calls but cannot recall data already sent. Contact us for erasure at the recipient.",
+    "title": "AI generation and personal data",
+    "explanation": "Choose which enabled AI providers may process your profile and the job ad to create cover letters and tailored CVs. Your choice is saved, and you will not be asked again while the consent remains valid for the current notice. Job search and your profile work if you decline. You can withdraw consent here at any time. Withdrawal stops new calls but cannot recall data already sent. Contact us for erasure at the recipient.",
     "allow": "I consent to the described processing by this provider.",
     "withdraw": "Withdraw consent",
     "unavailable": "This provider has not been enabled with reviewed information.",
@@ -27,6 +27,7 @@
     }
   },
   "privacy": {
+    "menu": "Privacy and AI",
     "title": "Privacy and personal data",
     "pending": "The complete privacy notice has not been published yet. The service is not ready for public launch until the responsible organization completes this information.",
     "exportScope": "Signed-in users can download account identity, profile and career facts, plus favorites in this browser. The export excludes provider logs, backups and data in other browsers. Contact us for a complete access request.",

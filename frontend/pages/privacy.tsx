@@ -40,8 +40,10 @@ export default function PrivacyPage({ notice, contact }: Props) {
     <p>{t('privacy.exportScope')}</p>
     <Button onClick={download} disabled={busy}>{t('privacy.export')}</Button>
     {error && <p role="alert">{error}</p>}
+    <section id="ai-consent" className="scroll-mt-6">
+      <AiConsent />
+    </section>
     <h2 className="text-xl font-semibold">{t('privacy.rights')}</h2>
-    <AiConsent />
     <p>{t('privacy.rightsDetails')}</p>
     {contact ? <a className="underline" href={`mailto:${encodeURIComponent(contact)}`}>{contact}</a> : <p role="status">{t('privacy.contactPending')}</p>}
     <Link href="/auth" className="underline">{t('auth.backToSignIn')}</Link>

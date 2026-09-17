@@ -14,6 +14,7 @@ import {
   Moon,
   LogOut,
   Bookmark,
+  ShieldCheck,
 } from "lucide-react";
 import { Button } from "./ui/button";
 
@@ -23,7 +24,7 @@ const navItemDefs = [
   { key: "nav.favorites", href: "/favorites", icon: Bookmark },
   { key: "nav.allJobs", href: "/jobs", icon: Briefcase },
   { key: "nav.support", href: "/support", icon: HelpCircle },
-  { key: "privacy.title", href: "/privacy", icon: User },
+  { key: "privacy.menu", href: "/privacy#ai-consent", icon: ShieldCheck },
 ];
 
 export default function Sidebar() {
@@ -129,7 +130,7 @@ export default function Sidebar() {
       {/* nav links */}
       <nav className="flex flex-col gap-1 px-2 mt-4">
         {navItemDefs.map(({ key, href, icon: Icon }) => {
-          const active = pathname === href;
+          const active = pathname === href.split('#')[0];
           return (
             <Link
               key={href}

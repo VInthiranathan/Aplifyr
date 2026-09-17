@@ -1,8 +1,8 @@
 {
   "consent": {
     "poolLimit": "Sökningen har nått sin kapacitetsgräns. Resultaten är inte fullständiga. Precisera dina jobbpreferenser för en ny sökning.",
-    "title": "Valfri AI för personliga brev",
-    "explanation": "Välj separat vilka leverantörer som får behandla din profil och annons för att skapa brev. Jobbsökning och profil fungerar även om du säger nej. Du kan när som helst återkalla här eller på integritetssidan. Återkallelse stoppar nya anrop, men kan inte ta tillbaka redan skickade uppgifter. Kontakta oss för radering hos mottagaren.",
+    "title": "AI-generering och personuppgifter",
+    "explanation": "Välj vilka aktiverade AI-leverantörer som får behandla din profil och jobbannons för att skapa personliga brev och anpassade CV:n. Valet sparas och du tillfrågas inte igen så länge samtycket gäller för den aktuella informationen. Jobbsökning och profil fungerar även om du säger nej. Du kan när som helst återkalla samtycket här. Återkallelse stoppar nya anrop, men kan inte ta tillbaka redan skickade uppgifter. Kontakta oss för radering hos mottagaren.",
     "allow": "Jag samtycker till den beskrivna behandlingen hos denna leverantör.",
     "withdraw": "Återkalla samtycke",
     "unavailable": "Leverantören är inte aktiverad med granskad information.",
@@ -27,6 +27,7 @@
     }
   },
   "privacy": {
+    "menu": "Integritet och AI",
     "title": "Integritet och personuppgifter",
     "pending": "Fullständig integritetsinformation är ännu inte publicerad. Tjänsten är inte redo för publik lansering innan ansvarig verksamhet har kompletterat informationen.",
     "exportScope": "Inloggade användare kan hämta kontoidentitet, profil och karriäruppgifter samt favoriter i denna webbläsare. Exporten omfattar inte leverantörsloggar, säkerhetskopior eller data i andra webbläsare. Kontakta oss för ett fullständigt tillgångsärende.",

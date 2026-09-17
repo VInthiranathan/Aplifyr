@@ -4,21 +4,22 @@ import {useTranslation} from 'next-i18next';
 import Link from 'next/link';
 type Notice={provider:string;version:string;notice_sv:string;notice_en:string;enabled:boolean};
 type Consent={provider:string;notice_version:string;granted:boolean};
-export default function AiConsent({providers=['gemini','groq'],onReady}: {providers?: string[];onReady?:(ready:boolean)=>void}) {
+type ConsentData={notices:Notice[];consents:Consent[]};
+export default function AiConsent({providers=['gemini','groq'],onReady,initialData}: {providers?: string[];onReady?:(ready:boolean)=>void;initialData?:ConsentData}) {
  const {t}=useTranslation('common');const {locale}=useRouter();
- const [data,setData]=useState<{notices:Notice[];consents:Consent[]}|null>(null);
+ const [data,setData]=useState<ConsentData|null>(initialData??null);
  const readyCallback=useRef(onReady);readyCallback.current=onReady;
- const [busy,setBusy]=useState(true);const [error,setError]=useState('');
+ const [busy,setBusy]=useState(!initialData);const [error,setError]=useState('');
  useEffect(()=>{
   readyCallback.current?.(!busy && !error && !!data && providers.every(provider=>{
    const notice=data.notices.find(n=>n.provider===provider&&n.enabled);
    return !!notice && !!data.consents.find(c=>c.provider===provider&&c.granted&&c.notice_version===notice.version);
   }));
  },[data,busy,error,providers]);
- useEffect(()=>{const controller=new AbortController();
+ useEffect(()=>{if(initialData)return;const controller=new AbortController();
   fetch('/api/account/consent',{signal:controller.signal}).then(async r=>{if(!r.ok)throw Error();return r.json();}).then(setData).catch(()=>{if(!controller.signal.aborted)setError(t('consent.error'));}).finally(()=>{if(!controller.signal.aborted)setBusy(false);});
   return ()=>controller.abort();
- },[t]);
+ },[initialData,t]);
  async function change(provider:string,version:string,granted:boolean) {
   if(busy)return;readyCallback.current?.(false);setBusy(true);setError('');
   try {const r=await fetch('/api/account/consent',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider,version,granted})});if(!r.ok)throw Error();setData(await r.json());}
