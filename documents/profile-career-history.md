@@ -54,8 +54,9 @@ key with the user's session. No service-role key is used. Ownership is assigned 
 PUT/DELETE filter by owner, ID and version; an unmatched/stale entry returns 409. Concurrent
 browser edits therefore do not silently overwrite each other. Mutations require JSON and
 reject cross-site browser requests; responses are private and non-cacheable. Database
-details are not sent in errors. The page consumes this dedicated API; legacy profile and
-cover-letter response shapes are unchanged.
+details are not sent in errors. The page consumes this dedicated API; legacy profile
+response shapes are unchanged. Cover-letter generation now additionally returns its
+seven-day `expiresAt` deadline.
 
 ## Rollout
 

@@ -23,7 +23,8 @@
       "consentOrQuota": "The request could not be authorized. Check your Gemini consent and try again later; a usage limit may apply.",
       "timeout": "The AI service took too long to respond. Try again later.",
       "invalidOutput": "The AI service returned an incomplete or unreadable answer. Try again.",
-      "provider": "The AI service could not complete the request. Try again later."
+      "provider": "The AI service could not complete the request. Try again later.",
+      "storage": "The letter was created but could not be linked to the job. Please try again later."
     }
   },
   "privacy": {
@@ -70,6 +71,24 @@
     "matches": "Matches",
     "recentJobs": "Recent Jobs",
     "matchedJobs": "Matched Jobs",
+    "preparedJobs": "Prepared Jobs",
+    "jobTabsLabel": "Job lists",
+    "noPreparedJobsTitle": "No prepared jobs yet",
+    "noPreparedJobsDescription": "A job appears here automatically after you generate a CV or cover letter for it.",
+    "cvReady": "CV ready",
+    "coverLetterReady": "Cover letter ready",
+    "cvExpires": "CV saved until {{date}}",
+    "openCv": "Open CV",
+    "deleteCv": "Delete CV",
+    "deletingCv": "Deleting…",
+    "deleteCvConfirm": "Delete the saved CV? This cannot be undone.",
+    "deleteCvError": "The CV could not be deleted. Please try again.",
+    "coverLetterExpires": "Cover letter saved until {{date}}",
+    "openCoverLetter": "Open letter",
+    "deleteCoverLetter": "Delete letter",
+    "deletingCoverLetter": "Deleting…",
+    "deleteCoverLetterConfirm": "Delete the saved cover letter? This cannot be undone.",
+    "deleteCoverLetterError": "The cover letter could not be deleted. Please try again.",
     "jobCount": "{{count}} jobs",
     "noRolesTitle": "Complete your profile",
     "noRolesDescription": "Add desired roles to your profile to see personalized job matches.",
@@ -180,7 +199,7 @@
     "externalInstructions": "Apply via the external website described in the ad (open the ad on Arbetsformedlingen below).",
     "genericInstructions": "Application instructions are available in the ad. Open the ad below.",
     "deadlineLabel": "Application deadline: {{date}}",
-    "aiDisclosure": "Create a draft with external AI? Your profile (name, title, location, biography, skills and roles) and the job ad are sent to an enabled provider: Gemini or Groq. If both are enabled, Groq can be used when Gemini fails. Do not include sensitive information. Review the result before use."
+    "aiDisclosure": "Create a draft with external AI? Your profile (name, title, location, biography, skills and roles) and the job ad are sent to an enabled provider: Gemini or Groq. If both are enabled, Groq can be used when Gemini fails. The completed letter is saved to your account for seven days and can be deleted earlier. Do not include sensitive information. Review the result before use."
   },
   "coverLetter": {
     "title": "Cover Letter",
@@ -190,7 +209,13 @@
     "copied": "Copied!",
     "copy": "Copy",
     "regenerate": "Regenerate",
-    "sendApplication": "Send application"
+    "sendApplication": "Send application",
+    "openSaved": "Open saved letter",
+    "savedUntil": "Saved until {{date}}",
+    "delete": "Delete letter",
+    "deleting": "Deleting…",
+    "deleteConfirm": "Delete the saved cover letter? This cannot be undone.",
+    "deleteError": "The cover letter could not be deleted. Please try again."
   },
   "user": {
     "noData": "Could not fetch user data – is the backend running?",
@@ -410,7 +435,7 @@
     "regenerate": "Regenerate CV",
     "generating": "Generating…",
     "progress": "Tailoring the wording to the job and checking your CV against your profile…",
-    "saved": "Your CV is ready. Download it before leaving or refreshing this page. It is not saved to your account.",
+    "saved": "Your CV is ready and saved until {{date}}.",
     "ready": "Your current profile will be used when you generate.",
     "preview": "CV preview",
     "summary": "Professional summary",
@@ -419,7 +444,7 @@
     "education": "Education",
     "present": "Present",
     "profile": "Update profile",
-    "disclosure": "CV generation shares selected profile and career information with Google Gemini. Aplifyr adds your name and location. The result exists temporarily on this page and is not saved to your account.",
+    "disclosure": "CV generation shares selected profile and career information with Google Gemini. Aplifyr adds your name and location. The completed CV is saved to your account for seven days and can be deleted earlier.",
     "review": "AI has tailored the wording to the job and checked it against your profile. Review the facts before applying.",
     "limited": "Your profile was large. The CV uses a bounded selection of facts; review that the relevant details are included.",
     "errors": {
@@ -444,6 +469,9 @@
     "download": "Download PDF",
     "downloading": "Creating PDF…",
     "downloadError": "The PDF could not be created. Your CV remains on this page; try again.",
+    "delete": "Delete CV",
+    "deleting": "Deleting…",
+    "deleteConfirm": "Delete the saved CV? This cannot be undone.",
     "omissions": "Some AI wording or details could not be verified against your profile and have been omitted. Review the CV before using it. Clarify your profile if important information is missing.",
     "templates": {
       "title": "Choose CV style",

@@ -46,6 +46,8 @@ export default function JobDetailPage() {
   const [jobHtml, setJobHtml] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [letter, setLetter] = useState<string | null>(null);
+  const [letterExpiresAt, setLetterExpiresAt] = useState<string | null>(null);
+  const [deletingLetter, setDeletingLetter] = useState(false);
   // debug toggle removed
   const [consentOpen, setConsentOpen] = useState(false);
   const requestGeneration = () => { if (!generating) { setShowModal(false); setConsentOpen(true); } };
@@ -141,6 +143,30 @@ export default function JobDetailPage() {
     fetchJob();
   }, [data, id]);
 
+  useEffect(() => {
+    if (!router.isReady || typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(id)) return;
+    const controller = new AbortController();
+    void (async () => {
+      try {
+        const { data: { session } } = await getSupabaseBrowserClient().auth.getSession();
+        if (!session) return;
+        const response = await fetch(`${BACKEND}/api/coverletters/${encodeURIComponent(id)}`, {
+          headers: { Authorization: `Bearer ${session.access_token}` }, signal: controller.signal,
+        });
+        if (!response.ok) return;
+        const saved = (await response.json()).letter;
+        if (saved && typeof saved.content === 'string' && typeof saved.expires_at === 'string') {
+          setLetter(saved.content);
+          setLetterExpiresAt(saved.expires_at);
+          if (router.query.letter === '1') setShowModal(true);
+        }
+      } catch (error) {
+        if (!(error instanceof Error && error.name === 'AbortError')) console.error('Could not load saved cover letter');
+      }
+    })();
+    return () => controller.abort();
+  }, [id, router.isReady, router.query.letter]);
+
   const generate = async () => {
     if (!job || generating) return;
     setGenerating(true);
@@ -184,7 +210,7 @@ export default function JobDetailPage() {
           Authorization: `Bearer ${session?.access_token ?? ""}`,
         },
         body: JSON.stringify({
-          jobs: [{title:String(job.headline??job.title??'').slice(0,200),employer:{name:String(job.employer?.name??'').slice(0,200)},workplace_address:{municipality:String(job.workplace_address?.municipality??'').slice(0,200)},description:{text:String(typeof job.description==='string'?job.description:job.description?.text??'').slice(0,16000)}}],
+          jobs: [{id:String(job.id??id).slice(0,100),title:String(job.headline??job.title??'').slice(0,200),employer:{name:String(job.employer?.name??'').slice(0,200)},workplace_address:{municipality:String(job.workplace_address?.municipality??'').slice(0,200)},description:{text:String(typeof job.description==='string'?job.description:job.description?.text??'').slice(0,16000)}}],
           user: userProfile,
         }),
       });
@@ -198,6 +224,7 @@ export default function JobDetailPage() {
 
       if (Array.isArray(data) && data[0]?.coverLetter) {
         setLetter(data[0].coverLetter);
+        setLetterExpiresAt(typeof data[0].expiresAt === 'string' ? data[0].expiresAt : null);
         setShowModal(true);
       } else if (Array.isArray(data) && data[0]?.error) {
         setLetter(t(`consent.errors.${aiFailureCode(data, res.status)}`));
@@ -211,6 +238,24 @@ export default function JobDetailPage() {
       setShowModal(true);
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const deleteCoverLetter = async () => {
+    if (typeof id !== 'string' || deletingLetter || !window.confirm(t('coverLetter.deleteConfirm'))) return;
+    setDeletingLetter(true);
+    try {
+      const { data: { session } } = await getSupabaseBrowserClient().auth.getSession();
+      if (!session) throw new Error('authentication');
+      const response = await fetch(`${BACKEND}/api/coverletters/${encodeURIComponent(id)}`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!response.ok) throw new Error('storage');
+      setShowModal(false); setLetter(null); setLetterExpiresAt(null);
+    } catch {
+      setFetchError(t('coverLetter.deleteError'));
+    } finally {
+      setDeletingLetter(false);
     }
   };
 
@@ -314,6 +359,7 @@ export default function JobDetailPage() {
                       fill={isFavorite(job.id) ? "currentColor" : "none"}
                     />
                   </Button>
+                  {letter && <Button variant="secondary" onClick={() => setShowModal(true)} className="mt-2 h-auto w-full px-4 py-2.5">{t("coverLetter.openSaved")}</Button>}
                 </div>
                 <div className="text-sm text-slate-500 mt-1">
                   {job.employer?.name}
@@ -479,6 +525,9 @@ export default function JobDetailPage() {
           applicationUrl={safeExternalUrl(getApplicationUrl())}
           onRegenerate={requestGeneration}
           isRegenerating={generating}
+          expiresAt={letterExpiresAt}
+          onDelete={() => void deleteCoverLetter()}
+          isDeleting={deletingLetter}
         />
       )}
     </div>

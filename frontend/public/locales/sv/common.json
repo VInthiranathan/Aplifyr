@@ -23,7 +23,8 @@
       "consentOrQuota": "Anropet kunde inte godkännas. Kontrollera ditt Gemini-samtycke och försök senare. En användningsgräns kan ha nåtts.",
       "timeout": "AI-tjänsten tog för lång tid på sig att svara. Försök igen senare.",
       "invalidOutput": "AI-tjänsten gav ett ofullständigt eller oläsbart svar. Försök igen.",
-      "provider": "AI-tjänsten kunde inte slutföra genereringen. Försök igen senare."
+      "provider": "AI-tjänsten kunde inte slutföra genereringen. Försök igen senare.",
+      "storage": "Brevet skapades men kunde inte kopplas till jobbet. Försök igen senare."
     }
   },
   "privacy": {
@@ -70,6 +71,24 @@
     "matches": "Matchningar",
     "recentJobs": "Senaste jobben",
     "matchedJobs": "Matchade jobb",
+    "preparedJobs": "Förberedda jobb",
+    "jobTabsLabel": "Jobblistor",
+    "noPreparedJobsTitle": "Inga förberedda jobb än",
+    "noPreparedJobsDescription": "Ett jobb visas här automatiskt när du har genererat ett CV eller personligt brev för det.",
+    "cvReady": "CV klart",
+    "coverLetterReady": "Personligt brev klart",
+    "cvExpires": "CV sparat till {{date}}",
+    "openCv": "Öppna CV",
+    "deleteCv": "Ta bort CV",
+    "deletingCv": "Tar bort…",
+    "deleteCvConfirm": "Vill du ta bort det sparade CV:t? Detta går inte att ångra.",
+    "deleteCvError": "CV:t kunde inte tas bort. Försök igen.",
+    "coverLetterExpires": "Personligt brev sparat till {{date}}",
+    "openCoverLetter": "Öppna brev",
+    "deleteCoverLetter": "Ta bort brev",
+    "deletingCoverLetter": "Tar bort…",
+    "deleteCoverLetterConfirm": "Vill du ta bort det sparade personliga brevet? Detta går inte att ångra.",
+    "deleteCoverLetterError": "Det personliga brevet kunde inte tas bort. Försök igen.",
     "jobCount": "{{count}} jobb",
     "noRolesTitle": "Komplettera din profil",
     "noRolesDescription": "Lägg till önskade roller i din profil för att se personliga jobbmatchningar.",
@@ -180,7 +199,7 @@
     "externalInstructions": "Ansök via den externa webbplats som anges i annonsen (öppna annonsen på Arbetsförmedlingen nedan).",
     "genericInstructions": "Ansökningsinstruktioner finns i annonsen. Öppna annonsen nedan.",
     "deadlineLabel": "Sista ansökningsdag: {{date}}",
-    "aiDisclosure": "Skapa ett utkast med extern AI? Din profil (namn, titel, ort, biografi, färdigheter och roller) och jobbannonsen skickas till en aktiverad leverantör: Gemini eller Groq. Om båda är aktiverade kan Groq användas när Gemini misslyckas. Ta inte med känsliga uppgifter. Granska resultatet innan du använder det."
+    "aiDisclosure": "Skapa ett utkast med extern AI? Din profil (namn, titel, ort, biografi, färdigheter och roller) och jobbannonsen skickas till en aktiverad leverantör: Gemini eller Groq. Om båda är aktiverade kan Groq användas när Gemini misslyckas. Det färdiga brevet sparas på ditt konto i sju dagar och kan tas bort tidigare. Ta inte med känsliga uppgifter. Granska resultatet innan du använder det."
   },
   "coverLetter": {
     "title": "Personligt brev",
@@ -190,7 +209,13 @@
     "copied": "Kopierat!",
     "copy": "Kopiera",
     "regenerate": "Generera om",
-    "sendApplication": "Skicka ansökan"
+    "sendApplication": "Skicka ansökan",
+    "openSaved": "Öppna sparat brev",
+    "savedUntil": "Sparat till {{date}}",
+    "delete": "Ta bort brev",
+    "deleting": "Tar bort…",
+    "deleteConfirm": "Vill du ta bort det sparade personliga brevet? Detta går inte att ångra.",
+    "deleteError": "Det personliga brevet kunde inte tas bort. Försök igen."
   },
   "user": {
     "noData": "Kunde inte hämta användardata – är backend igång?",
@@ -410,7 +435,7 @@
     "regenerate": "Generera CV igen",
     "generating": "Genererar…",
     "progress": "Anpassar formuleringarna till jobbet och faktagranskar ditt CV mot din profil…",
-    "saved": "Ditt CV är klart. Ladda ner det innan du lämnar eller laddar om sidan. Det sparas inte på ditt konto.",
+    "saved": "Ditt CV är klart och sparas till {{date}}.",
     "ready": "Din aktuella profil används när du genererar.",
     "preview": "Förhandsvisning av CV",
     "summary": "Profil",
@@ -419,7 +444,7 @@
     "education": "Utbildning",
     "present": "Pågående",
     "profile": "Uppdatera profil",
-    "disclosure": "CV-genereringen delar utvalda profil- och karriäruppgifter med Google Gemini. Ditt namn och din plats läggs till av Aplifyr. Resultatet finns tillfälligt på denna sida och sparas inte på ditt konto.",
+    "disclosure": "CV-genereringen delar utvalda profil- och karriäruppgifter med Google Gemini. Ditt namn och din plats läggs till av Aplifyr. Det färdiga CV:t sparas på ditt konto i sju dagar och kan tas bort tidigare.",
     "review": "AI:n har anpassat formuleringarna efter jobbet och kontrollerat dem mot din profil. Granska ändå uppgifterna innan du ansöker.",
     "limited": "Din profil var omfattande. CV:t använder ett begränsat urval av fakta. Kontrollera att relevanta uppgifter finns med.",
     "errors": {
@@ -444,6 +469,9 @@
     "download": "Ladda ner PDF",
     "downloading": "Skapar PDF…",
     "downloadError": "PDF-filen kunde inte skapas. Ditt CV finns kvar på sidan; försök igen.",
+    "delete": "Ta bort CV",
+    "deleting": "Tar bort…",
+    "deleteConfirm": "Vill du ta bort det sparade CV:t? Detta går inte att ångra.",
     "omissions": "Vissa AI-formuleringar eller uppgifter kunde inte bekräftas mot din profil och har utelämnats. Granska CV:t före användning. Förtydliga gärna profilen om viktig information saknas.",
     "templates": {
       "title": "Välj CV-stil",

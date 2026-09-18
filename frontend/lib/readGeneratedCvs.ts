@@ -3,7 +3,7 @@ export async function readGeneratedCvs(client: SupabaseClient, owner: string) {
   const rows: Record<string, unknown>[] = [];
   let cursor = '';
   for (let page = 0; page <= 100; page++) {
-    let query = client.from('generated_cvs').select('job_id,content,job_context,metadata,created_at,updated_at').eq('user_id', owner).order('job_id').limit(25);
+    let query = client.from('generated_cvs').select('job_id,content,job_context,metadata,created_at,updated_at,expires_at').eq('user_id', owner).order('job_id').limit(25);
     if (cursor) query = query.gt('job_id', cursor);
     const { data, error } = await query;
     if (error || !Array.isArray(data)) throw new Error('CV export unavailable');

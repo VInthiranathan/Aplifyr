@@ -56,10 +56,10 @@ Environment.SetEnvironmentVariable("AI_ALLOWED_PROVIDERS", "gemini");
 Environment.SetEnvironmentVariable("GEMINI_API_KEY", "letter-fixture");
 Environment.SetEnvironmentVariable("GEMINI_MODEL", null);
 var letters = new Aplifyr.Api.Controllers.CoverLettersController(
- Microsoft.Extensions.Logging.Abstractions.NullLogger<Aplifyr.Api.Controllers.CoverLettersController>.Instance, gate) {
+ Microsoft.Extensions.Logging.Abstractions.NullLogger<Aplifyr.Api.Controllers.CoverLettersController>.Instance, gate, privacyConfig) {
  ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext { HttpContext = privacyContext }
 };
-using var letterRequest = System.Text.Json.JsonDocument.Parse("{\"jobs\":[{\"title\":\"Synthetic role\",\"description\":\"Synthetic job\"}]}");
+using var letterRequest = System.Text.Json.JsonDocument.Parse("{\"jobs\":[{\"id\":\"synthetic-job\",\"title\":\"Synthetic role\",\"description\":\"Synthetic job\"}]}");
 var missingModel = (Microsoft.AspNetCore.Mvc.ObjectResult)await letters.GenerateAll(letterRequest.RootElement);
 if(missingModel.StatusCode != 503 || !System.Text.Json.JsonSerializer.Serialize(missingModel.Value).Contains("configuration")) throw new Exception("Letter configuration failure hidden");
 Environment.SetEnvironmentVariable("GEMINI_MODEL", "fixture-model");

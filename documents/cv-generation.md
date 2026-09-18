@@ -15,9 +15,10 @@ dates and the skills list remain deterministically sourced. Generated prose must
 supporting profile facts and pass a separate source-only factual review before returning the result.
 
 Generation uses the shared consent UI (Gemini only), preserves the old preview while
-regenerating and after failure, and returns the validated CV only to the requesting browser. The progress
+regenerating and after failure, and stores the validated CV for the requesting owner. The progress
 message describes the combined operation; it does not pretend to stream individual
-backend stages. The preview exists only in React memory. Refresh or navigation removes it; download it first.
+backend stages. The latest CV is restored after refresh or navigation for seven days from generation.
+The user can delete it immediately from the CV page or the home dashboard.
 A canceled request is not a durable background task.
 
 ## Document language
@@ -121,9 +122,11 @@ snapshot: a concurrent edit after the final check is still possible.
 ## API contracts and failures
 
 - `GET /api/cvs/{jobId}` -> `{ job: { id, title, company, location }, cv: GeneratedCv | null }`.
-  `cv` is always null; the endpoint fetches live job context.
-- `POST /api/cvs/{jobId}/generate` -> the same shape after validation, without a database write.
+  It returns the owner's unexpired saved CV when present; otherwise it fetches live job context.
+- `POST /api/cvs/{jobId}/generate` -> the same shape after validation and an atomic database write.
   No JSON payload or `user_id` is accepted/needed.
+- `DELETE /api/cvs/{jobId}` deletes the owner's CV. The database trigger also removes its
+  CV preparation marker, while preserving a prepared job that also has a cover letter.
 - Response headers are `private, no-store`.
 - 400 invalid ID; 401 missing/invalid authentication; 403 CV notice consent missing;
   409 profile changed; 410 removed job; 422 empty/oversized source;
@@ -136,19 +139,24 @@ snapshot: a concurrent edit after the final check is still possible.
   share per-user/global reservations and budgets with letters. Distinct API keys
   do not guarantee distinct Google project quotas; configure Google usage budgets.
 
-## No new CV persistence
+## CV persistence and prepared jobs
 
-Generation never reads or writes `generated_cvs` or calls `save_generated_cv`.
-The response retains `job_id`, `content`, `job_context`, `metadata`, `created_at` and
-`updated_at` for renderer compatibility; timestamps describe generation, not storage.
-Responses remain private/no-store. The preview is not written to browser storage.
-Profile reads, consent receipts and privacy quota reservations still use Supabase.
-Google's processing/retention is separate from Aplifyr's no-CV-storage behavior.
+After factual validation and the final profile hash check, the backend calls the
+service-role-only `save_generated_cv_v2` RPC. It stores the latest structured CV,
+bounded job context and metadata in `generated_cvs`, with `expires_at` exactly seven
+days after the successful write. Regeneration replaces the row and restarts retention.
+The authenticated SELECT policy hides expired rows immediately; an hourly `pg_cron`
+job physically deletes them. Existing migration-009 rows receive a deadline based on
+their latest `updated_at` value.
 
-Historical migration 009 and existing records are retained; no destructive cleanup
-is applied as part of this change. Account export still includes any historical CV
-records, and existing owner RLS and account-deletion cascade remain intact.
-A separate, explicitly authorized cleanup would be required to remove historical data.
+`prepared_jobs` is an owner-readable summary used by the two home tabs. A successful
+CV or cover-letter write sets that artifact's independent expiry and stores bounded public
+job context through a service-role RPC. Cover-letter text is stored in
+`generated_cover_letters`, not in the summary row. Failed generations create no prepared
+entry. Deletion and expiry clear only the corresponding marker through a trigger and remove
+the prepared row when neither artifact remains. RLS, explicit owner filters, bounded JSON,
+server-derived user IDs and account-deletion cascades apply. Responses remain
+private/no-store and no generated document is written to browser storage.
 
 ## PDF download
 
@@ -175,7 +183,8 @@ Backend only:
 - **`GEMINI_MODEL`**: configured shared model supporting structured JSON responses.
 - **`AI_ALLOWED_PROVIDERS`** must include `gemini`.
 - **`GEMINI_CV_NOTICE_VERSION`**: exact active reviewed notice version covering CV
-  generation and factual review, selected career descriptions/achievements/learning and temporary browser preview/download.
+  generation and factual review, selected career descriptions/achievements/learning,
+  seven-day account storage, deletion and local preview/download.
 - existing `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
 
 Do not reuse a letter-only notice as consent for broader CV disclosure. Configure a
@@ -226,20 +235,18 @@ renewal, quota exhaustion and mobile keyboard behavior in staging before merging
 
 ### Verification in this implementation session
 
-Frontend type checking and production build passed with the locally available locked
-Next.js 16.3.4 dependencies. All 52 frontend/database tests passed. The CV database
-test was rerun after correcting the per-owner lock and adding capacity/same-job
-cross-owner fixtures. 34 CV assertions after the rewriting update, 18 authentication boundary cases, privacy
-reservation checks and 16 matching regressions passed against the compiled backend.
+Frontend type checking and the production build passed with the locked Next.js 16.3.4
+dependencies. All 65 frontend/database tests passed, including generated CV/letter
+retention, independent deletion, prepared-job state and owner isolation. The .NET
+10.0.401 SDK completed a standard restore and Release build; 81 CV checks, 18
+authentication/privacy checks and 16 matching regressions passed.
 
-Standard .NET MSBuild execution was blocked by this environment. Current backend
-sources were instead compiled with the installed .NET 10 compiler/reference assemblies
-and cached dependency binaries (one existing DotNetEnv assembly-version warning).
-This does not replace CI restore/Release/Docker validation. No real Gemini calls or
-browser visual checks were performed. Live read-only inspection confirmed existing
-profile/career owner policies, absence of generated_cvs and absence of service_role
-SELECT/UPDATE privileges on auth.users; the migration therefore uses an advisory
-lock rather than requiring new Auth privileges. No live migration was applied.
+Docker is unavailable in the local environment, so a local image build was not run.
+Read-only Render inspection confirms the service builds from `backend/Dockerfile`, whose
+builder and runtime images are both .NET 10, and binds the configured `PORT`. No real
+Gemini calls or browser visual checks were performed. Live Supabase inspection confirmed
+that `generated_cvs` exists while the new `generated_cover_letters`/`prepared_jobs`
+migration is not yet applied. No live database mutation or deployment was performed.
 
 ## Generation consent dialog
 
@@ -275,7 +282,8 @@ build/tests before deployment. No live AI requests or database mutations were ma
 
 The owner subsequently authorized development/test activation with unpaid Gemini
 projects and empty contact email. `2026-09-cv-v1` is now enabled with updated
-Swedish/English disclosures for transient output. No user consent was pre-granted.
+Swedish/English disclosures for the then-transient output. It must be superseded by
+a reviewed version before seven-day storage is deployed. No user consent was pre-granted.
 See [privacy controls](privacy-controls.md) for activation scope and outstanding
 backend environment/live-generation checks. CI run 34752948672 passed all jobs.
 

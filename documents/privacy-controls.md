@@ -18,7 +18,7 @@ CSP uses a fresh request nonce on Next scripts and next-themes; production scrip
 
 `008_privacy_consent_and_limits.sql` is the single manual upgrade for an existing 001–005 schema. It includes 007 limits when absent, adds restrictive guards while preserving existing profile/career policies, and enforces a transactionally counted 200-entry career quota even for direct writes. Existing over-quota entries remain editable/deletable; new inserts are blocked. NOT VALID preserves oversized legacy rows for reviewed correction. Reconcile CLI history after manual SQL; do not replay old creation migrations.
 
-Verification: 48 frontend/database tests plus the focus regression passed; production frontend build passed. Current backend source compiled offline with .NET 10 reference assemblies and cached dependency binaries; 16 matching regressions, nine Auth tests and privacy reservation checks passed. Normal MSBuild/restore was blocked by the execution environment; CI must run standard restore/Release/Docker gates. HTML smoke checks verify nonce alignment on `/auth`, `/privacy`, `/sv/privacy`. Local PostgreSQL fixtures cover migration repeatability, policy preservation, direct-write limits, quota, consent/withdrawal, immutable notices, owner isolation and deletion cascade. Live Supabase, provider calls and full browser accessibility/compatibility testing remain unverified.
+Verification: 65 frontend/database tests and the production frontend build passed. A standard restore and Release build passed with .NET SDK 10.0.401; 81 CV checks, 18 Auth/privacy checks and 16 matching regressions passed. Docker is not installed in the local environment, but Render's configured Dockerfile uses matching .NET 10 SDK and ASP.NET 10 images. HTML smoke checks verify nonce alignment on `/auth`, `/privacy`, `/sv/privacy`. Local PostgreSQL fixtures cover migration repeatability, policy preservation, direct-write limits, quota, consent/withdrawal, immutable notices, owner isolation, seven-day generated-document retention and deletion cascade. Live provider calls, the new production migration and full browser accessibility/compatibility testing remain unverified.
 
 No production deletion, processor erasure, contract signature, legal-basis/retention decision or hosted Auth configuration was performed. See the runbook for those owner responsibilities.
 
@@ -32,7 +32,7 @@ The page loads plain-text, reviewed notices from server-side `PRIVACY_NOTICE_SV`
 
 `GET /api/account/export` uses cookie-aware `lib/serverSupabase.ts` with the anon key and `auth.getUser()`. Client-supplied owner IDs are ignored. Responses are `private, no-store`; POST and other methods return 405, unauthenticated calls 401, unavailable auth/database or incomplete reads 503 with generic errors.
 
-Response: `{ exportedAt, account: { id, email, createdAt }, profile, career, aiConsent }`. Profile and career fields are explicitly selected. No full Auth object, tokens, hashes or admin metadata are exported. The browser adds `localFavorites` from the authenticated owner's storage key; unavailable/malformed storage becomes null, distinguishable from an empty list. The page downloads a JSON Blob, then revokes its object URL. It creates no export record on the server.
+Response: `{ exportedAt, account: { id, email, createdAt }, profile, career, aiConsent, generatedCvs, generatedCoverLetters }`. Profile, career and active generated-document fields are explicitly selected. No full Auth object, tokens, hashes or admin metadata are exported. The browser adds `localFavorites` from the authenticated owner's storage key; unavailable/malformed storage becomes null, distinguishable from an empty list. The page downloads a JSON Blob, then revokes its object URL. It creates no export record on the server.
 
 Purpose is user access to their stored facts; the controller must document the applicable legal basis and retention for the broader processing. This is not a complete Article 15 response or a guarantee of Article 20 applicability. Logs, provider copies, backups, other devices and required processing information need the manual rights process. Protect the downloaded file; it contains personal data.
 
@@ -58,14 +58,15 @@ The owner explicitly elected to proceed without a backup. Live inspection confir
 
 CI run 34310446353 passed frontend tests/build, backend Release build, security/matching tests and Docker build. Migration 008 now also revokes direct client execution of the existing optional rls_auto_enable event-trigger function and the immutable-notice trigger, and uses a 5-second lock timeout and 60-second statement timeout. Its PostgreSQL consent/quota regression passed after these changes. Production migration and post-migration verification are tracked in PR #13. Hosted environment variables, browser login/consent flows and processor/notice decisions still require operational verification; optional AI remains disabled until configured and approved.
 
-## CV generation extension (migration 009)
+## Generated documents and seven-day retention (migrations 009 and 20260918164504)
 
 See [CV generation](cv-generation.md). CV shares selected career statements with Gemini for job-specific rewriting and a separate source-only factual review, then
-returns validated content plus job context for a temporary browser preview and local PDF download.
-New CVs are not stored in the database or browser storage. Historical CV records remain
-exportable until separately removed; this change does not delete them. Both calls reserve independently through the existing privacy gate. This broader disclosure requires a reviewed notice
+returns validated content plus job context for an owner-only preview and local PDF download.
+The latest generated CV and cover letter are stored in Supabase for seven days, hidden at their
+independent expiry and physically deleted by an hourly database job. Users can delete either one earlier.
+Both AI calls reserve independently through the existing privacy gate. This broader disclosure and retention requires a reviewed notice
 version configured in `GEMINI_CV_NOTICE_VERSION`; the existing reservation and withdrawal rules
-remain mandatory. Export now includes `generatedCvs`. Historical records cascade on Auth account deletion;
+remain mandatory. Changing from transient output to stored output requires a new notice version and fresh consent; a transient-only notice must not be reused. Export includes active `generatedCvs` and `generatedCoverLetters`. Records cascade on Auth account deletion;
 provider/backups and retention remain operational responsibilities. No new legal basis is asserted.
 
 ## Generation consent dialog
@@ -100,8 +101,8 @@ data-use exception for unpaid quota is separate from that availability requireme
 Paid API access means using a Cloud project with active billing. See
 [Google terms](https://ai.google.dev/gemini-api/terms). No billing configuration,
 notice activation, user consent grant or live provider call was performed here.
-New CV output is temporary and downloaded locally; the old database notice draft
-about storing new CVs must be replaced with reviewed text before activation.
+The notice described in this historical status is no longer sufficient after seven-day
+CV storage is introduced. It must be replaced with reviewed text and a new version before deployment.
 
 ### Subsequent development activation — 2026-09-13
 
@@ -111,7 +112,7 @@ left empty. This is not a public-launch or compliance approval. The unused disab
 `2026-09-cv-v1` draft had no consent receipts; its Swedish/English text was replaced
 and enabled transactionally in Supabase. Verification returned Gemini as the only
 enabled provider. No user consent was granted by the operator action. The text
-explains both generation flows, temporary new CV output, historical records, Google
+explains both generation flows, the then-temporary generated output, historical records, Google
 processing, withdrawal and the missing contact email. Existing consent/version/quota
 checks remain mandatory. Activation is provider-wide, not an account allowlist.
 
