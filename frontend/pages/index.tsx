@@ -2,8 +2,8 @@ import type { GetServerSideProps } from "next";
 import type {
   MatchedJob,
   MatchedJobsResponse,
-  Progression,
   MatchProfileRequest,
+  PreparedJob,
 } from "../types/api";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import {
@@ -13,11 +13,11 @@ import {
 } from "@supabase/auth-helpers-nextjs";
 import { useTranslation } from "next-i18next";
 import { isDebugUiEnabled } from "../lib/backendUrl";
-import { isSupabaseConfigured } from "../lib/supabaseClient";
+import { getSupabaseBrowserClient, isSupabaseConfigured } from "../lib/supabaseClient";
 import Link from "next/link";
 import JobListCard from "../components/JobListCard";
 import { useFavorites } from "../lib/useFavorites";
-import { MapPin, Wifi, Briefcase, Bookmark, RefreshCw, Eye } from "lucide-react";
+import { MapPin, Wifi, Briefcase, Bookmark, RefreshCw, Eye, FileText } from "lucide-react";
 import { formatLocation } from "../lib/utils";
 import { useMatchSession } from "../lib/matchSessionContext";
 import { getPublicBackendUrl } from "../lib/backendUrl";
@@ -29,7 +29,7 @@ const HOME_VIEW_MORE_STEP = 15;
 
 interface Props {
   matchReq: MatchProfileRequest;
-  progression: Progression;
+  preparedJobs: PreparedJob[];
   showDebug: boolean;
   profileId: string;
 }
@@ -40,13 +40,12 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
   res,
   query,
 }) => {
-  // Progression is hardcoded — real data is out of scope until a later slice.
-  const progression: Progression = { applied: 0, readyToApply: 0, readyToGenerate: 0 };
   res.setHeader("Cache-Control", "private, no-store");
   const showDebug = isDebugUiEnabled() && query.debug === "1";
 
   let matchReq: MatchProfileRequest = {};
   let profileId = "";
+  let preparedJobs: PreparedJob[] = [];
 
   if (isSupabaseConfigured) {
     const supabase = createServerClient(
@@ -101,6 +100,24 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
       .from("profile_career_entries").select("skills").eq("user_id", user.id)
       .order("id");
     if (careerError) console.warn("[home] Could not load career skills for matching");
+    const { data: prepared, error: preparedError } = await supabase
+      .from("prepared_jobs")
+      .select("job_id,job_context,has_cv,cv_expires_at,has_cover_letter,cover_letter_expires_at,updated_at")
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false })
+      .limit(100);
+    if (preparedError) console.warn("[home] Could not load prepared jobs");
+    else preparedJobs = ((prepared ?? []) as PreparedJob[]).map(job => {
+      const activeCv = job.has_cv && !!job.cv_expires_at && new Date(job.cv_expires_at).getTime() > Date.now();
+      const activeLetter = job.has_cover_letter && !!job.cover_letter_expires_at && new Date(job.cover_letter_expires_at).getTime() > Date.now();
+      return {
+        ...job,
+        has_cv: activeCv,
+        cv_expires_at: activeCv ? job.cv_expires_at : null,
+        has_cover_letter: activeLetter,
+        cover_letter_expires_at: activeLetter ? job.cover_letter_expires_at : null,
+      };
+    });
     matchReq = {
       roles: profile?.roles ?? [],
       title: profile?.title ?? "",
@@ -114,7 +131,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
     props: {
       matchReq,
       profileId,
-      progression,
+      preparedJobs,
       showDebug,
       ...(await serverSideTranslations(locale ?? "en", ["common"])),
     },
@@ -125,9 +142,14 @@ export default function Home(props: Props) {
   return <HomeContent key={props.profileId + matchProfileKey(props.matchReq)} {...props} />;
 }
 
-function HomeContent({ matchReq, progression, showDebug, profileId }: Props) {
-  const { t } = useTranslation("common");
+function HomeContent({ matchReq, preparedJobs: initialPreparedJobs, showDebug, profileId }: Props) {
+  const { t, i18n } = useTranslation("common");
   const { toggleFavorite, isFavorite } = useFavorites();
+  const [activeJobsTab, setActiveJobsTab] = useState<"matched" | "prepared">("matched");
+  const [preparedJobs, setPreparedJobs] = useState(initialPreparedJobs);
+  const [deletingCv, setDeletingCv] = useState<string | null>(null);
+  const [deletingLetter, setDeletingLetter] = useState<string | null>(null);
+  const [preparedError, setPreparedError] = useState("");
 
   // ── Session context — persists matched jobs across SPA navigations ────────
   const { getSession, updateSession } = useMatchSession();
@@ -210,12 +232,6 @@ function HomeContent({ matchReq, progression, showDebug, profileId }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleCount, seed, poolRevision]);
 
-  const total =
-    progression.applied + progression.readyToApply + progression.readyToGenerate || 1;
-  const appliedPct = (progression.applied / total) * 100;
-  const readyPct =
-    ((progression.applied + progression.readyToApply) / total) * 100;
-
   const gradeA = desiredRolesSource !== null ? matched.filter((j) => j.matchGrade === "A").length : null;
   const gradeB = desiredRolesSource !== null ? matched.filter((j) => j.matchGrade === "B").length : null;
   const gradeC = desiredRolesSource !== null ? matched.filter((j) => j.matchGrade === "C").length : null;
@@ -236,6 +252,54 @@ function HomeContent({ matchReq, progression, showDebug, profileId }: Props) {
       matchReqHash: currentHash,
       // fetchComplete intentionally NOT reset — the background pool keeps growing
     });
+  };
+
+  const deleteCv = async (jobId: string) => {
+    if (!window.confirm(t("home.deleteCvConfirm"))) return;
+    setDeletingCv(jobId);
+    setPreparedError("");
+    try {
+      const { data: { session } } = await getSupabaseBrowserClient().auth.getSession();
+      if (!session) throw new Error("authentication");
+      const response = await fetch(`${getPublicBackendUrl()}/api/cvs/${encodeURIComponent(jobId)}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!response.ok) throw new Error("delete");
+      setPreparedJobs(current => current.flatMap(job => {
+        if (job.job_id !== jobId) return [job];
+        if (!job.has_cover_letter) return [];
+        return [{ ...job, has_cv: false, cv_expires_at: null }];
+      }));
+    } catch {
+      setPreparedError(t("home.deleteCvError"));
+    } finally {
+      setDeletingCv(null);
+    }
+  };
+
+  const deleteCoverLetter = async (jobId: string) => {
+    if (!window.confirm(t("home.deleteCoverLetterConfirm"))) return;
+    setDeletingLetter(jobId);
+    setPreparedError("");
+    try {
+      const { data: { session } } = await getSupabaseBrowserClient().auth.getSession();
+      if (!session) throw new Error("authentication");
+      const response = await fetch(`${getPublicBackendUrl()}/api/coverletters/${encodeURIComponent(jobId)}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!response.ok) throw new Error("delete");
+      setPreparedJobs(current => current.flatMap(job => {
+        if (job.job_id !== jobId) return [job];
+        if (!job.has_cv) return [];
+        return [{ ...job, has_cover_letter: false, cover_letter_expires_at: null }];
+      }));
+    } catch {
+      setPreparedError(t("home.deleteCoverLetterError"));
+    } finally {
+      setDeletingLetter(null);
+    }
   };
 
   // ── Background poll — grows the cached job pool page-by-page ─────────────
@@ -301,87 +365,8 @@ function HomeContent({ matchReq, progression, showDebug, profileId }: Props) {
         <p className="app-page-subtitle">{t("home.subtitle")}</p>
       </div>
 
-      {/* Stats Grid - Progression + Grades */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Progression Card */}
-        <div className="lg:col-span-1 bg-gradient-to-br from-orange-300 via-purple-500 to-purple-700 rounded-3xl p-8 shadow-lg hover:shadow-xl transition-shadow">
-          <h3 className="text-sm font-semibold text-white/90 uppercase tracking-wider mb-6">
-            {t("home.progression")}
-          </h3>
-
-          <div className="flex justify-center mb-8">
-            <div className="relative w-32 h-32">
-              <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-                <circle
-                  cx="18"
-                  cy="18"
-                  r="15.9"
-                  fill="none"
-                  stroke="rgba(255,255,255,0.2)"
-                  strokeWidth="2.5"
-                />
-                <circle
-                  cx="18"
-                  cy="18"
-                  r="15.9"
-                  fill="none"
-                  stroke="rgba(255,255,255,0.5)"
-                  strokeWidth="2.5"
-                  strokeDasharray={`${readyPct} ${100 - readyPct}`}
-                  strokeLinecap="round"
-                />
-                <circle
-                  cx="18"
-                  cy="18"
-                  r="15.9"
-                  fill="none"
-                  stroke="white"
-                  strokeWidth="2.5"
-                  strokeDasharray={`${appliedPct} ${100 - appliedPct}`}
-                  strokeLinecap="round"
-                />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-2xl font-bold text-white">
-                  {progression.applied}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="w-3 h-3 rounded-full bg-white" />
-                <span className="text-sm text-white/90">{t("home.applied")}</span>
-              </div>
-              <span className="text-sm font-semibold text-white">
-                {progression.applied}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="w-3 h-3 rounded-full bg-white/50" />
-                <span className="text-sm text-white/90">{t("home.readyToApply")}</span>
-              </div>
-              <span className="text-sm font-semibold text-white">
-                {progression.readyToApply}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="w-3 h-3 rounded-full bg-white/20" />
-                <span className="text-sm text-white/90">{t("home.readyToGenerate")}</span>
-              </div>
-              <span className="text-sm font-semibold text-white">
-                {progression.readyToGenerate}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Grade Match Cards */}
-        <div className="lg:col-span-3 grid grid-cols-3 gap-6">
+      {/* Grade Match Cards */}
+      <div className="grid grid-cols-3 gap-6">
           {/* A Grade */}
           <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-4 sm:p-8 border border-gray-200 dark:border-white/5 shadow-sm hover:shadow-md dark:shadow-none transition-all hover:scale-[1.02] group">
             <div className="flex items-center justify-center mb-4 sm:mb-6">
@@ -438,23 +423,33 @@ function HomeContent({ matchReq, progression, showDebug, profileId }: Props) {
               </p>
             </div>
           </div>
-        </div>
       </div>
 
       {/* Job List Section */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-800 dark:text-white">
-            {t("home.matchedJobs")}
-          </h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div role="tablist" aria-label={t("home.jobTabsLabel")} className="inline-flex w-fit rounded-xl bg-gray-100 dark:bg-white/5 p-1">
+            {(["matched", "prepared"] as const).map(tab => (
+              <button
+                key={tab}
+                type="button"
+                role="tab"
+                aria-selected={activeJobsTab === tab}
+                onClick={() => setActiveJobsTab(tab)}
+                className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${activeJobsTab === tab ? "bg-white text-gray-900 shadow-sm dark:bg-white/10 dark:text-white" : "text-gray-500 hover:text-gray-800 dark:text-white/50 dark:hover:text-white"}`}
+              >
+                {t(tab === "matched" ? "home.matchedJobs" : "home.preparedJobs")}
+              </button>
+            ))}
+          </div>
           <div className="flex items-center gap-3">
-            {!fetchComplete && !poolLimited && matched.length > 0 && (
+            {activeJobsTab === "matched" && !fetchComplete && !poolLimited && matched.length > 0 && (
               <span className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-white/30">
                 <span className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-white/30 animate-pulse" />
                 {t("home.findingMoreMatches")}
               </span>
             )}
-            {desiredRolesSource !== null && !matchLoading && matched.length > 0 && (
+            {activeJobsTab === "matched" && desiredRolesSource !== null && !matchLoading && matched.length > 0 && (
               <button
                 onClick={handleLoadDifferent}
                 className="flex items-center gap-1 text-xs text-gray-400 dark:text-white/30 hover:text-gray-600 dark:hover:text-white/60 transition-colors"
@@ -464,11 +459,14 @@ function HomeContent({ matchReq, progression, showDebug, profileId }: Props) {
               </button>
             )}
             <span className="text-sm text-slate-500 dark:text-white/50">
-              {desiredRolesSource !== null &&
-                t("home.jobCount", { count: matched.length })}
+              {activeJobsTab === "prepared"
+                ? t("home.jobCount", { count: preparedJobs.length })
+                : desiredRolesSource !== null && t("home.jobCount", { count: matched.length })}
             </span>
           </div>
         </div>
+
+        {activeJobsTab === "matched" ? <>
 
         {/* Loading skeleton — first paint before matches arrive */}
         {desiredRolesSource === null && !matchError && (
@@ -696,6 +694,42 @@ function HomeContent({ matchReq, progression, showDebug, profileId }: Props) {
             </span>
           </div>
         )}
+        </> : <>
+          {preparedError && <p role="alert" className="app-card-base p-4">{preparedError}</p>}
+          {preparedJobs.length === 0 ? (
+            <div className="app-card-base p-12 text-center">
+              <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{t("home.noPreparedJobsTitle")}</p>
+              <p className="text-gray-500 dark:text-white/50">{t("home.noPreparedJobsDescription")}</p>
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {preparedJobs.map(job => (
+                <JobListCard
+                  key={job.job_id}
+                  leading={<div className="w-12 h-12 rounded-2xl bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center text-purple-600 dark:text-purple-400"><FileText size={20} /></div>}
+                  title={<Link href={`/jobs/${job.job_id}`} className="text-lg font-semibold text-gray-900 dark:text-white hover:underline leading-snug">{job.job_context.title || t("jobDetail.defaultJobTitle")}</Link>}
+                  badges={<div className="flex flex-wrap gap-2">
+                    {job.has_cv && <span className="text-xs font-semibold rounded-full px-3 py-1 bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">{t("home.cvReady")}</span>}
+                    {job.has_cover_letter && <span className="text-xs font-semibold rounded-full px-3 py-1 bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-300">{t("home.coverLetterReady")}</span>}
+                  </div>}
+                  subtitle={job.job_context.company}
+                  meta={<>
+                    {job.job_context.location && <span className="flex items-center gap-1"><MapPin size={13} />{job.job_context.location}</span>}
+                    {job.has_cv && job.cv_expires_at && <span>{t("home.cvExpires", { date: new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium" }).format(new Date(job.cv_expires_at)) })}</span>}
+                    {job.has_cover_letter && job.cover_letter_expires_at && <span>{t("home.coverLetterExpires", { date: new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium" }).format(new Date(job.cover_letter_expires_at)) })}</span>}
+                  </>}
+                  aside={<div className="flex flex-wrap items-center gap-2">
+                    {job.has_cv && <Link href={`/jobs/${job.job_id}/cv`} className="app-secondary-button px-3 py-2 text-sm">{t("home.openCv")}</Link>}
+                    {job.has_cv && <button type="button" disabled={deletingCv === job.job_id} onClick={() => void deleteCv(job.job_id)} className="app-secondary-button px-3 py-2 text-sm disabled:opacity-50">{t(deletingCv === job.job_id ? "home.deletingCv" : "home.deleteCv")}</button>}
+                    {job.has_cover_letter && <Link href={`/jobs/${job.job_id}?letter=1`} className="app-secondary-button px-3 py-2 text-sm">{t("home.openCoverLetter")}</Link>}
+                    {job.has_cover_letter && <button type="button" disabled={deletingLetter === job.job_id} onClick={() => void deleteCoverLetter(job.job_id)} className="app-secondary-button px-3 py-2 text-sm disabled:opacity-50">{t(deletingLetter === job.job_id ? "home.deletingCoverLetter" : "home.deleteCoverLetter")}</button>}
+                    <Link href={`/jobs/${job.job_id}`} className="app-secondary-button px-3 py-2 text-sm" title={t("home.viewJob")}><Eye size={15} /></Link>
+                  </div>}
+                />
+              ))}
+            </div>
+          )}
+        </>}
       </div>
     </div>
   );

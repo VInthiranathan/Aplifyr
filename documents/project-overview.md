@@ -8,15 +8,16 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 
 ### Job-specific CV
 
-- `/jobs/[id]/cv` maintains job context and renders a temporary ATS preview with a local PDF download; new CVs are not stored.
+- `/jobs/[id]/cv` maintains job context, stores the latest generated CV for seven days, restores it on return, supports immediate deletion, and creates a local PDF download.
 - Gemini rewrites profile, work and education text in the advertisement's Swedish or English language, with source references and a separate factual review using the CV key. CV preview/PDF headings follow the same language.
-- See [CV generation](cv-generation.md) for contracts, migration 009, source-validation limits and configuration.
+- See [CV generation](cv-generation.md) for contracts, migrations 009 and 20260918164504, retention, source-validation limits and configuration.
 
 
 ### Home Dashboard
 
 - loads personalized JobTech matches through `ExternalJobsController.Matching.cs`, using desired roles, geographic preferences, and explicit profile/career skills
-- shows match grades; application progression counts are currently placeholders
+- shows match grades and two job-list tabs: matched jobs and prepared jobs
+- adds a job to prepared jobs only after a CV or cover letter is generated successfully; the latest CV and latest cover letter are stored for seven days and can be deleted independently
 - requires a signed-in session when Supabase is configured
 - see [Job preferences and matching](job-preferences-matching.md) for scoring, caching, pagination, and verification
 

@@ -29,8 +29,20 @@ public sealed class CvsController(IConfiguration configuration, AiPrivacyGate pr
     [HttpGet("{jobId}")]
     public Task<IActionResult> Get(string jobId) => Run(async () => {
         if (!ValidId(jobId)) throw new CvFailure(400, "invalidJob");
+        var store = new CvStore(HttpContext, configuration);
+        var saved = await store.Request($"generated_cvs?user_id=eq.{store.UserId}&job_id=eq.{Uri.EscapeDataString(jobId)}&expires_at=gt.{Uri.EscapeDataString(DateTimeOffset.UtcNow.ToString("O"))}&select=job_id,content,job_context,metadata,created_at,updated_at,expires_at&limit=1");
+        if (saved.GetArrayLength() == 1)
+            return Ok(new { job = saved[0].GetProperty("job_context"), cv = saved[0] });
         var job = await Job(jobId);
         return Ok(new { job = Context(job), cv = (object?)null });
+    });
+
+    [HttpDelete("{jobId}")]
+    public Task<IActionResult> Delete(string jobId) => Run(async () => {
+        if (!ValidId(jobId)) throw new CvFailure(400, "invalidJob");
+        var store = new CvStore(HttpContext, configuration);
+        await store.Request($"generated_cvs?user_id=eq.{store.UserId}&job_id=eq.{Uri.EscapeDataString(jobId)}", HttpMethod.Delete, service: true);
+        return Ok(new { deleted = true });
     });
 
     [HttpPost("{jobId}/generate")]
@@ -77,9 +89,17 @@ public sealed class CvsController(IConfiguration configuration, AiPrivacyGate pr
         if (CvContent.Hash(new { profile = latest.Profile, career = latest.Career }) != sourceHash) throw new CvFailure(409, "profileChanged");
         var metadata = new { schemaVersion = CvContent.Version, promptVersion = 3, groundingVersion = 1, provider = "gemini", model = Environment.GetEnvironmentVariable("GEMINI_MODEL"),
             sourceHash, jobHash, noticeVersion, sourceLimited = ranked.Length < career.Length || selectedFacts.Count < facts.Count || skills.Length > 100 || CvContent.Text(profile, "bio").Length > 800 || career.Any(e => new[] { "description", "achievements", "learned", "strengths" }.Any(field => CvContent.Text(e, field).Length > 800)) };
+        var jobContext = Context(job);
+        var deadlineJson = await store.Request("rpc/save_generated_cv_v2", HttpMethod.Post, new {
+            p_user = store.UserId, p_job = jobId, p_content = content,
+            p_context = jobContext, p_metadata = metadata
+        }, service: true);
+        if (deadlineJson.ValueKind != JsonValueKind.String ||
+            !DateTimeOffset.TryParse(deadlineJson.GetString(), out var expiresAt))
+            throw new CvFailure(503, "storage");
         var generatedAt = DateTimeOffset.UtcNow;
-        return Ok(new { job = Context(job), cv = new { job_id = jobId, content, job_context = Context(job), metadata,
-            created_at = generatedAt, updated_at = generatedAt } });
+        return Ok(new { job = jobContext, cv = new { job_id = jobId, content, job_context = jobContext, metadata,
+            created_at = generatedAt, updated_at = generatedAt, expires_at = expiresAt } });
     });
 
     private async Task<IActionResult> Run(Func<Task<IActionResult>> action)

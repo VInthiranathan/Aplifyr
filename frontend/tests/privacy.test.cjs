@@ -37,6 +37,7 @@ test('export verifies identity, ignores supplied owner, omits auth secrets and f
   const handler=load('pages/api/account/export.ts',{
     '../../../lib/serverSupabase':{serverSupabase:()=>({auth:{getUser:async()=>({data:{user}})},from:()=>query,rpc:async()=>({data:{current:[],receipts:[]}})})},
     '../../../lib/readGeneratedCvs':{readGeneratedCvs:async(_client,owner)=>{assert.equal(owner,'owner');return [];}},
+    '../../../lib/readGeneratedCoverLetters':{readGeneratedCoverLetters:async(_client,owner)=>{assert.equal(owner,'owner');return [];}},
     '../../../lib/readCareerEntries':{readCareerEntries:async(_client,owner)=>{assert.equal(owner,'owner');return [];}}
   }).default;
   async function invoke(method='GET'){

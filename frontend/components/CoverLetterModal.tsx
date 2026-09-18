@@ -1,6 +1,6 @@
 import { safeExternalUrl } from "../lib/safeHtml";
 import {useDialogFocus} from '../lib/useDialogFocus';
-import { X, Copy, RefreshCw, Edit2, Send, Check } from "lucide-react";
+import { X, Copy, RefreshCw, Edit2, Send, Check, Trash2, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTranslation } from "next-i18next";
 import { Button } from "./ui/button";
@@ -14,6 +14,9 @@ interface CoverLetterModalProps {
   applicationUrl?: string;
   onRegenerate: () => void;
   isRegenerating?: boolean;
+  expiresAt: string | null;
+  onDelete: () => void;
+  isDeleting?: boolean;
 }
 
 export default function CoverLetterModal({
@@ -25,8 +28,11 @@ export default function CoverLetterModal({
   applicationUrl,
   onRegenerate,
   isRegenerating = false,
+  expiresAt,
+  onDelete,
+  isDeleting = false,
 }: CoverLetterModalProps) {
-  const { t } = useTranslation("common");
+  const { t, i18n } = useTranslation("common");
   const dialog=useDialogFocus(isOpen,onClose);
   const [isEditing, setIsEditing] = useState(false);
   const [editedLetter, setEditedLetter] = useState(letter);
@@ -71,6 +77,7 @@ export default function CoverLetterModal({
             <p className="text-sm text-gray-500 dark:text-white/60 mt-1">
               {jobTitle} {company && `• ${company}`}
             </p>
+            {expiresAt && <p className="text-xs text-gray-500 dark:text-white/50 mt-1">{t('coverLetter.savedUntil', { date: new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium' }).format(new Date(expiresAt)) })}</p>}
           </div>
           <Button
             onClick={onClose}
@@ -131,6 +138,15 @@ export default function CoverLetterModal({
                 className={isRegenerating ? "animate-spin" : ""}
               />
               {t("coverLetter.regenerate")}
+            </Button>
+            <Button
+              onClick={onDelete}
+              disabled={isDeleting || isRegenerating}
+              variant="secondary"
+              className="h-auto px-4 py-2"
+            >
+              {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+              {t(isDeleting ? "coverLetter.deleting" : "coverLetter.delete")}
             </Button>
           </div>
           {applicationUrl && (

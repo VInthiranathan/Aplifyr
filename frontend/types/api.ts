@@ -182,5 +182,25 @@ export interface CvJobContext { id: string; title: string; company: string; loca
 export interface GeneratedCv {
   job_id: string; content: CvContent; job_context: CvJobContext;
   metadata: { sourceLimited: boolean; sourceHash: string; jobHash: string };
-  created_at: string; updated_at: string;
+  created_at: string; updated_at: string; expires_at: string;
+}
+
+export interface PreparedJob {
+  job_id: string;
+  job_context: CvJobContext;
+  has_cv: boolean;
+  cv_expires_at: string | null;
+  has_cover_letter: boolean;
+  cover_letter_expires_at: string | null;
+  updated_at: string;
+}
+
+export interface GeneratedCoverLetter {
+  job_id: string;
+  content: string;
+  job_context: CvJobContext;
+  metadata: { provider?: string };
+  created_at: string;
+  updated_at: string;
+  expires_at: string;
 }

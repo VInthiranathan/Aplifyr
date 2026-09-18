@@ -4,7 +4,7 @@ import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Trash2 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import AiGenerationConsent from '../../../components/AiGenerationConsent';
 import { cvTemplateIds, cvTemplate, type CvTemplateId } from '../../../lib/cvTemplates';
@@ -15,13 +15,14 @@ import { useMatchSession } from '../../../lib/matchSessionContext';
 import type { CvJobContext, GeneratedCv } from '../../../types/api';
 
 export default function CvPage() {
-  const router = useRouter(); const { t } = useTranslation('common'); const { getSession } = useMatchSession();
+  const router = useRouter(); const { t, i18n } = useTranslation('common'); const { getSession } = useMatchSession();
   const id = typeof router.query.id === 'string' ? router.query.id : '';
   const [job, setJob] = useState<CvJobContext | null>(null);
   const [template, setTemplate] = useState<CvTemplateId>('classic');
   const [cv, setCv] = useState<GeneratedCv | null>(null);
   const [loading, setLoading] = useState(true); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
   const [downloading, setDownloading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const downloads = useRef(0);
   const downloadingRef = useRef(false);
   const [consentOpen, setConsentOpen] = useState(false);
@@ -76,6 +77,20 @@ export default function CvPage() {
     } catch { setError(t('cv.downloadError')); }
     finally { downloadingRef.current = false; setDownloading(false); }
   }
+  async function deleteCv() {
+    if (!cv || deleting || !window.confirm(t('cv.deleteConfirm'))) return;
+    setDeleting(true); setError('');
+    try {
+      const { data: { session } } = await getSupabaseBrowserClient().auth.getSession();
+      if (!session) throw new Error('authentication');
+      const response = await fetch(`${getPublicBackendUrl()}/api/cvs/${encodeURIComponent(id)}`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!response.ok) throw new Error('storage');
+      setCv(null);
+    } catch (e) { displayError(e); }
+    finally { setDeleting(false); }
+  }
   const grade = getSession().matched.find(j => j.id === id)?.matchGrade;
   return <div className="app-page-shell space-y-6">
     <header className="app-page-header"><h1 className="app-page-title">{t('cv.title')}</h1><p className="app-page-subtitle">{t('cv.description')}</p></header>
@@ -116,8 +131,8 @@ export default function CvPage() {
         <Button disabled={busy || downloading} onClick={()=>setConsentOpen(true)}>{busy && <Loader2 className="animate-spin mr-2" size={16} />}{t(busy ? 'cv.generating' : cv ? 'cv.regenerate' : 'cv.generate')}</Button>
         <Link className="underline" href="/user">{t('cv.profile')}</Link>
       </div>
-      <p role="status" aria-live="polite">{busy ? t('cv.progress') : cv ? t('cv.saved') : t('cv.ready')}</p>
-      {cv && <><Button disabled={downloading || busy} onClick={download}>{t(downloading ? 'cv.downloading' : 'cv.download')}</Button><p>{t('cv.review')}</p>{cv.metadata.sourceLimited && <p>{t('cv.limited')}</p>}{cv.content.omittedUnsupportedContent && <p role="status" data-testid="cv-omissions" className="app-card-base p-4">{t('cv.omissions')}</p>}<CvPreview content={cv.content} template={template} /></>}
+      <p role="status" aria-live="polite">{busy ? t('cv.progress') : cv ? t('cv.saved', { date: new Intl.DateTimeFormat(i18n?.language ?? router.locale ?? 'en', { dateStyle: 'medium' }).format(new Date(cv.expires_at)) }) : t('cv.ready')}</p>
+      {cv && <><div className="flex flex-wrap gap-3"><Button disabled={downloading || busy || deleting} onClick={download}>{t(downloading ? 'cv.downloading' : 'cv.download')}</Button><Button variant="secondary" disabled={deleting || busy || downloading} onClick={deleteCv}>{deleting ? <Loader2 className="animate-spin mr-2" size={16} /> : <Trash2 className="mr-2" size={16} />}{t(deleting ? 'cv.deleting' : 'cv.delete')}</Button></div><p>{t('cv.review')}</p>{cv.metadata.sourceLimited && <p>{t('cv.limited')}</p>}{cv.content.omittedUnsupportedContent && <p role="status" data-testid="cv-omissions" className="app-card-base p-4">{t('cv.omissions')}</p>}<CvPreview content={cv.content} template={template} /></>}
     </>}
   </div>;
 }

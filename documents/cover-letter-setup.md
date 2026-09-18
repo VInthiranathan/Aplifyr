@@ -1,4 +1,4 @@
-# Cover letter generation
+# Cover letter generation and persistence
 
 The job detail page calls `POST /api/coverletters/generate-all` on the backend.
 The generate button opens the shared consent dialog; saving consent and choosing
@@ -27,11 +27,29 @@ dates and skills). Career narrative fields are excluded from letters. No uploads
 are used. The backend separates source data from instructions and reserves every
 provider call through the existing consent and quota checks.
 
-Successful responses retain the array shape:
+Successful responses retain the array shape and add the seven-day deadline:
 
 ```json
-[{"title":"Developer","coverLetter":"Generated draft","provider":"Gemini"}]
+[{"title":"Developer","coverLetter":"Generated draft","provider":"Gemini","expiresAt":"2026-09-25T12:00:00Z"}]
 ```
+
+The required job ID is validated server-side. After a successful provider response, the backend
+stores the latest letter through the service-role-only `save_generated_cover_letter` RPC. The
+write also adds the job to `prepared_jobs`. Regeneration replaces the previous letter and restarts
+its seven-day retention; it does not create history.
+
+- `GET /api/coverletters/{jobId}` returns `{ letter: GeneratedCoverLetter | null }` for the verified owner.
+- `DELETE /api/coverletters/{jobId}` deletes that owner's saved letter and its marker, while preserving a prepared job that still has an active CV.
+- Responses are `private, no-store`; no owner ID from the client is trusted.
+
+RLS hides an expired letter immediately, and the hourly cleanup job from migration
+`20260918164504_prepared_jobs_and_generated_document_retention.sql` physically deletes it. Direct authenticated
+writes are revoked, JSON/text sizes and per-owner capacity are bounded, and Auth account deletion
+cascades to the saved letter. Account export includes active `generatedCoverLetters`.
+
+Because the earlier consent text described generated output as temporary, activate a newly reviewed
+notice version covering seven-day storage and deletion, then obtain fresh consent before deploying
+this behavior. The migration does not activate a notice or grant consent.
 
 For a single-job Gemini failure, the backend returns an HTTP error and a controlled
 `error` code: 503 `configuration`, 429 `quota` or `consentOrQuota`, 502

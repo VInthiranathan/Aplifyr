@@ -153,9 +153,12 @@ npm run build
 
 ## Job-specific CV configuration
 
-Apply migration `009_generated_cvs.sql` after 008 and before deploying the new account export.
+Apply migration `009_generated_cvs.sql` after 008, then apply
+`20260918164504_prepared_jobs_and_generated_document_retention.sql`. The latter enables Supabase Cron,
+adds independent seven-day retention for generated CVs and cover letters, and adds prepared-job tracking. Verify the cleanup job after deployment.
 Set backend-only `GEMINI_CV_API_KEY` and `GEMINI_CV_NOTICE_VERSION` (the reviewed active Gemini
-notice covering CV/career processing). `GEMINI_API_KEY` remains for letters; CV has no key fallback.
+notice covering CV/career processing and seven-day storage). Use a new notice version and obtain
+fresh consent; do not reuse a notice that says generated output is transient. `GEMINI_API_KEY` remains for letters; CV has no key fallback.
 Existing `GEMINI_MODEL`, `AI_ALLOWED_PROVIDERS=gemini` and backend Supabase credentials are required.
 See [CV generation](cv-generation.md) for consent renewal, limits and staging checks.
 

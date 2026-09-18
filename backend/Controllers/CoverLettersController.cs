@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Aplifyr.Api.Security;
 using Aplifyr.Api.Cv;
 
@@ -13,11 +14,49 @@ public class CoverLettersController : ControllerBase
     private static readonly HttpClient _http = new(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(30), MaxResponseContentBufferSize = 128 * 1024 };
     private readonly ILogger<CoverLettersController> _logger;
     private readonly AiPrivacyGate _privacy;
+    private readonly IConfiguration _configuration;
 
-    public CoverLettersController(ILogger<CoverLettersController> logger, AiPrivacyGate privacy)
+    public CoverLettersController(ILogger<CoverLettersController> logger, AiPrivacyGate privacy, IConfiguration configuration)
     {
         _logger = logger;
         _privacy = privacy;
+        _configuration = configuration;
+    }
+
+    [HttpGet("{jobId}")]
+    public async Task<IActionResult> GetSaved(string jobId)
+    {
+        Response.Headers.CacheControl = "private, no-store";
+        if (User.Identity?.IsAuthenticated != true) return Unauthorized(new { error = "authentication" });
+        if (!ValidJobId(jobId)) return BadRequest(new { error = "invalidJob" });
+        try
+        {
+            var store = new CvStore(HttpContext, _configuration);
+            var saved = await store.Request($"generated_cover_letters?user_id=eq.{store.UserId}&job_id=eq.{Uri.EscapeDataString(jobId)}&expires_at=gt.{Uri.EscapeDataString(DateTimeOffset.UtcNow.ToString("O"))}&select=job_id,content,job_context,metadata,created_at,updated_at,expires_at&limit=1");
+            return Ok(new { letter = saved.GetArrayLength() == 1 ? saved[0] : (JsonElement?)null });
+        }
+        catch (CvFailure failure)
+        {
+            return StatusCode(failure.Status, new { error = failure.Code });
+        }
+    }
+
+    [HttpDelete("{jobId}")]
+    public async Task<IActionResult> DeleteSaved(string jobId)
+    {
+        Response.Headers.CacheControl = "private, no-store";
+        if (User.Identity?.IsAuthenticated != true) return Unauthorized(new { error = "authentication" });
+        if (!ValidJobId(jobId)) return BadRequest(new { error = "invalidJob" });
+        try
+        {
+            var store = new CvStore(HttpContext, _configuration);
+            await store.Request($"generated_cover_letters?user_id=eq.{store.UserId}&job_id=eq.{Uri.EscapeDataString(jobId)}", HttpMethod.Delete, service: true);
+            return Ok(new { deleted = true });
+        }
+        catch (CvFailure failure)
+        {
+            return StatusCode(failure.Status, new { error = failure.Code });
+        }
     }
 
     [HttpPost("generate-all")]
@@ -94,6 +133,9 @@ public class CoverLettersController : ControllerBase
 
         foreach (var jobEl in jobs.EnumerateArray())
         {
+            var jobId = TryReadString(jobEl, "id", out var suppliedJobId) ? suppliedJobId : "";
+            if (!ValidJobId(jobId))
+                return BadRequest(new { error = "invalidJob" });
             var title = ReadJobTitle(jobEl);
             var employer = ReadEmployer(jobEl, title);
             var description = ReadDescription(jobEl, title);
@@ -130,7 +172,10 @@ public class CoverLettersController : ControllerBase
                 if (!string.IsNullOrEmpty(coverLetter))
                 {
                     _logger.LogInformation("[CoverLetters] Provider or job-field processing status");
-                    results.Add(new { title, coverLetter, provider = "Gemini" });
+                    var expiresAt = await SaveCoverLetter(jobId, title, employer, location, coverLetter, "Gemini");
+                    if (expiresAt == null)
+                        return StatusCode(503, new { error = "storage" });
+                    results.Add(new { title, coverLetter, provider = "Gemini", expiresAt });
                     await Task.Delay(500, HttpContext.RequestAborted);
                     continue;
                 }
@@ -146,7 +191,10 @@ public class CoverLettersController : ControllerBase
                 if (!string.IsNullOrEmpty(coverLetter))
                 {
                     _logger.LogInformation("[CoverLetters] Provider or job-field processing status");
-                    results.Add(new { title, coverLetter, provider = "Groq" });
+                    var expiresAt = await SaveCoverLetter(jobId, title, employer, location, coverLetter, "Groq");
+                    if (expiresAt == null)
+                        return StatusCode(503, new { error = "storage" });
+                    results.Add(new { title, coverLetter, provider = "Groq", expiresAt });
                     await Task.Delay(500, HttpContext.RequestAborted);
                     continue;
                 }
@@ -161,6 +209,30 @@ public class CoverLettersController : ControllerBase
 
         _logger.LogInformation("[CoverLetters] Completed processing. Returning {ResultCount} result(s)", results.Count);
         return Ok(results);
+    }
+
+    private static bool ValidJobId(string jobId) => Regex.IsMatch(jobId, "^[A-Za-z0-9_-]{1,100}$", RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100));
+
+    private async Task<DateTimeOffset?> SaveCoverLetter(string jobId, string title, string employer, string location, string content, string provider)
+    {
+        try
+        {
+            var store = new CvStore(HttpContext, _configuration);
+            var deadline = await store.Request("rpc/save_generated_cover_letter", HttpMethod.Post, new {
+                p_user = store.UserId,
+                p_job = jobId,
+                p_content = content,
+                p_context = new { id = jobId, title, company = employer, location },
+                p_metadata = new { provider }
+            }, service: true);
+            return deadline.ValueKind == JsonValueKind.String && DateTimeOffset.TryParse(deadline.GetString(), out var expiresAt)
+                ? expiresAt : null;
+        }
+        catch (CvFailure failure)
+        {
+            _logger.LogWarning("Cover-letter preparation marker failed: code={Code}", failure.Code);
+            return null;
+        }
     }
 
     private string ReadJobTitle(JsonElement jobElement)
