@@ -94,7 +94,7 @@ export default function AuthPage() {
         }
 
         if (!data.session) {
-          setInfo(t("auth.checkEmail"));
+          await router.replace("/auth/verify-email");
           return;
         }
 

@@ -38,6 +38,21 @@ Project documents define implementation-specific behavior.
 - Review the final diff before finishing.
 - Do not modify unrelated files.
 
+### Render and Vercel Safety
+
+Treat Render and Vercel configuration with the same protection as the `main` branch.
+
+Without the owner's explicit approval for the exact action, do not:
+
+- create, update, delete, redeploy, promote, roll back, restart, suspend, or scale Render services or Vercel projects/deployments
+- change environment variables, secrets, environment groups, domains, regions, resource sizes, disks, databases, cron jobs, build settings, runtime settings, or platform settings in Render or Vercel
+- change runtime, framework, SDK, build-image, Docker base-image, Node.js, or .NET versions when that change affects Render or Vercel deployment behavior
+- apply repository configuration changes whose purpose is to mutate Render or Vercel settings
+
+Read-only inspection of deployment status, logs, and configuration is allowed when relevant to the task.
+
+Approval to merge a specific change into `main` permits only the automatic deployment caused by that merge. It does not authorize unrelated platform changes.
+
 ---
 
 ## 4. Documentation

@@ -6,6 +6,12 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 
 ## Main User Flows
 
+### Account registration and sign-in
+
+- `/auth` keeps the existing split sign-in form and uses the refined animated Aplifyr brand panel.
+- Registrations that require email confirmation continue to `/auth/verify-email`, where the activation step is explained before the user returns to sign in.
+- If Supabase returns an active session immediately, registration continues directly to the authenticated home page.
+
 ### Job-specific CV
 
 - `/jobs/[id]/cv` maintains job context, stores the latest generated CV for seven days, restores it on return, supports immediate deletion, and creates a local PDF download.

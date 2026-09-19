@@ -228,7 +228,7 @@
     "noBioAvailable": "No bio available",
     "locationPreferences": "Location preferences",
     "selected": "Selected: {{value}}",
-    "techStack": "Tech stack",
+    "techStack": "Skills",
     "desiredRoles": "Desired roles",
     "editModalTitle": "Edit Profile",
     "profilePicture": "Profile Picture",
@@ -318,7 +318,12 @@
       "missingEmailOrPassword": "Email and password are required.",
       "missingNewPassword": "Enter and confirm your new password.",
       "passwordsDoNotMatch": "Passwords do not match."
-    }
+    },
+    "verifyEmailTitle": "Confirm your account",
+    "verifyEmailSubtitle": "One last step before you can start using Aplifyr",
+    "verifyEmailCardTitle": "Check your email",
+    "verifyEmailInstructions": "We sent you a confirmation link. Open the email and select the link to activate your account, then return here to sign in.",
+    "verifyEmailSpamHint": "The email may take a moment to arrive. If you cannot find it, check your spam or junk folder."
   },
   "career": {
     "tabs": {
