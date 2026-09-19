@@ -228,7 +228,7 @@
     "noBioAvailable": "Ingen bio tillgänglig",
     "locationPreferences": "Platsinställningar",
     "selected": "Valt: {{value}}",
-    "techStack": "Teknikstack",
+    "techStack": "Färdigheter",
     "desiredRoles": "Önskade roller",
     "editModalTitle": "Redigera profil",
     "profilePicture": "Profilbild",
@@ -318,7 +318,12 @@
       "missingEmailOrPassword": "E-post och lösenord krävs.",
       "missingNewPassword": "Ange och bekräfta ditt nya lösenord.",
       "passwordsDoNotMatch": "Lösenorden matchar inte."
-    }
+    },
+    "verifyEmailTitle": "Bekräfta ditt konto",
+    "verifyEmailSubtitle": "Ett sista steg innan du kan börja använda Aplifyr",
+    "verifyEmailCardTitle": "Kontrollera din e-post",
+    "verifyEmailInstructions": "Vi har skickat en bekräftelselänk till dig. Öppna mejlet och klicka på länken för att aktivera kontot. Gå sedan tillbaka hit och logga in.",
+    "verifyEmailSpamHint": "Det kan ta en liten stund innan mejlet kommer fram. Kontrollera skräpposten om du inte hittar det."
   },
   "career": {
     "tabs": {
