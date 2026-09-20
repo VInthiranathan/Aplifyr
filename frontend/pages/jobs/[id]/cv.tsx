@@ -9,11 +9,12 @@ import { Button } from '../../../components/ui/button';
 import AiGenerationConsent from '../../../components/AiGenerationConsent';
 import CvTemplateThumbnail from '../../../components/CvTemplateThumbnail';
 import { cvTemplateIds, type CvTemplateId } from '../../../lib/cvTemplates';
+import CvEditor from '../../../components/CvEditor';
 import CvPreview from '../../../components/CvPreview';
 import { getPublicBackendUrl } from '../../../lib/backendUrl';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
 import { useMatchSession } from '../../../lib/matchSessionContext';
-import type { CvJobContext, GeneratedCv } from '../../../types/api';
+import type { CvContent, CvJobContext, GeneratedCv } from '../../../types/api';
 
 export default function CvPage() {
   const router = useRouter(); const { t, i18n } = useTranslation('common'); const { getSession } = useMatchSession();
@@ -21,6 +22,9 @@ export default function CvPage() {
   const [job, setJob] = useState<CvJobContext | null>(null);
   const [template, setTemplate] = useState<CvTemplateId>('elegant');
   const [cv, setCv] = useState<GeneratedCv | null>(null);
+  const [draft, setDraft] = useState<CvContent | null>(null);
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [loading, setLoading] = useState(true); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
   const [downloading, setDownloading] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -44,7 +48,7 @@ export default function CvPage() {
     }
     const data = await response.json();
     if (data.job?.id !== id || (data.cv && data.cv.job_id !== id)) throw new Error('invalidJob');
-    if (!controller.signal.aborted) { setJob(data.job); setCv(data.cv); }
+    if (!controller.signal.aborted) { setJob(data.job); setCv(data.cv); setDraft(null); }
   }
   function displayError(e: unknown) {
     const key = e instanceof Error ? e.message : 'unavailable';
@@ -54,11 +58,11 @@ export default function CvPage() {
     if (!router.isReady) return;
     const controller = new AbortController(); request.current = controller;
     downloads.current = 0; setTemplate('elegant');
-    setConsentOpen(false); setJob(null); setCv(null); setError(''); setLoading(true); setBusy(false); generating.current = false;
+    setDraft(null); setSaving(false); savingRef.current = false; setConsentOpen(false); setJob(null); setCv(null); setError(''); setLoading(true); setBusy(false); generating.current = false;
     if (!/^[A-Za-z0-9_-]{1,100}$/.test(id)) { setError(t('cv.errors.invalidJob')); setLoading(false); return; }
     call(false, controller).catch(e => { if (!controller.signal.aborted) displayError(e); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
     const { data: { subscription } } = getSupabaseBrowserClient().auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT' || (owner.current !== null && session?.user.id !== owner.current)) { request.current?.abort(); setConsentOpen(false); setCv(null); setJob(null); setError(t('cv.errors.authentication')); }
+      if (event === 'SIGNED_OUT' || (owner.current !== null && session?.user.id !== owner.current)) { request.current?.abort(); setConsentOpen(false); setDraft(null); setCv(null); setJob(null); setError(t('cv.errors.authentication')); }
     });
     return () => { controller.abort(); request.current?.abort(); subscription.unsubscribe(); };
   }, [id, router.isReady]);
@@ -68,6 +72,29 @@ export default function CvPage() {
     const controller = new AbortController(); request.current = controller;
     try { await call(true, controller); } catch (e) { if (!controller.signal.aborted) displayError(e); }
     finally { if (!controller.signal.aborted) { setBusy(false); generating.current = false; } }
+  }
+  async function saveEdits() {
+    if (!cv || !draft || savingRef.current) return;
+    savingRef.current = true; setSaving(true); setError('');
+    const controller = new AbortController(); request.current = controller;
+    try {
+      const { data: { session } } = await getSupabaseBrowserClient().auth.getSession();
+      if (!session || session.user.id !== owner.current) throw new Error('authentication');
+      const response = await fetch(`${getPublicBackendUrl()}/api/cvs/${encodeURIComponent(id)}`, {
+        method: 'PATCH', signal: controller.signal,
+        headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updatedAt: cv.updated_at, edits: {
+          professionalSummary: draft.professionalSummary.map(row => row.text),
+          experience: draft.experience.map(entry => entry.bullets.map(row => row.text)),
+          education: draft.education.map(entry => entry.bullets.map(row => row.text)),
+        } }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? 'storage');
+      if (data.job?.id !== id || data.cv?.job_id !== id) throw new Error('invalidJob');
+      if (!controller.signal.aborted) { setCv(data.cv); setDraft(null); }
+    } catch (e) { if (!controller.signal.aborted) displayError(e); }
+    finally { if (!controller.signal.aborted) { setSaving(false); savingRef.current = false; } }
   }
   async function download() {
     if (!cv || !job || downloadingRef.current) return;
@@ -143,11 +170,18 @@ export default function CvPage() {
       <p>{t('cv.disclosure')}</p>
       {consentOpen && <AiGenerationConsent key={id} onClose={()=>setConsentOpen(false)} onConfirm={()=>{setConsentOpen(false);void generate();}} />}
       <div className="flex flex-wrap gap-3 items-center">
-        <Button className="w-full sm:w-auto" disabled={busy || downloading} onClick={()=>setConsentOpen(true)}>{busy && <Loader2 className="animate-spin mr-2" size={16} />}{t(busy ? 'cv.generating' : cv ? 'cv.regenerate' : 'cv.generate')}</Button>
+        <Button className="w-full sm:w-auto" disabled={busy || downloading || !!draft || deleting || saving} onClick={()=>setConsentOpen(true)}>{busy && <Loader2 className="animate-spin mr-2" size={16} />}{t(busy ? 'cv.generating' : cv ? 'cv.regenerate' : 'cv.generate')}</Button>
         <Link className="underline" href="/user">{t('cv.profile')}</Link>
       </div>
       <p role="status" aria-live="polite">{busy ? t('cv.progress') : cv ? t('cv.saved', { date: new Intl.DateTimeFormat(i18n?.language ?? router.locale ?? 'en', { dateStyle: 'medium' }).format(new Date(cv.expires_at)) }) : t('cv.ready')}</p>
-      {cv && <><div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap"><Button className="min-w-0" disabled={downloading || busy || deleting} onClick={download}>{t(downloading ? 'cv.downloading' : 'cv.download')}</Button><Button className="min-w-0" variant="secondary" disabled={deleting || busy || downloading} onClick={deleteCv}>{deleting ? <Loader2 className="animate-spin mr-2" size={16} /> : <Trash2 className="mr-2" size={16} />}{t(deleting ? 'cv.deleting' : 'cv.delete')}</Button></div><p>{t('cv.review')}</p>{cv.metadata.sourceLimited && <p>{t('cv.limited')}</p>}{cv.content.omittedUnsupportedContent && <p role="status" data-testid="cv-omissions" className="app-card-base p-4">{t('cv.omissions')}</p>}<CvPreview content={cv.content} template={template} /></>}
+      {cv && <>
+        {draft ? <div className="flex flex-wrap gap-3">
+          <Button disabled={saving} onClick={saveEdits}>{t(saving ? 'cv.savingEdits' : 'cv.saveEdits')}</Button>
+          <Button variant="secondary" disabled={saving} onClick={() => { setDraft(null); setError(''); }}>{t('cv.cancelEdit')}</Button>
+        </div> : <Button variant="secondary" disabled={busy || downloading || deleting} onClick={() => { setDraft(cv.content); setError(''); }}>{t('cv.edit')}</Button>}
+        {draft && <CvEditor content={draft} onChange={setDraft} disabled={saving} />}
+        {cv.content.userEdited && <p role="status">{t('cv.editedNotice')}</p>}
+        <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap"><Button className="min-w-0" disabled={downloading || busy || deleting || !!draft || saving} onClick={download}>{t(downloading ? 'cv.downloading' : 'cv.download')}</Button><Button className="min-w-0" variant="secondary" disabled={deleting || busy || downloading || !!draft || saving} onClick={deleteCv}>{deleting ? <Loader2 className="animate-spin mr-2" size={16} /> : <Trash2 className="mr-2" size={16} />}{t(deleting ? 'cv.deleting' : 'cv.delete')}</Button></div><p>{t('cv.review')}</p>{cv.metadata.sourceLimited && <p>{t('cv.limited')}</p>}{cv.content.omittedUnsupportedContent && <p role="status" data-testid="cv-omissions" className="app-card-base p-4">{t('cv.omissions')}</p>}<CvPreview content={draft ?? cv.content} template={template} /></>}
     </>}
   </div>;
 }

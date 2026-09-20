@@ -37,6 +37,31 @@ public sealed class CvsController(IConfiguration configuration, AiPrivacyGate pr
         return Ok(new { job = Context(job), cv = (object?)null });
     });
 
+    [HttpPatch("{jobId}")]
+    [RequestSizeLimit(65536)]
+    public Task<IActionResult> Edit(string jobId, [FromBody] JsonElement body) => Run(async () => {
+        if (!ValidId(jobId)) throw new CvFailure(400, "invalidJob");
+        if (body.ValueKind != JsonValueKind.Object || body.EnumerateObject().Count() != 2 ||
+            !body.TryGetProperty("edits", out var edits) || !body.TryGetProperty("updatedAt", out var version) ||
+            version.ValueKind != JsonValueKind.String || !DateTimeOffset.TryParse(version.GetString(), out var expected))
+            throw new CvFailure(400, "invalidEdit");
+        var store = new CvStore(HttpContext, configuration);
+        var path = $"generated_cvs?user_id=eq.{store.UserId}&job_id=eq.{Uri.EscapeDataString(jobId)}&expires_at=gt.{Uri.EscapeDataString(DateTimeOffset.UtcNow.ToString("O"))}";
+        var saved = await store.Request(path + "&limit=1");
+        if (saved.GetArrayLength() != 1) throw new CvFailure(409, "editConflict");
+        var row = saved[0];
+        if (!DateTimeOffset.TryParse(CvContent.Text(row, "updated_at"), out var current) || current != expected)
+            throw new CvFailure(409, "editConflict");
+        var content = CvEditing.Apply(row.GetProperty("content"), edits);
+        // Compare-and-swap protects against edits, deletion and regeneration in another tab.
+        // Only content and revision change: expiry and prepared-job markers are preserved.
+        var updated = await store.Request(path + "&updated_at=eq." + Uri.EscapeDataString(CvContent.Text(row, "updated_at")) +
+            "&select=job_id,content,job_context,metadata,created_at,updated_at,expires_at", HttpMethod.Patch,
+            new { content, updated_at = DateTimeOffset.UtcNow }, service: true);
+        if (updated.GetArrayLength() != 1) throw new CvFailure(409, "editConflict");
+        return Ok(new { job = updated[0].GetProperty("job_context"), cv = updated[0] });
+    });
+
     [HttpDelete("{jobId}")]
     public Task<IActionResult> Delete(string jobId) => Run(async () => {
         if (!ValidId(jobId)) throw new CvFailure(400, "invalidJob");
@@ -87,7 +112,7 @@ public sealed class CvsController(IConfiguration configuration, AiPrivacyGate pr
         // Reject stale results when the profile changed during generation.
         var latest = await store.Profile();
         if (CvContent.Hash(new { profile = latest.Profile, career = latest.Career }) != sourceHash) throw new CvFailure(409, "profileChanged");
-        var metadata = new { schemaVersion = CvContent.Version, promptVersion = 3, groundingVersion = 1, provider = "gemini", model = Environment.GetEnvironmentVariable("GEMINI_MODEL"),
+        var metadata = new { schemaVersion = CvContent.Version, promptVersion = 4, groundingVersion = 1, provider = "gemini", model = Environment.GetEnvironmentVariable("GEMINI_MODEL"),
             sourceHash, jobHash, noticeVersion, sourceLimited = ranked.Length < career.Length || selectedFacts.Count < facts.Count || skills.Length > 100 || CvContent.Text(profile, "bio").Length > 800 || career.Any(e => new[] { "description", "achievements", "learned", "strengths" }.Any(field => CvContent.Text(e, field).Length > 800)) };
         var jobContext = Context(job);
         var deadlineJson = await store.Request("rpc/save_generated_cv_v2", HttpMethod.Post, new {

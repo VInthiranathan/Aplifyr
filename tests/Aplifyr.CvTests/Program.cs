@@ -23,6 +23,28 @@ string Changed(Action<JsonNode> change) { var node=JsonNode.Parse(output)!;chang
 object ValidateContent(string value, JsonElement[]? career = null) => CvContent.Validate(value,profile,career??[work,education],facts,["C#","SQL"]);
 string Validate(string value, JsonElement[]? career = null) => JsonSerializer.Serialize(ValidateContent(value,career));
 var valid = Validate(output);
+var editPayload = JsonSerializer.SerializeToElement(new {
+    professionalSummary = new[] { "My revised summary." },
+    experience = new[] { new[] { "Revised work contribution." } },
+    education = new[] { new[] { "" } }
+});
+var edited = CvEditing.Apply(Json(valid), editPayload);
+Check(edited["professionalSummary"]![0]!["text"]!.GetValue<string>() == "My revised summary.");
+Check(edited["professionalSummary"]![0]!["userEdited"]!.GetValue<bool>());
+Check(edited["professionalSummary"]![0]!["sourceFactIds"]!.AsArray().Count == 0);
+Check(edited["experience"]![0]!["organization"]!.GetValue<string>() == "Actual company");
+Check(edited["education"]![0]!["bullets"]!.AsArray().Count == 0);
+Check(Json(valid).GetProperty("professionalSummary")[0].GetProperty("text").GetString() != "My revised summary.");
+foreach (var invalidEdit in new[] {
+    "{}", "null", "[]",
+    "{\"professionalSummary\":[],\"experience\":[],\"education\":[]}",
+    JsonSerializer.Serialize(new { professionalSummary = new[] { new string('x', 601) }, experience = new[] { new[] { "ok" } }, education = new[] { new[] { "ok" } } }),
+    JsonSerializer.Serialize(new { professionalSummary = new[] { "ok" }, experience = new[] { new[] { "ok" } }, education = new[] { new[] { "ok" } }, user_id = "victim" })
+}) {
+    try { CvEditing.Apply(Json(valid), Json(invalidEdit)); throw new Exception("Invalid edit accepted"); }
+    catch (CvFailure failure) { Check(failure.Status == 400 && failure.Code == "invalidEdit"); }
+}
+
 Check(valid.Contains("Actual company") && valid.Contains("Actual school") && valid.Contains("Developed tools using C#.") && valid.Contains("Applied database studies"));
 Check(!valid.Contains("Studied databases and built")); // Render rewritten content, not source text.
 foreach (var invalid in new[] {

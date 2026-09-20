@@ -210,12 +210,16 @@
     "copy": "Copy",
     "regenerate": "Regenerate",
     "sendApplication": "Send application",
-    "openSaved": "Open saved letter",
+    "openSaved": "Open cover letter",
     "savedUntil": "Saved until {{date}}",
     "delete": "Delete letter",
     "deleting": "Deleting…",
     "deleteConfirm": "Delete the saved cover letter? This cannot be undone.",
-    "deleteError": "The cover letter could not be deleted. Please try again."
+    "deleteError": "The cover letter could not be deleted. Please try again.",
+    "loadingSaved": "Loading saved letter…",
+    "download": "Export PDF",
+    "downloading": "Exporting…",
+    "downloadError": "Could not create the PDF. Your edits are still here. Please try again."
   },
   "user": {
     "noData": "Could not fetch user data – is the backend running?",
@@ -469,7 +473,9 @@
       "consent": "Review and accept the current Gemini notice before generating a CV.",
       "consentOrQuota": "Generation is temporarily blocked. Check your Gemini consent and try again later; a usage limit may apply.",
       "profileChanged": "Your profile changed during generation. Generate again to use the latest version.",
-      "unavailable": "CV generation is temporarily unavailable. Please try again later."
+      "unavailable": "CV generation is temporarily unavailable. Please try again later.",
+      "invalidEdit": "Check your text. Each statement can contain up to 600 characters.",
+      "editConflict": "This CV was changed, deleted or expired. Copy your edits before reloading the page."
     },
     "download": "Download PDF",
     "downloading": "Creating PDF…",
@@ -508,6 +514,12 @@
         "sampleName": "Sam Ekström",
         "sampleTitle": "Administrator"
       }
-    }
+    },
+    "edit": "Edit CV",
+    "saveEdits": "Save changes",
+    "savingEdits": "Saving changes…",
+    "cancelEdit": "Cancel editing",
+    "editHelp": "Edit any sentence or bullet. Leave a field empty to remove it. Save before exporting the PDF. Editing does not extend expiry. Names, titles and dates come from your profile.",
+    "editedNotice": "This CV contains your own edits. Review the information before applying."
   }
 }

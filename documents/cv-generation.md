@@ -311,3 +311,45 @@ The CV page offers four single-column designs based on common professional CV pa
 Selection is page-local, defaults to Elegant, resets for a new job, and is disabled during PDF export. The selected card has both a radio state and a visible selection marker. Switching styles before or after generation never triggers AI, changes facts or writes to storage. The full preview and downloaded PDF use the same selected design.
 
 `lib/cvTemplates.ts` shares allowlisted colours, header variants, sizes, margins and spacing across the thumbnail, `CvPreview` and PDF export. The backend's `ats-basic` schema marker remains unchanged; design is an independent renderer option. Every design uses one column and the same semantic reading order, standard localized headings, selectable PDF text and the embedded Unicode font. Decorative bars and dots contain no information. No photos, skill bars, tables or document sidebars are used. Long content wraps and paginates without truncation. Preview is responsive continuous content; PDF uses A4 pagination, so screen line breaks need not match exactly. ATS compatibility varies by parser and is not certified.
+
+## User editing and role-specific wording
+
+The CV page has **Edit CV**, **Save changes** and **Cancel editing** actions. Each
+summary statement and work/education bullet has a labelled plain-text field (600
+characters). Blank fields remove that statement on save. The preview updates from
+the draft; PDF download, deletion and regeneration are disabled until editing is
+saved or cancelled. Headings, identity, dates and skill names remain profile-derived.
+Changes are specific to this saved CV; they do not modify the profile. Unsaved drafts
+remain in component memory and are lost when leaving/reloading the page.
+
+`PATCH /api/cvs/{jobId}` accepts `{ updatedAt, edits: { professionalSummary: string[],
+experience: string[][], education: string[][] } }`. Array shapes must match the saved
+CV. No client-supplied owner, source references, metadata, job context or expiry is
+accepted. The endpoint authenticates through the existing middleware, reads through
+owner RLS and performs a server-only compare-and-swap update filtered by owner, job,
+revision and expiry. A missing, expired or concurrently changed row returns 409;
+the UI retains the draft so the user can copy it before reloading.
+
+Only content and `updated_at` change. `expires_at`, original generation metadata,
+prepared-job markers and profile data stay intact. No migration or new client grants
+are required. User-modified statements have `userEdited: true` and empty evidence
+references; they are not represented as AI-reviewed claims. Unchanged statements
+retain their source references. A document-level notice identifies user edits.
+Saving/exporting performs no Gemini calls and requires no AI-processing consent.
+
+Prompt version 4 explicitly maps this advertisement's responsibilities and
+mandatory/desirable requirements to verified profile facts. It prioritizes supported
+fit in the summary and relevant contributions within entries, preserves academic and
+junior context, and forbids filling gaps with fabricated skills or experience. The
+existing independent source-only review remains mandatory. No match score or real
+model quality improvement is guaranteed by these instructions.
+
+
+### Editing/export verification — 2026-09-20
+
+All 75 frontend tests passed. Follow-up editing/retention tests passed after adding
+compare-and-swap/owner/expiry-preservation checks and navigation cancellation.
+TypeScript checking and the final frontend production build passed. Backend Release
+build passed with no warnings/errors; 93 CV checks and the authentication/privacy
+security suite passed using synthetic fixtures. No live Gemini requests, hosted
+Supabase mutations or authenticated visual browser checks were performed.

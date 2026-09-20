@@ -3,6 +3,7 @@ const templatesModule={exports:{}};
 vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname,'../lib/cvTemplates.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{module:templatesModule,exports:templatesModule.exports});
 function setup(fetch){
  const mocks={
+ '../../../components/CvEditor':()=>null,
  '../../../lib/cvTemplates':templatesModule.exports,
  'next/router':{useRouter:()=>({query:{id:'123'},isReady:true})},
  'next-i18next':{useTranslation:()=>({t:k=>k})},'next-i18next/serverSideTranslations':{},

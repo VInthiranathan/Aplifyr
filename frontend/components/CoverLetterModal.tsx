@@ -1,7 +1,7 @@
 import { safeExternalUrl } from "../lib/safeHtml";
 import {useDialogFocus} from '../lib/useDialogFocus';
-import { X, Copy, RefreshCw, Edit2, Send, Check, Trash2, Loader2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { X, Copy, RefreshCw, Edit2, Send, Check, Trash2, Loader2, Download } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "next-i18next";
 import { Button } from "./ui/button";
 
@@ -36,6 +36,23 @@ export default function CoverLetterModal({
   const dialog=useDialogFocus(isOpen,onClose);
   const [isEditing, setIsEditing] = useState(false);
   const [editedLetter, setEditedLetter] = useState(letter);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState(false);
+  const downloadRequest = useRef<AbortController | null>(null);
+  useEffect(() => {
+    setDownloadError(false); setDownloading(false);
+    return () => { downloadRequest.current?.abort(); downloadRequest.current = null; };
+  }, [isOpen, letter]);
+  async function exportPdf() {
+    if (downloadRequest.current) return;
+    const controller = new AbortController(); downloadRequest.current = controller;
+    setDownloading(true); setDownloadError(false);
+    try {
+      const { downloadCoverLetter } = await import('../lib/downloadCoverLetter.js');
+      await downloadCoverLetter(editedLetter, jobTitle, company, controller.signal);
+    } catch { if (!controller.signal.aborted) setDownloadError(true); }
+    finally { if (downloadRequest.current === controller) { downloadRequest.current = null; setDownloading(false); } }
+  }
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -108,9 +125,14 @@ export default function CoverLetterModal({
           )}
         </div>
 
+        {downloadError && <p role="alert" className="px-4 py-2">{t('coverLetter.downloadError')}</p>}
         {/* Footer Actions */}
         <div className="grid gap-3 border-t border-gray-200 bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] dark:border-white/10 dark:bg-[#0a0a0a] sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:p-6">
           <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+            <Button onClick={exportPdf} disabled={downloading || isRegenerating || isDeleting || !editedLetter.trim()} variant="secondary" className="h-auto min-w-0 whitespace-normal px-3 py-2 sm:px-4">
+              {downloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+              {t(downloading ? 'coverLetter.downloading' : 'coverLetter.download')}
+            </Button>
             <Button
               onClick={() => setIsEditing(!isEditing)}
               variant="secondary"

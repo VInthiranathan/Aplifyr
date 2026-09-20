@@ -14,7 +14,7 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 
 ### Job-specific CV
 
-- `/jobs/[id]/cv` maintains job context, stores the latest generated CV for seven days, restores it on return, supports immediate deletion, and creates a local PDF download.
+- `/jobs/[id]/cv` maintains job context, stores the latest generated CV for seven days, restores it on return, supports immediate deletion and saved per-statement editing without extending expiry, and exports the saved revision as a local PDF.
 - Gemini rewrites profile, work and education text in the advertisement's Swedish or English language, with source references and a separate factual review using the CV key. CV preview/PDF headings follow the same language.
 - See [CV generation](cv-generation.md) for contracts, migrations 009 and 20260918164504, retention, source-validation limits and configuration.
 
@@ -111,3 +111,5 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 - `frontend/`: Next.js app
 - `supabase/`: Supabase config and SQL migrations
 - `documents/`: setup guides, review notes, and project documentation
+
+The job page reuses its cover-letter button to open an existing letter. The letter modal exports its current text as a local PDF; see [cover-letter setup](cover-letter-setup.md).
