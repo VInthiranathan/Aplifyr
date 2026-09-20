@@ -9,7 +9,7 @@ export function cvFilename(name: string, company: string, sequence: number): str
 }
 
 /** Text-based PDF; no HTML interpretation, tracking images, or external rendering service. */
-export function buildCvPdf(content: CvContent, font: string, t: (key: string) => string, template: CvTemplateId = 'classic'): jsPDF {
+export function buildCvPdf(content: CvContent, font: string, t: (key: string) => string, template: CvTemplateId = 'elegant'): jsPDF {
   t = cvDocumentT(content, t);
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
   pdf.addFileToVFS('DejaVuSans.ttf', font);
@@ -18,16 +18,19 @@ export function buildCvPdf(content: CvContent, font: string, t: (key: string) =>
   const style = cvTemplate(template);
   const margin = style.margin, bottom = 297 - margin, width = 210 - margin * 2;
   let y = margin + 3;
-  if (template === 'modern') { pdf.setDrawColor(style.accent); pdf.setLineWidth(1); pdf.line(margin, y, 210 - margin, y); y += 9; }
   function room(height: number) { if (y + height > bottom) { pdf.addPage(); y = margin + 3; } }
-  function text(value: string, size: number = style.bodySize, indent = 0) {
+  function text(value: string, size: number = style.bodySize, indent = 0, align: 'left' | 'center' = 'left') {
     // Render plain text and normalize control characters; all wrapping uses embedded font metrics.
     const clean = value.replace(/[\x00-\x08\x0b-\x1f\x7f]/g, ' ').trim();
     if (!clean) return;
     pdf.setFontSize(size);
-    const lines: string[] = pdf.splitTextToSize(clean, width - indent);
+    const lines: string[] = pdf.splitTextToSize(clean, width - indent * 2);
     const lineHeight = size * style.lineHeight;
-    for (const line of lines) { room(lineHeight); pdf.text(line, margin + indent, y); y += lineHeight; }
+    for (const line of lines) {
+      room(lineHeight);
+      pdf.text(line, align === 'center' ? 105 : margin + indent, y, align === 'center' ? { align: 'center' } : undefined);
+      y += lineHeight;
+    }
     y += style.gap;
   }
   function heading(label: string) {
@@ -46,14 +49,33 @@ export function buildCvPdf(content: CvContent, font: string, t: (key: string) =>
       y += 3;
     }
   }
-  pdf.setTextColor(style.accent); text(content.name, style.nameSize); pdf.setTextColor('#111827'); text(content.title, 12); text(content.location, 10);
+  if (style.header === 'panel') {
+    pdf.setFillColor(style.accent); pdf.rect(0, 0, 210, 4, 'F');
+    pdf.setFillColor(style.headerBackground ?? '#f3f1f1'); pdf.rect(margin, 10, width, 32, 'F');
+    y = 20;
+  } else if (style.header === 'band') {
+    pdf.setFillColor(style.accent); pdf.rect(0, 0, 210, 40, 'F');
+    y = 15;
+  } else if (style.header === 'dots') {
+    [style.accent, style.secondaryAccent, '#9a9a70'].forEach((color, index) => {
+      pdf.setFillColor(color); pdf.circle(margin + index * 5, y - 2, 1.8, 'F');
+    });
+    y += 7;
+  }
+  const headerAlign = style.headerAlign;
+  pdf.setTextColor(style.header === 'band' ? '#ffffff' : style.accent); text(content.name, style.nameSize, 0, headerAlign);
+  pdf.setTextColor(style.header === 'band' ? '#ffffff' : '#111827'); text(content.title, 12, 0, headerAlign); text(content.location, 10, 0, headerAlign);
+  pdf.setTextColor('#111827');
+  if (style.header === 'band' && y < 46) y = 46;
+  if (style.header === 'panel' && y < 48) y = 48;
   if (content.professionalSummary.length) { heading(t('cv.summary')); content.professionalSummary.forEach(f => text(f.text)); }
   if (content.skills.length) { heading(t('cv.skills')); text(content.skills.join(' · ')); }
   entries(t('cv.experience'), content.experience); entries(t('cv.education'), content.education);
+  if (style.header === 'panel') { pdf.setFillColor(style.accent); pdf.rect(0, 293, 210, 4, 'F'); }
   return pdf;
 }
 
-export async function downloadCv(content: CvContent, company: string, sequence: number, t: (key: string) => string, signal?: AbortSignal, template: CvTemplateId = 'classic') {
+export async function downloadCv(content: CvContent, company: string, sequence: number, t: (key: string) => string, signal?: AbortSignal, template: CvTemplateId = 'elegant') {
   const response = await fetch('/fonts/DejaVuSans.ttf', { signal });
   if (!response.ok) throw new Error('Font unavailable');
   const bytes = new Uint8Array(await response.arrayBuffer());

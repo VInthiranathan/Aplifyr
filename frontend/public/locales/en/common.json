@@ -480,18 +480,30 @@
     "omissions": "Some AI wording or details could not be verified against your profile and have been omitted. Review the CV before using it. Clarify your profile if important information is missing.",
     "templates": {
       "title": "Choose CV style",
-      "help": "Three single-column styles with clear headings and readable text. Switch before or after generation without new AI calls. The PDF uses the same style.",
-      "classic": {
-        "name": "Classic",
-        "description": "Timeless black-and-white design with clear dividers."
+      "help": "Scroll sideways to explore four ATS-friendly examples. Switch before or after generation without new AI calls. The selected design is also used in the PDF.",
+      "elegant": {
+        "name": "Elegant",
+        "description": "Burgundy details and a soft header panel with generous spacing.",
+        "sampleName": "Elin Andersson",
+        "sampleTitle": "Project Manager"
       },
-      "modern": {
-        "name": "Modern",
-        "description": "Airy design with subtle dark-blue accents."
+      "nordic": {
+        "name": "Nordic",
+        "description": "A dark-blue header and a compact Scandinavian expression.",
+        "sampleName": "Leo Bergström",
+        "sampleTitle": "Software Developer"
       },
-      "compact": {
-        "name": "Compact",
-        "description": "Tighter spacing that leaves more room for your experience."
+      "professional": {
+        "name": "Professional",
+        "description": "A clean monochrome layout with clear rules and strong hierarchy.",
+        "sampleName": "Nora Lind",
+        "sampleTitle": "Digital Marketer"
+      },
+      "accent": {
+        "name": "Accent",
+        "description": "Subtle colour markers for a warm, personal and readable design.",
+        "sampleName": "Sam Ekström",
+        "sampleTitle": "Administrator"
       }
     }
   }

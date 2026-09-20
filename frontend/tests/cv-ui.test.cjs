@@ -8,6 +8,7 @@ function setup(fetch){
  'next-i18next':{useTranslation:()=>({t:k=>k})},'next-i18next/serverSideTranslations':{},
  'next/link':({href,children})=>React.createElement('a',{href},children),
  '../../../components/ui/button':{Button:props=>React.createElement('button',props)},
+ '../../../components/CvTemplateThumbnail':({template,name})=>React.createElement('div',{'data-thumbnail':template},name),
  '../../../components/AiGenerationConsent':({onConfirm,onClose})=>React.createElement('section',{role:'dialog'},React.createElement('button',{onClick:onConfirm},'confirm'),React.createElement('button',{onClick:onClose},'cancel')),'../../../components/CvPreview':({content,template})=>React.createElement('article',{'data-template':template},content.name),
  '../../../lib/backendUrl':{getPublicBackendUrl:()=>''},
  '../../../lib/supabaseClient':{getSupabaseBrowserClient:()=>({auth:{getSession:async()=>({data:{session:{access_token:'test-token',user:{id:'owner'}}}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})}})},
@@ -26,12 +27,14 @@ test('saved CV returns after remount; consent precedes generation and failures p
  await act(async()=>generate().props.onClick());assert.equal(calls.length,1);
  await act(async()=>view.root.findByProps({role:'dialog'}).findAllByType('button')[0].props.onClick());
  const requestsBeforeStyle=calls.length;
- assert.equal(view.root.findAllByProps({type:'radio'}).length,3);
- for(const style of ['modern','compact','classic']){
+ assert.equal(view.root.findAllByProps({type:'radio'}).length,4);
+ assert.ok(view.root.findByProps({'data-testid':'cv-template-gallery'}).props.className.includes('overflow-x-auto'));
+ for(const style of ['nordic','professional','accent','elegant']){
   await act(async()=>view.root.findByProps({type:'radio',value:style}).props.onChange());
   assert.equal(view.root.findByType('article').props['data-template'],style);
   assert.equal(calls.length,requestsBeforeStyle);
  }
+ assert.deepEqual(view.root.findAll(node=>node.props['data-template-card']).map(node=>node.props['data-template-card']),['elegant','nordic','professional','accent']);
  assert.equal(view.root.findByType('article').children[0],'Jonas Axelsson');assert.equal(view.root.findByProps({'data-testid':'cv-omissions'}).children[0],'cv.omissions');
  await act(async()=>generate().props.onClick());
  await act(async()=>view.root.findByProps({role:'dialog'}).findAllByType('button')[0].props.onClick());

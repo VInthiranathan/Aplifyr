@@ -480,18 +480,30 @@
     "omissions": "Vissa AI-formuleringar eller uppgifter kunde inte bekräftas mot din profil och har utelämnats. Granska CV:t före användning. Förtydliga gärna profilen om viktig information saknas.",
     "templates": {
       "title": "Välj CV-stil",
-      "help": "Tre enkelspaltiga stilar med tydliga rubriker och läsbar text. Byt stil före eller efter generering utan nya AI-anrop. Samma stil används i PDF-filen.",
-      "classic": {
-        "name": "Klassisk",
-        "description": "Tidlös svartvit design med tydliga avdelare."
+      "help": "Svep i sidled för att se fyra ATS-vänliga exempel. Byt mall före eller efter generering utan nya AI-anrop. Den valda designen används även i PDF-filen.",
+      "elegant": {
+        "name": "Elegant",
+        "description": "Vinröda detaljer och en mjuk rubrikyta med generöst utrymme.",
+        "sampleName": "Elin Andersson",
+        "sampleTitle": "Projektledare"
       },
-      "modern": {
-        "name": "Modern",
-        "description": "Luftig design med diskreta mörkblå accenter."
+      "nordic": {
+        "name": "Nordisk",
+        "description": "Mörkblå toppyta och ett kompakt, skandinaviskt uttryck.",
+        "sampleName": "Leo Bergström",
+        "sampleTitle": "Systemutvecklare"
       },
-      "compact": {
-        "name": "Kompakt",
-        "description": "Tätare mellanrum som ger mer plats åt din erfarenhet."
+      "professional": {
+        "name": "Professionell",
+        "description": "Ren svartvit layout med tydliga linjer och stark hierarki.",
+        "sampleName": "Nora Lind",
+        "sampleTitle": "Digital marknadsförare"
+      },
+      "accent": {
+        "name": "Accent",
+        "description": "Diskreta färgmarkörer och en varm, personlig men tydlig design.",
+        "sampleName": "Sam Ekström",
+        "sampleTitle": "Administratör"
       }
     }
   }
