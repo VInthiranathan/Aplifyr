@@ -75,13 +75,18 @@ export function buildCvPdf(content: CvContent, font: string, t: (key: string) =>
   return pdf;
 }
 
-export async function downloadCv(content: CvContent, company: string, sequence: number, t: (key: string) => string, signal?: AbortSignal, template: CvTemplateId = 'elegant') {
+export async function loadPdfFont(signal?: AbortSignal): Promise<string> {
   const response = await fetch('/fonts/DejaVuSans.ttf', { signal });
   if (!response.ok) throw new Error('Font unavailable');
   const bytes = new Uint8Array(await response.arrayBuffer());
   let binary = '';
   for (let i = 0; i < bytes.length; i += 8192) binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
-  const pdf = buildCvPdf(content, btoa(binary), t, template);
+  return btoa(binary);
+}
+
+export async function downloadCv(content: CvContent, company: string, sequence: number, t: (key: string) => string, signal?: AbortSignal, template: CvTemplateId = 'elegant') {
+  const font = await loadPdfFont(signal);
+  const pdf = buildCvPdf(content, font, t, template);
   if (signal?.aborted) return;
   pdf.save(cvFilename(content.name, company, sequence));
 }

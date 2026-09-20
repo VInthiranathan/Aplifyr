@@ -71,3 +71,15 @@ test('all CV templates preserve text order, paginate long entries and retain fin
  }
  assert.equal(documents.length,4);assert.equal(new Set(documents).size,4);
 });
+
+test('cover-letter PDF retains Swedish text, paragraph order and the final line over multiple pages',()=>{
+ const letterModule={exports:{}};
+ const code=ts.transpileModule(fs.readFileSync(path.join(__dirname,'../lib/downloadCoverLetter.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;
+ vm.runInNewContext(code,{module:letterModule,exports:letterModule.exports,require:n=>n==='jspdf'?pdfModule:n==='./downloadCv'?moduleUnderTest.exports:require(n)});
+ const font=fs.readFileSync(path.join(__dirname,'../public/fonts/DejaVuSans.ttf')).toString('base64');
+ pdfText.length=0;
+ const letter=Array.from({length:90},(_,i)=>`Stycke ${i}: Jag utvecklade tjänster i Göteborg och lärde mig SQL.`).join('\n\n')+'\nSISTA RADEN ÅÄÖ';
+ const pdf=letterModule.exports.buildCoverLetterPdf(letter,'Utvecklare','Företag',font);
+ assert.ok(pdf.getNumberOfPages()>1);assert.equal(pdfText[0],'Utvecklare');
+ assert.ok(pdfText.includes('SISTA RADEN ÅÄÖ'));assert.ok(pdf.output().startsWith('%PDF-'));
+});

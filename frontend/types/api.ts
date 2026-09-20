@@ -165,12 +165,13 @@ export interface MatchProfileRequest {
   locationPreferences?: string[];
 }
 
-export interface CvFact { sourceFactId: string; sourceFactIds?: string[]; text: string }
+export interface CvFact { userEdited?: boolean; sourceFactId: string; sourceFactIds?: string[]; text: string }
 export interface CvEntry {
   sourceId: string; title: string; organization: string; qualification: string;
   startMonth: string; endMonth: string; isCurrent: boolean; bullets: CvFact[];
 }
 export interface CvContent {
+  userEdited?: boolean;
   language?: 'en' | 'sv';
   omittedUnsupportedContent?: boolean;
   schemaVersion: 1; template: 'ats-basic'; name: string; title: string; location: string;
@@ -178,7 +179,7 @@ export interface CvContent {
   analysis: { keywords: string[]; responsibilities: string[]; mandatory: string[]; desirable: string[]; domain: string };
 }
 export interface CvJobContext { id: string; title: string; company: string; location: string }
-/** Transient generation response; dates describe generation, not database persistence. */
+/** Owner-saved document with an independent seven-day expiry. */
 export interface GeneratedCv {
   job_id: string; content: CvContent; job_context: CvJobContext;
   metadata: { sourceLimited: boolean; sourceHash: string; jobHash: string };

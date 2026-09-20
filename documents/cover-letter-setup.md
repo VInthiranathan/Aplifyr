@@ -74,3 +74,19 @@ a stable model with structured output and free-tier availability according to
 [Google's model page](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite)
 and [pricing](https://ai.google.dev/gemini-api/docs/pricing).
 Live checks must confirm the keys and full pipeline after each model change.
+
+## Saved-letter action and PDF export
+
+The job page uses one primary cover-letter action. While the saved-letter lookup is
+pending it is disabled; when a letter exists it reads **Open cover letter** and opens
+that letter without a consent dialog or AI request. Otherwise it generates through
+the existing consent flow. The former separate open button is removed. Successful
+deletion returns the action to generation. Generation errors are shown separately
+and never become letter content; a failed regeneration preserves the previous letter.
+
+The modal's **Export PDF** downloads a selectable-text A4 PDF of the currently
+edited letter. It embeds the same local DejaVu Sans font as CV export and wraps and
+paginates long text. Export loads only same-origin font assets, makes no AI call and
+sends no letter content to a PDF service. Closing/unmounting cancels pending downloads;
+an export failure preserves the text for retry. Letter edits remain local to the
+modal (existing behavior); exporting does not persist them or extend seven-day storage.

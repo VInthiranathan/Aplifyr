@@ -210,12 +210,16 @@
     "copy": "Kopiera",
     "regenerate": "Generera om",
     "sendApplication": "Skicka ansökan",
-    "openSaved": "Öppna sparat brev",
+    "openSaved": "Öppna personliga brevet",
     "savedUntil": "Sparat till {{date}}",
     "delete": "Ta bort brev",
     "deleting": "Tar bort…",
     "deleteConfirm": "Vill du ta bort det sparade personliga brevet? Detta går inte att ångra.",
-    "deleteError": "Det personliga brevet kunde inte tas bort. Försök igen."
+    "deleteError": "Det personliga brevet kunde inte tas bort. Försök igen.",
+    "loadingSaved": "Hämtar sparat brev…",
+    "download": "Exportera PDF",
+    "downloading": "Exporterar…",
+    "downloadError": "PDF-filen kunde inte skapas. Dina ändringar finns kvar. Försök igen."
   },
   "user": {
     "noData": "Kunde inte hämta användardata – är backend igång?",
@@ -469,7 +473,9 @@
       "consent": "Läs och godkänn den aktuella Gemini-informationen innan du genererar CV.",
       "consentOrQuota": "Genereringen är tillfälligt blockerad. Kontrollera ditt Gemini-samtycke och försök senare. En användningsgräns kan ha nåtts.",
       "profileChanged": "Din profil ändrades under genereringen. Generera igen för att använda senaste versionen.",
-      "unavailable": "CV-genereringen är tillfälligt otillgänglig. Försök igen senare."
+      "unavailable": "CV-genereringen är tillfälligt otillgänglig. Försök igen senare.",
+      "invalidEdit": "Kontrollera texterna. Varje rad får vara högst 600 tecken.",
+      "editConflict": "CV:t har ändrats, tagits bort eller löpt ut. Kopiera dina ändringar innan du laddar om sidan."
     },
     "download": "Ladda ner PDF",
     "downloading": "Skapar PDF…",
@@ -508,6 +514,12 @@
         "sampleName": "Sam Ekström",
         "sampleTitle": "Administratör"
       }
-    }
+    },
+    "edit": "Redigera CV",
+    "saveEdits": "Spara ändringar",
+    "savingEdits": "Sparar ändringar…",
+    "cancelEdit": "Avbryt redigering",
+    "editHelp": "Ändra en rad eller punkt direkt. Lämna fältet tomt för att ta bort texten. Spara innan du exporterar PDF. Giltighetstiden förlängs inte. Namn, titlar och datum hämtas från din profil.",
+    "editedNotice": "Detta CV innehåller dina egna ändringar. Granska uppgifterna innan du skickar det."
   }
 }

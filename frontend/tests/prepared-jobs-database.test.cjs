@@ -27,10 +27,22 @@ test('prepared jobs follow CV and cover-letter retention, deletion and owner iso
     assert.ok(new Date(deadline).getTime() > Date.now() + 6.9 * 24 * 60 * 60 * 1000);
     assert.equal((await db.query('select count(*)::int count from prepared_jobs')).rows[0].count, 1);
 
+    // The edit endpoint uses a service-role PATCH with owner, job, expiry and revision predicates.
+    const beforeEdit = (await db.query("select updated_at::text, expires_at::text from generated_cvs where user_id=$1 and job_id='job-1'", [a])).rows[0];
+    const edit = (owner, revision) => db.query(`update generated_cvs set content=$1, updated_at=clock_timestamp()
+      where user_id=$2 and job_id='job-1' and updated_at=$3 and expires_at > now() returning *`,
+      [{schemaVersion:1,userEdited:true,professionalSummary:[{text:'My revision',userEdited:true}]},owner,revision]);
+    assert.equal((await edit(b, beforeEdit.updated_at)).rows.length, 0);
+    assert.equal((await edit(a, beforeEdit.updated_at)).rows.length, 1);
+    assert.equal((await edit(a, beforeEdit.updated_at)).rows.length, 0);
+    assert.equal((await db.query("select expires_at::text from generated_cvs where user_id=$1 and job_id='job-1'", [a])).rows[0].expires_at, beforeEdit.expires_at);
+    assert.deepEqual((await db.query("select cv_expires_at from prepared_jobs where user_id=$1 and job_id='job-1'", [a])).rows[0].cv_expires_at, deadline);
+
     await db.exec('reset role; set role authenticated');
     await db.query("select set_config('request.jwt.claim.sub',$1,false)", [a]);
     assert.equal((await db.query('select count(*)::int count from prepared_jobs')).rows[0].count, 1);
     assert.equal((await db.query('select count(*)::int count from generated_cvs')).rows[0].count, 1);
+    await assert.rejects(db.query("update generated_cvs set content=content"), /permission denied/);
     await assert.rejects(db.query("delete from generated_cvs where job_id='job-1'"), /permission denied/);
     await db.query("select set_config('request.jwt.claim.sub',$1,false)", [b]);
     assert.equal((await db.query('select count(*)::int count from prepared_jobs')).rows[0].count, 0);

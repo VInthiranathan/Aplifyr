@@ -5,7 +5,7 @@ import { useRouter } from "next/router";
 import type { GetServerSideProps } from "next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Briefcase, MapPin, Wifi, Loader2, Bookmark } from "lucide-react";
 import { getPublicBackendUrl } from "../../lib/backendUrl";
@@ -45,6 +45,8 @@ export default function JobDetailPage() {
   // raw API response logging removed
   const [jobHtml, setJobHtml] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  const generationRequest = useRef<AbortController | null>(null);
+  const [loadingLetter, setLoadingLetter] = useState(true);
   const [letter, setLetter] = useState<string | null>(null);
   const [letterExpiresAt, setLetterExpiresAt] = useState<string | null>(null);
   const [deletingLetter, setDeletingLetter] = useState(false);
@@ -146,6 +148,8 @@ export default function JobDetailPage() {
   useEffect(() => {
     if (!router.isReady || typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(id)) return;
     const controller = new AbortController();
+    generationRequest.current?.abort(); setGenerating(false);
+    setLetter(null); setLetterExpiresAt(null); setShowModal(false); setLoadingLetter(true);
     void (async () => {
       try {
         const { data: { session } } = await getSupabaseBrowserClient().auth.getSession();
@@ -155,22 +159,29 @@ export default function JobDetailPage() {
         });
         if (!response.ok) return;
         const saved = (await response.json()).letter;
-        if (saved && typeof saved.content === 'string' && typeof saved.expires_at === 'string') {
+        if (!controller.signal.aborted && saved && typeof saved.content === 'string' && typeof saved.expires_at === 'string') {
           setLetter(saved.content);
           setLetterExpiresAt(saved.expires_at);
           if (router.query.letter === '1') setShowModal(true);
         }
       } catch (error) {
         if (!(error instanceof Error && error.name === 'AbortError')) console.error('Could not load saved cover letter');
-      }
+      } finally { if (!controller.signal.aborted) setLoadingLetter(false); }
     })();
-    return () => controller.abort();
+    const { data: { subscription } } = getSupabaseBrowserClient().auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        controller.abort(); generationRequest.current?.abort();
+        setShowModal(false); setLetter(null); setLetterExpiresAt(null); setConsentOpen(false);
+      }
+    });
+    return () => { controller.abort(); generationRequest.current?.abort(); subscription.unsubscribe(); };
   }, [id, router.isReady, router.query.letter]);
 
   const generate = async () => {
     if (!job || generating) return;
+    const controller = new AbortController(); generationRequest.current = controller;
     setGenerating(true);
-    setLetter(null);
+    setFetchError(null);
     try {
       // Get user profile for personalized letter
       const supabase = getSupabaseBrowserClient();
@@ -182,7 +193,7 @@ export default function JobDetailPage() {
       if (session) {
         try {
           const profileRes = await fetch("/api/profile", {
-            credentials: "same-origin",
+            credentials: "same-origin", signal: controller.signal,
           });
           if (profileRes.ok) {
             const profileData = await profileRes.json();
@@ -203,8 +214,9 @@ export default function JobDetailPage() {
         }
       }
 
+      if (controller.signal.aborted) return;
       const res = await fetch(`${BACKEND}/api/coverletters/generate-all`, {
-        method: "POST",
+        method: "POST", signal: controller.signal,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session?.access_token ?? ""}`,
@@ -216,9 +228,9 @@ export default function JobDetailPage() {
       });
 
       const data = await res.json().catch(() => null);
+      if (controller.signal.aborted) return;
       if (!res.ok) {
-        setLetter(t(`consent.errors.${aiFailureCode(data, res.status)}`));
-        setShowModal(true);
+        setFetchError(t(`consent.errors.${aiFailureCode(data, res.status)}`));
         return;
       }
 
@@ -227,17 +239,14 @@ export default function JobDetailPage() {
         setLetterExpiresAt(typeof data[0].expiresAt === 'string' ? data[0].expiresAt : null);
         setShowModal(true);
       } else if (Array.isArray(data) && data[0]?.error) {
-        setLetter(t(`consent.errors.${aiFailureCode(data, res.status)}`));
-        setShowModal(true);
+        setFetchError(t(`consent.errors.${aiFailureCode(data, res.status)}`));
       } else {
-        setLetter(t('consent.generateError'));
-        setShowModal(true);
+        setFetchError(t('consent.generateError'));
       }
     } catch (e) {
-      setLetter(t('consent.generateError'));
-      setShowModal(true);
+      if (!controller.signal.aborted) setFetchError(t('consent.generateError'));
     } finally {
-      setGenerating(false);
+      if (!controller.signal.aborted) setGenerating(false);
     }
   };
 
@@ -359,7 +368,6 @@ export default function JobDetailPage() {
                       fill={isFavorite(job.id) ? "currentColor" : "none"}
                     />
                   </Button>
-                  {letter && <Button variant="secondary" onClick={() => setShowModal(true)} className="h-auto basis-full px-4 py-2.5">{t("coverLetter.openSaved")}</Button>}
                 </div>
                 <div className="text-sm text-slate-500 mt-1">
                   {job.employer?.name}
@@ -489,9 +497,10 @@ export default function JobDetailPage() {
                       {entry.title} — {entry.organization}
                     </label>)}
                   </div>
+                  {fetchError && <p role="alert" className="mb-3 text-sm text-red-600 dark:text-red-400">{fetchError}</p>}
                   <Button
-                    onClick={requestGeneration}
-                    disabled={generating}
+                    onClick={() => letter ? setShowModal(true) : requestGeneration()}
+                    disabled={generating || loadingLetter || deletingLetter}
                     className="h-auto w-full px-4 py-2.5"
                   >
                     {generating ? (
@@ -500,7 +509,7 @@ export default function JobDetailPage() {
                         {t("jobDetail.generateCoverLetter")}
                       </>
                     ) : (
-                      t("jobDetail.generateCoverLetter")
+                      t(loadingLetter ? "coverLetter.loadingSaved" : letter ? "coverLetter.openSaved" : "jobDetail.generateCoverLetter")
                     )}
                   </Button>
                   <Button asChild variant="secondary" className="mt-2 h-auto w-full px-4 py-2.5">

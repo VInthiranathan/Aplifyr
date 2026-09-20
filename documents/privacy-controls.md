@@ -122,3 +122,13 @@ matching and CV tests, and Docker build. Backend settings still need verificatio
 `GEMINI_MODEL`, both feature keys and Supabase server credentials. The Render tool
 requires explicit workspace selection before service inspection or changes. No
 real Gemini generation has been verified in this session.
+
+### Manual document edits and PDF export
+
+Users can save edits to CV summary statements and career bullets without sending
+those edits to Gemini. The existing saved CV is updated for its authenticated owner;
+its original seven-day deadline is not extended. User edits are marked separately
+from AI-reviewed statements. CV and cover-letter PDFs are generated locally with
+same-origin font assets. Downloaded files are outside the application's deletion
+and expiry controls. Cover-letter edits in the modal remain local and exportable;
+only CV edits are persisted by this change. See the respective feature documents.
