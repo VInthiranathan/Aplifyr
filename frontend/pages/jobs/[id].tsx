@@ -273,7 +273,7 @@ export default function JobDetailPage() {
 
   if (!job && !jobHtml) {
     return (
-      <div className="p-4 sm:p-6">
+      <div className="app-page-shell">
         {fetching ? (
           <p className="text-sm text-slate-400">{t("jobDetail.loading")}</p>
         ) : (
@@ -294,13 +294,13 @@ export default function JobDetailPage() {
   }
 
   return (
-      <div className="p-4 sm:p-6">
+      <div className="app-page-shell">
       {/* Debug UI removed */}
       {jobHtml ? (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h1 className="text-lg font-bold">{t("jobDetail.ad")}</h1>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:flex">
               <Button asChild variant="external" className="h-auto px-3 py-2">
                 <a
                   href={`https://arbetsformedlingen.se/platsbanken/annonser/${id}`}
@@ -327,9 +327,9 @@ export default function JobDetailPage() {
               <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg bg-slate-100 dark:bg-white/5 flex items-center justify-center flex-shrink-0">
                 <Briefcase />
               </div>
-              <div className="flex-1">
-                <div className="flex items-start justify-between gap-4">
-                  <h1 className="text-2xl sm:text-3xl font-semibold leading-tight">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <h1 className="min-w-0 flex-1 break-words text-2xl font-semibold leading-tight [overflow-wrap:anywhere] sm:text-3xl">
                     {job.headline ?? job.title ?? t("jobDetail.defaultJobTitle")}
                   </h1>
                   <Button
@@ -359,12 +359,12 @@ export default function JobDetailPage() {
                       fill={isFavorite(job.id) ? "currentColor" : "none"}
                     />
                   </Button>
-                  {letter && <Button variant="secondary" onClick={() => setShowModal(true)} className="mt-2 h-auto w-full px-4 py-2.5">{t("coverLetter.openSaved")}</Button>}
+                  {letter && <Button variant="secondary" onClick={() => setShowModal(true)} className="h-auto basis-full px-4 py-2.5">{t("coverLetter.openSaved")}</Button>}
                 </div>
                 <div className="text-sm text-slate-500 mt-1">
                   {job.employer?.name}
                 </div>
-                <div className="mt-3 text-sm text-slate-500 flex items-center gap-4">
+                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-500">
                   {(job.workplace_address?.municipality ||
                     job.workplace_address?.region) && (
                     <span className="flex items-center gap-1">
@@ -390,11 +390,11 @@ export default function JobDetailPage() {
               </div>
             </div>
 
-            {typeof id === 'string' && <Button asChild className="mt-6"><Link href={`/jobs/${encodeURIComponent(id)}/cv`}>{t('cv.generate')}</Link></Button>}
+            {typeof id === 'string' && <Button asChild className="mt-6 w-full sm:w-auto"><Link href={`/jobs/${encodeURIComponent(id)}/cv`}>{t('cv.generate')}</Link></Button>}
             <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="col-span-2 space-y-6">
-                <section className="bg-white dark:bg-[#111] p-6 rounded-lg">
-                  <h2 className="text-2xl font-semibold mb-4">{t("jobDetail.aboutJob")}</h2>
+              <div className="min-w-0 space-y-6 lg:col-span-2">
+                <section className="rounded-2xl bg-white p-4 dark:bg-[#111] sm:p-6">
+                  <h2 className="mb-4 text-xl font-semibold sm:text-2xl">{t("jobDetail.aboutJob")}</h2>
                   <div className="prose max-w-none text-sm text-slate-700 dark:text-white">
                     {renderAFDescription(job, t)}
                   </div>
@@ -406,8 +406,8 @@ export default function JobDetailPage() {
                 {renderOtherInformation(job, t)}
               </div>
 
-              <aside className="col-span-1">
-                <div className="bg-gray-50 dark:bg-[#0b0b0b] border border-gray-200 dark:border-white/5 rounded-lg p-6">
+              <aside className="min-w-0 lg:col-span-1">
+                <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 dark:border-white/5 dark:bg-[#0b0b0b] sm:p-6">
                   <h3 className="font-semibold mb-2">{t("jobDetail.applyJob")}</h3>
                   <p className="text-sm text-slate-500 mb-3">
                     {renderApplicationDeadline(job, t, localeTag)}

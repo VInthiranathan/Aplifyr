@@ -366,59 +366,59 @@ function HomeContent({ matchReq, preparedJobs: initialPreparedJobs, showDebug, p
       </div>
 
       {/* Grade Match Cards */}
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-3 gap-2 sm:gap-6">
           {/* A Grade */}
-          <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-4 sm:p-8 border border-gray-200 dark:border-white/5 shadow-sm hover:shadow-md dark:shadow-none transition-all hover:scale-[1.02] group">
-            <div className="flex items-center justify-center mb-4 sm:mb-6">
-              <div className="px-4 py-2 rounded-full bg-green-100 dark:bg-green-500/20 group-hover:scale-110 transition-transform">
+          <div className="group rounded-2xl border border-gray-200 bg-white p-3 text-center shadow-sm transition-all hover:shadow-md dark:border-white/5 dark:bg-[#1a1a1a] dark:shadow-none sm:rounded-3xl sm:p-8 sm:text-left sm:hover:scale-[1.02]">
+            <div className="mb-3 flex items-center justify-center sm:mb-6">
+              <div className="rounded-full bg-green-100 px-3 py-1.5 transition-transform group-hover:scale-110 dark:bg-green-500/20 sm:px-4 sm:py-2">
                 <span className="text-sm font-bold text-green-600 dark:text-green-400 uppercase tracking-wider">
                   A
                 </span>
               </div>
             </div>
             <div>
-              <p className="text-3xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-2">
+              <p className="mb-1 text-2xl font-bold text-gray-900 dark:text-white sm:mb-2 sm:text-5xl">
                 {gradeA ?? <span className="text-gray-300 dark:text-white/20">—</span>}
               </p>
-              <p className="text-sm text-gray-500 dark:text-white/50">
+              <p className="truncate text-[11px] text-gray-500 dark:text-white/50 sm:text-sm">
                 {t("home.matches")}
               </p>
             </div>
           </div>
 
           {/* B Grade */}
-          <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-4 sm:p-8 border border-gray-200 dark:border-white/5 shadow-sm hover:shadow-md dark:shadow-none transition-all hover:scale-[1.02] group">
-            <div className="flex items-center justify-center mb-4 sm:mb-6">
-              <div className="px-4 py-2 rounded-full bg-yellow-100 dark:bg-yellow-500/20 group-hover:scale-110 transition-transform">
+          <div className="group rounded-2xl border border-gray-200 bg-white p-3 text-center shadow-sm transition-all hover:shadow-md dark:border-white/5 dark:bg-[#1a1a1a] dark:shadow-none sm:rounded-3xl sm:p-8 sm:text-left sm:hover:scale-[1.02]">
+            <div className="mb-3 flex items-center justify-center sm:mb-6">
+              <div className="rounded-full bg-yellow-100 px-3 py-1.5 transition-transform group-hover:scale-110 dark:bg-yellow-500/20 sm:px-4 sm:py-2">
                 <span className="text-sm font-bold text-yellow-600 dark:text-yellow-400 uppercase tracking-wider">
                   B
                 </span>
               </div>
             </div>
             <div>
-              <p className="text-3xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-2">
+              <p className="mb-1 text-2xl font-bold text-gray-900 dark:text-white sm:mb-2 sm:text-5xl">
                 {gradeB ?? <span className="text-gray-300 dark:text-white/20">—</span>}
               </p>
-              <p className="text-sm text-gray-500 dark:text-white/50">
+              <p className="truncate text-[11px] text-gray-500 dark:text-white/50 sm:text-sm">
                 {t("home.matches")}
               </p>
             </div>
           </div>
 
           {/* C Grade */}
-          <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-4 sm:p-8 border border-gray-200 dark:border-white/5 shadow-sm hover:shadow-md dark:shadow-none transition-all hover:scale-[1.02] group">
-            <div className="flex items-center justify-center mb-4 sm:mb-6">
-              <div className="px-4 py-2 rounded-full bg-red-100 dark:bg-red-500/20 group-hover:scale-110 transition-transform">
+          <div className="group rounded-2xl border border-gray-200 bg-white p-3 text-center shadow-sm transition-all hover:shadow-md dark:border-white/5 dark:bg-[#1a1a1a] dark:shadow-none sm:rounded-3xl sm:p-8 sm:text-left sm:hover:scale-[1.02]">
+            <div className="mb-3 flex items-center justify-center sm:mb-6">
+              <div className="rounded-full bg-red-100 px-3 py-1.5 transition-transform group-hover:scale-110 dark:bg-red-500/20 sm:px-4 sm:py-2">
                 <span className="text-sm font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">
                   C
                 </span>
               </div>
             </div>
             <div>
-              <p className="text-3xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-2">
+              <p className="mb-1 text-2xl font-bold text-gray-900 dark:text-white sm:mb-2 sm:text-5xl">
                 {gradeC ?? <span className="text-gray-300 dark:text-white/20">—</span>}
               </p>
-              <p className="text-sm text-gray-500 dark:text-white/50">
+              <p className="truncate text-[11px] text-gray-500 dark:text-white/50 sm:text-sm">
                 {t("home.matches")}
               </p>
             </div>
@@ -428,7 +428,7 @@ function HomeContent({ matchReq, preparedJobs: initialPreparedJobs, showDebug, p
       {/* Job List Section */}
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div role="tablist" aria-label={t("home.jobTabsLabel")} className="inline-flex w-fit rounded-xl bg-gray-100 dark:bg-white/5 p-1">
+          <div role="tablist" aria-label={t("home.jobTabsLabel")} className="grid w-full grid-cols-2 rounded-xl bg-gray-100 p-1 dark:bg-white/5 sm:inline-flex sm:w-fit">
             {(["matched", "prepared"] as const).map(tab => (
               <button
                 key={tab}
@@ -436,13 +436,13 @@ function HomeContent({ matchReq, preparedJobs: initialPreparedJobs, showDebug, p
                 role="tab"
                 aria-selected={activeJobsTab === tab}
                 onClick={() => setActiveJobsTab(tab)}
-                className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${activeJobsTab === tab ? "bg-white text-gray-900 shadow-sm dark:bg-white/10 dark:text-white" : "text-gray-500 hover:text-gray-800 dark:text-white/50 dark:hover:text-white"}`}
+                className={`min-w-0 truncate rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors sm:px-4 sm:py-2 ${activeJobsTab === tab ? "bg-white text-gray-900 shadow-sm dark:bg-white/10 dark:text-white" : "text-gray-500 hover:text-gray-800 dark:text-white/50 dark:hover:text-white"}`}
               >
                 {t(tab === "matched" ? "home.matchedJobs" : "home.preparedJobs")}
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             {activeJobsTab === "matched" && !fetchComplete && !poolLimited && matched.length > 0 && (
               <span className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-white/30">
                 <span className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-white/30 animate-pulse" />
@@ -452,7 +452,7 @@ function HomeContent({ matchReq, preparedJobs: initialPreparedJobs, showDebug, p
             {activeJobsTab === "matched" && desiredRolesSource !== null && !matchLoading && matched.length > 0 && (
               <button
                 onClick={handleLoadDifferent}
-                className="flex items-center gap-1 text-xs text-gray-400 dark:text-white/30 hover:text-gray-600 dark:hover:text-white/60 transition-colors"
+                className="flex min-h-10 items-center gap-1 text-xs text-gray-400 transition-colors hover:text-gray-600 dark:text-white/30 dark:hover:text-white/60"
               >
                 <RefreshCw size={11} />
                 {t("home.loadDifferentJobs")}
@@ -474,7 +474,7 @@ function HomeContent({ matchReq, preparedJobs: initialPreparedJobs, showDebug, p
             {Array.from({ length: 3 }).map((_, i) => (
               <div
                 key={i}
-                className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-6 border border-gray-200 dark:border-white/5 animate-pulse"
+                className="animate-pulse rounded-2xl border border-gray-200 bg-white p-4 dark:border-white/5 dark:bg-[#1a1a1a] sm:rounded-3xl sm:p-6"
               >
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-2xl bg-gray-200 dark:bg-white/10" />
@@ -491,7 +491,7 @@ function HomeContent({ matchReq, preparedJobs: initialPreparedJobs, showDebug, p
         {/* Error state */}
         {poolLimited && <p role="status" className="app-card-base p-4">{t('consent.poolLimit')}</p>}
         {matchError && !matchLoading && (
-          <div role="alert" className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-12 border border-gray-200 dark:border-white/5 text-center">
+          <div role="alert" className="rounded-2xl border border-gray-200 bg-white p-6 text-center dark:border-white/5 dark:bg-[#1a1a1a] sm:rounded-3xl sm:p-12">
             <p className="text-gray-400 dark:text-white/40">
               {t("home.matchLoadError")}
             </p>
@@ -501,7 +501,7 @@ function HomeContent({ matchReq, preparedJobs: initialPreparedJobs, showDebug, p
 
         {/* No roles — guide user to set up their profile */}
         {desiredRolesSource === "none" && (
-          <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-12 border border-gray-200 dark:border-white/5 text-center">
+          <div className="rounded-2xl border border-gray-200 bg-white p-6 text-center dark:border-white/5 dark:bg-[#1a1a1a] sm:rounded-3xl sm:p-12">
             <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
               {t("home.noRolesTitle")}
             </p>
@@ -519,7 +519,7 @@ function HomeContent({ matchReq, preparedJobs: initialPreparedJobs, showDebug, p
           desiredRolesSource !== null &&
           matched.length === 0 &&
           !matchLoading && !matchError && (
-          <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-12 border border-gray-200 dark:border-white/5 text-center">
+          <div className="rounded-2xl border border-gray-200 bg-white p-6 text-center dark:border-white/5 dark:bg-[#1a1a1a] sm:rounded-3xl sm:p-12">
             <p className="text-gray-400 dark:text-white/40">
               {t(fetchComplete ? "home.noMatchesDescription" : "home.loadingMatches")}
             </p>
@@ -697,7 +697,7 @@ function HomeContent({ matchReq, preparedJobs: initialPreparedJobs, showDebug, p
         </> : <>
           {preparedError && <p role="alert" className="app-card-base p-4">{preparedError}</p>}
           {preparedJobs.length === 0 ? (
-            <div className="app-card-base p-12 text-center">
+            <div className="app-card-base rounded-2xl p-6 text-center sm:p-12">
               <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{t("home.noPreparedJobsTitle")}</p>
               <p className="text-gray-500 dark:text-white/50">{t("home.noPreparedJobsDescription")}</p>
             </div>

@@ -29,7 +29,7 @@ export default function CvPreview({ content, template = 'elegant' }: { content: 
     </section>;
   }
   const isBand = style.header === 'band';
-  return <article lang={content.language} aria-label={t('cv.preview')} data-template={template} style={{ fontSize: `${style.bodySize}pt`, lineHeight: style.lineHeight / 0.3528 }} className="relative mx-auto max-w-[210mm] min-h-[70vh] overflow-hidden bg-white text-gray-900 shadow-sm border border-gray-200 break-words">
+  return <article lang={content.language} aria-label={t('cv.preview')} data-template={template} style={{ fontSize: `${style.bodySize}pt`, lineHeight: style.lineHeight / 0.3528 }} className="relative mx-auto min-h-[70vh] w-full max-w-[210mm] overflow-hidden break-words rounded-xl border border-gray-200 bg-white text-gray-900 shadow-sm [overflow-wrap:anywhere] sm:rounded-none">
     {style.header === 'panel' ? <div aria-hidden="true" className="h-3" style={{ backgroundColor: style.accent }} /> : null}
     <header
       className={`space-y-2 ${style.headerAlign === 'center' ? 'text-center' : ''}`}

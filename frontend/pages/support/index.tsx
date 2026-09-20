@@ -24,7 +24,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
     <div className="border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="app-hover-standard w-full flex items-center justify-between px-5 py-4 text-left bg-white dark:bg-[#1a1a1a]"
+        className="app-hover-standard flex min-h-12 w-full items-center justify-between bg-white px-4 py-4 text-left dark:bg-[#1a1a1a] sm:px-5"
       >
         <span className="font-medium text-slate-800 dark:text-white">{t(q)}</span>
         <ChevronDown

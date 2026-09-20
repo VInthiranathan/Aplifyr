@@ -10,7 +10,7 @@ export default function TopNav() {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-30 h-14 bg-white dark:bg-[#111] border-b border-slate-200 dark:border-white/10 flex items-center justify-between px-4 md:hidden">
+      <nav className="fixed inset-x-0 top-0 z-30 flex h-[calc(3.5rem+env(safe-area-inset-top))] items-end justify-between border-b border-slate-200 bg-white px-4 pb-3 dark:border-white/10 dark:bg-[#111] md:hidden">
         <Link
           href="/"
           className="text-xl font-bold tracking-[0.2em] text-slate-900 dark:text-white hover:text-sky-500 dark:hover:text-sky-400 transition-colors"
@@ -20,7 +20,7 @@ export default function TopNav() {
         </Link>
         <button
           onClick={() => setDrawerOpen(true)}
-          className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 text-slate-600 dark:text-white/60 transition-colors"
+          className="-mb-1 flex h-11 w-11 items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100 dark:text-white/60 dark:hover:bg-white/5"
           aria-label={t('nav.settings')}
         >
           <Menu size={20} />

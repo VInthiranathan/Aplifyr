@@ -17,11 +17,11 @@
   }
 
   .app-job-list-card {
-    @apply app-card-base app-card-hover rounded-3xl p-6;
+    @apply app-card-base app-card-hover rounded-2xl p-4 sm:rounded-3xl sm:p-6;
   }
 
   .app-page-shell {
-    @apply p-4 sm:p-6 space-y-6 sm:space-y-8;
+    @apply mx-auto w-full max-w-7xl space-y-5 p-4 sm:space-y-8 sm:p-6;
   }
 
   .app-page-header {
@@ -47,4 +47,24 @@
 
 html, body, #__next {
   height: 100%;
+}
+
+html {
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-width: 320px;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  touch-action: manipulation;
 }

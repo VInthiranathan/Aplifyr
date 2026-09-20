@@ -13,6 +13,7 @@ import {
   ExternalLink,
   Loader2,
   Bookmark,
+  X,
 } from "lucide-react";
 import { formatLocation } from "../../lib/utils";
 import { getPublicBackendUrl } from "../../lib/backendUrl";
@@ -285,14 +286,14 @@ export default function AllJobsPage() {
   const currentPage = Math.floor(offset / LIMIT) + 1;
 
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-slate-900 dark:text-white">
+    <div className="app-page-shell">
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <h1 className="min-w-0 text-xl font-bold text-slate-900 dark:text-white">
           {t("jobs.title")}
         </h1>
         <div className="flex items-center gap-3">
           {!loading && filteredJobs.length > 0 && (
-            <span className="text-slate-400 dark:text-white/40 text-sm">
+            <span className="text-right text-xs text-slate-400 dark:text-white/40 sm:text-sm">
               {filteredJobs.length !== total ? (
                 t("jobs.filteredTotalAds", {
                   shown: filteredJobs.length.toLocaleString(localeTag),
@@ -310,9 +311,9 @@ export default function AllJobsPage() {
       </div>
 
       {/* ── Filter bar ── */}
-      <div className="flex flex-wrap gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(220px,1fr)_minmax(180px,auto)_auto]">
         {/* Search */}
-        <div className="flex-1 min-w-[200px] relative">
+        <div className="relative min-w-0">
           <Search
             size={15}
             className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30"
@@ -327,7 +328,7 @@ export default function AllJobsPage() {
         </div>
 
         {/* Employment type (select) */}
-        <div className="relative min-w-[180px]">
+        <div className="relative min-w-0">
           <Briefcase
             size={15}
             className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30"
@@ -348,7 +349,7 @@ export default function AllJobsPage() {
         {/* Remote toggle */}
         <button
           onClick={() => update({ remote: !filters.remote })}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm transition-colors ${
+          className={`flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm transition-colors sm:w-auto ${
             filters.remote
               ? "bg-purple-500/20 border-purple-500/50 text-purple-600 dark:text-purple-300"
               : "bg-white dark:bg-[#1a1a1a] border-slate-200 dark:border-white/10 text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"
@@ -360,8 +361,8 @@ export default function AllJobsPage() {
       </div>
 
           {/* ── Compact filters: Location + Occupation ── */}
-          <div className="flex flex-wrap gap-3 mt-3 items-center">
-            <div className="relative min-w-[300px]" ref={locationPanelRef}>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(260px,1fr)_minmax(220px,auto)_auto] sm:items-center">
+            <div className="relative min-w-0" ref={locationPanelRef}>
               <MapPin
                 size={15}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30"
@@ -377,9 +378,14 @@ export default function AllJobsPage() {
                   : t("jobs.selectRegionPlaceholder")}
               </button>
 
-              {showLocationPanel && (
-                <div className="absolute z-50 mt-2 w-[640px] bg-white dark:bg-[#111] border border-slate-200 dark:border-white/10 rounded-xl shadow-lg p-3 flex">
-                  <div className="w-1/2 max-h-[360px] overflow-auto pr-3 border-r border-slate-100 dark:border-white/5">
+              {showLocationPanel && <>
+                <div aria-hidden="true" onClick={() => setShowLocationPanel(false)} className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[1px] sm:hidden" />
+                <div className="fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] top-[calc(4.25rem+env(safe-area-inset-top))] z-50 flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl dark:border-white/10 dark:bg-[#111] sm:absolute sm:inset-auto sm:left-0 sm:top-full sm:mt-2 sm:h-auto sm:max-h-[70vh] sm:w-[min(640px,calc(100vw-7rem))] sm:flex-row sm:rounded-xl sm:shadow-lg">
+                  <div className="mb-2 flex items-center justify-between border-b border-slate-100 pb-2 dark:border-white/5 sm:hidden">
+                    <strong className="text-sm">{t("jobs.selectRegionPlaceholder")}</strong>
+                    <button type="button" onClick={() => setShowLocationPanel(false)} aria-label={t("privacy.close")} className="app-hover-standard flex h-10 w-10 items-center justify-center rounded-xl"><X size={18} /></button>
+                  </div>
+                  <div className="max-h-[42%] w-full overflow-auto border-b border-slate-100 pb-3 dark:border-white/5 sm:max-h-[360px] sm:w-1/2 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-3">
                     <div className="flex items-center justify-between mb-2">
                       <strong className="text-sm">{t("jobs.regions")}</strong>
                       <button
@@ -411,7 +417,7 @@ export default function AllJobsPage() {
                     ))}
                   </div>
 
-                  <div className="w-1/2 pl-4 max-h-[360px] overflow-auto">
+                  <div className="min-h-0 w-full flex-1 overflow-auto pt-3 sm:max-h-[360px] sm:w-1/2 sm:pl-4 sm:pt-0">
                     <div className="flex items-center justify-between mb-2">
                       <strong className="text-sm">{t("jobs.municipalities")}</strong>
                       <div className="text-xs text-slate-500">
@@ -465,10 +471,10 @@ export default function AllJobsPage() {
                     )}
                   </div>
                 </div>
-              )}
+              </>}
             </div>
 
-            <div className="relative min-w-[220px]">
+            <div className="relative min-w-0">
               <Briefcase
                 size={15}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30"
@@ -516,7 +522,7 @@ export default function AllJobsPage() {
                     employmentType: "",
                   });
                 }}
-                className="app-secondary-button ml-2 px-3 py-1.5 text-xs text-red-700 dark:text-red-400 border-red-300 dark:border-red-800/60 hover:bg-red-200 dark:hover:bg-red-900/40 hover:text-red-700 dark:hover:text-red-300"
+                className="app-secondary-button min-h-11 w-full px-3 py-1.5 text-xs text-red-700 dark:text-red-400 border-red-300 dark:border-red-800/60 hover:bg-red-200 dark:hover:bg-red-900/40 hover:text-red-700 dark:hover:text-red-300 sm:w-auto"
               >
                 ✕ {t("jobs.clearFilters")}
               </button>
@@ -675,11 +681,11 @@ export default function AllJobsPage() {
 
       {/* ── Pagination ── */}
       {!loading && totalPages > 1 && (
-        <div className="flex items-center justify-center gap-3 pt-4">
+        <div className="flex items-center justify-between gap-2 pt-4 sm:justify-center sm:gap-3">
           <button
             onClick={() => setOffset(Math.max(0, offset - LIMIT))}
             disabled={offset === 0}
-            className="app-secondary-button px-4 py-2 text-sm"
+            className="app-secondary-button min-w-0 flex-1 px-3 py-2 text-sm sm:flex-none sm:px-4"
           >
             ← {t("jobs.previous")}
           </button>
@@ -689,7 +695,7 @@ export default function AllJobsPage() {
           <button
             onClick={() => setOffset(offset + LIMIT)}
             disabled={currentPage >= totalPages}
-            className="app-secondary-button px-4 py-2 text-sm"
+            className="app-secondary-button min-w-0 flex-1 px-3 py-2 text-sm sm:flex-none sm:px-4"
           >
             {t("jobs.next")} →
           </button>

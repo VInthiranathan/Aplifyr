@@ -71,6 +71,7 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 - Tailwind CSS
 - next-i18next for English and Swedish translations
 - Supabase auth helpers for browser and server-side auth handling
+- mobile-first app shell with safe-area-aware top and bottom navigation, contained page scrolling, responsive filters, and bottom-sheet dialogs; see [Mobile app experience](mobile-app-experience.md)
 
 ### Backend
 

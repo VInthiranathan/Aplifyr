@@ -27,13 +27,13 @@ export default function JobListCard({
 }: JobListCardProps) {
   return (
     <article className={cn("app-job-list-card group", className)}>
-      <div className="flex items-start gap-4">
-        {leading ? <div className="flex-shrink-0">{leading}</div> : null}
+      <div className="flex min-w-0 items-start gap-3 sm:gap-4">
+        {leading ? <div className="hidden flex-shrink-0 sm:block">{leading}</div> : null}
 
         <div className="flex-1 min-w-0">
           <div className="flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-3 mb-3 flex-wrap">
+              <div className="mb-3 flex min-w-0 flex-wrap items-center gap-2 break-words [overflow-wrap:anywhere] sm:gap-3">
                 {title}
                 {badges}
               </div>
@@ -50,7 +50,7 @@ export default function JobListCard({
             </div>
 
             {aside ? (
-              <div className="flex flex-row sm:flex-col items-center sm:items-end gap-3 sm:flex-shrink-0">
+              <div className="flex w-full flex-row flex-wrap items-center gap-2 sm:w-auto sm:flex-shrink-0 sm:flex-col sm:items-end sm:gap-3">
                 {aside}
               </div>
             ) : null}

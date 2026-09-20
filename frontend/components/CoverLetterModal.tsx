@@ -69,12 +69,12 @@ export default function CoverLetterModal({
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4">
       <div ref={dialog} tabIndex={-1} role="dialog" aria-modal="true" aria-label={t('coverLetter.title')} className="relative w-full sm:max-w-3xl bg-gray-50 dark:bg-[#0d0d0d] border border-gray-200 dark:border-white/10 rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[92dvh] flex flex-col">
         {/* Header */}
-        <div className="flex items-start justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-white/10">
-          <div>
-            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
+        <div className="flex min-w-0 items-start justify-between gap-3 border-b border-gray-200 p-4 dark:border-white/10 sm:p-6">
+          <div className="min-w-0">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">
               {t("coverLetter.title")}
             </h2>
-            <p className="text-sm text-gray-500 dark:text-white/60 mt-1">
+            <p className="mt-1 break-words text-sm text-gray-500 dark:text-white/60 [overflow-wrap:anywhere]">
               {jobTitle} {company && `• ${company}`}
             </p>
             {expiresAt && <p className="text-xs text-gray-500 dark:text-white/50 mt-1">{t('coverLetter.savedUntil', { date: new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium' }).format(new Date(expiresAt)) })}</p>}
@@ -91,17 +91,17 @@ export default function CoverLetterModal({
         </div>
 
         {/* Content */}
-        <div className="p-4 sm:p-6 max-h-[55vh] overflow-y-auto flex-1">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
           {isEditing ? (
             <textarea
               value={editedLetter}
               onChange={(e) => setEditedLetter(e.target.value)}
-              className="w-full min-h-[400px] p-4 bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-white/10 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-400 resize-none"
+              className="min-h-[45dvh] w-full resize-none rounded-xl border border-gray-300 bg-white p-4 text-gray-900 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:border-white/10 dark:bg-[#1a1a1a] dark:text-white sm:min-h-[400px]"
               placeholder={t("coverLetter.editPlaceholder")}
             />
           ) : (
-            <div className="bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-white/5 rounded-xl p-6">
-              <pre className="whitespace-pre-wrap text-sm leading-relaxed text-gray-900 dark:text-white font-sans">
+            <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/5 dark:bg-[#1a1a1a] sm:p-6">
+              <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-relaxed text-gray-900 dark:text-white [overflow-wrap:anywhere]">
                 {editedLetter}
               </pre>
             </div>
@@ -109,12 +109,12 @@ export default function CoverLetterModal({
         </div>
 
         {/* Footer Actions */}
-        <div className="flex flex-wrap items-center justify-between gap-3 p-4 sm:p-6 border-t border-gray-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a]">
-          <div className="flex flex-wrap gap-2">
+        <div className="grid gap-3 border-t border-gray-200 bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] dark:border-white/10 dark:bg-[#0a0a0a] sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:p-6">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
             <Button
               onClick={() => setIsEditing(!isEditing)}
               variant="secondary"
-              className="h-auto px-4 py-2"
+              className="h-auto min-w-0 px-3 py-2 sm:px-4"
             >
               <Edit2 size={16} />
               {isEditing ? t("coverLetter.save") : t("coverLetter.edit")}
@@ -122,7 +122,7 @@ export default function CoverLetterModal({
             <Button
               onClick={handleCopy}
               variant="secondary"
-              className="h-auto px-4 py-2"
+              className="h-auto min-w-0 px-3 py-2 sm:px-4"
             >
               {copied ? <Check size={16} /> : <Copy size={16} />}
               {copied ? t("coverLetter.copied") : t("coverLetter.copy")}
@@ -131,7 +131,7 @@ export default function CoverLetterModal({
               onClick={onRegenerate}
               disabled={isRegenerating}
               variant="secondary"
-              className="h-auto px-4 py-2"
+              className="h-auto min-w-0 px-3 py-2 sm:px-4"
             >
               <RefreshCw
                 size={16}
@@ -143,7 +143,7 @@ export default function CoverLetterModal({
               onClick={onDelete}
               disabled={isDeleting || isRegenerating}
               variant="secondary"
-              className="h-auto px-4 py-2"
+              className="h-auto min-w-0 px-3 py-2 sm:px-4"
             >
               {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
               {t(isDeleting ? "coverLetter.deleting" : "coverLetter.delete")}
@@ -153,7 +153,7 @@ export default function CoverLetterModal({
             <Button
               onClick={handleApply}
               variant="external"
-              className="h-auto px-6 py-2.5"
+              className="h-auto w-full px-6 py-2.5 sm:w-auto"
             >
               <Send size={16} />
               {t("coverLetter.sendApplication")}

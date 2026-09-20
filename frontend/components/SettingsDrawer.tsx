@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { useTranslation } from "next-i18next";
 import { useRouter } from "next/router";
-import { Sun, Moon, LogOut, ShieldCheck, X } from "lucide-react";
+import { Sun, Moon, LogOut, ShieldCheck, HelpCircle, X } from "lucide-react";
 import { Button } from "./ui/button";
 
 interface Props {
@@ -60,7 +60,7 @@ export default function SettingsDrawer({ open, onClose }: Props) {
         tabIndex={-1}
         aria-modal="true"
         aria-label={t("nav.settings")}
-        className="fixed right-0 top-0 bottom-0 z-50 w-64 bg-white dark:bg-[#1a1a1a] border-l border-slate-200 dark:border-white/10 shadow-xl md:hidden flex flex-col"
+        className="fixed bottom-0 right-0 top-0 z-50 flex w-[min(20rem,88vw)] flex-col border-l border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] shadow-xl dark:border-white/10 dark:bg-[#1a1a1a] md:hidden"
       >
         <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-white/10">
           <span className="font-semibold text-slate-800 dark:text-white">
@@ -78,6 +78,9 @@ export default function SettingsDrawer({ open, onClose }: Props) {
         <div className="flex flex-col gap-2 p-4 flex-1">
           <Button asChild variant="secondary" className="w-full justify-start gap-2">
             <Link href="/privacy#ai-consent" onClick={onClose}><ShieldCheck size={16} />{t('privacy.menu')}</Link>
+          </Button>
+          <Button asChild variant="secondary" className="w-full justify-start gap-2">
+            <Link href="/support" onClick={onClose}><HelpCircle size={16} />{t('nav.support')}</Link>
           </Button>
           {/* locale toggle */}
           <Button

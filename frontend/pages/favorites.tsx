@@ -90,7 +90,7 @@ export default function FavoritesPage() {
 
         {/* Empty state */}
         {favorites.length === 0 && (
-          <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-16 border border-gray-200 dark:border-white/5 text-center">
+          <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center dark:border-white/5 dark:bg-[#1a1a1a] sm:rounded-3xl sm:p-16">
             <Bookmark
               size={64}
               className="mx-auto mb-4 text-gray-300 dark:text-white/20"
@@ -111,7 +111,7 @@ export default function FavoritesPage() {
         {favorites.length > 0 &&
           filteredFavorites.length === 0 &&
           searchQuery && (
-            <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-12 border border-gray-200 dark:border-white/5 text-center">
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 text-center dark:border-white/5 dark:bg-[#1a1a1a] sm:rounded-3xl sm:p-12">
               <p className="text-gray-400 dark:text-white/40">
                 {t("favorites.noResults", { query: searchQuery })}
               </p>

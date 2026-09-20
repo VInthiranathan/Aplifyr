@@ -73,13 +73,13 @@ export default function JobPreferences({ profile, onSaved }: Props) {
       <p className="app-page-subtitle">{t('preferences.intro')}</p>
     </div>
     <fieldset disabled={status === 'saving'} className="grid min-w-0 gap-6 lg:grid-cols-2">
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-white/5 dark:bg-[#1a1a1a]">
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-white/5 dark:bg-[#1a1a1a] sm:p-6">
         <label htmlFor="preferred-roles" className="mb-4 flex items-center gap-3 text-xl font-bold text-gray-900 dark:text-white"><Briefcase aria-hidden="true" className="h-5 w-5" />{t('user.desiredRoles')}</label>
         <input id="preferred-roles" value={roles} onChange={e => { setRoles(e.target.value); setStatus('idle'); }} aria-describedby="roles-help" placeholder={t('user.rolesPlaceholder')} className={inputClass} />
         <p id="roles-help" className="mt-3 text-sm text-gray-500 dark:text-white/60">{t('preferences.rolesHelp')}</p>
         <p className="mt-4 text-sm text-gray-500 dark:text-white/60">{t('preferences.skillsHelp')}</p>
       </div>
-      <div className="space-y-4 rounded-2xl border border-gray-200 bg-white p-6 dark:border-white/5 dark:bg-[#1a1a1a]">
+      <div className="space-y-4 rounded-2xl border border-gray-200 bg-white p-4 dark:border-white/5 dark:bg-[#1a1a1a] sm:p-6">
         <label htmlFor="preferred-location" className="flex items-center gap-3 text-xl font-bold text-gray-900 dark:text-white"><MapPin aria-hidden="true" className="h-5 w-5" />{t('user.location')}</label>
         <input id="preferred-location" value={location} maxLength={200} onChange={e => { setLocation(e.target.value); setStatus('idle'); }} aria-describedby="location-help" className={inputClass} />
         <p id="location-help" className="text-sm text-gray-500 dark:text-white/60">{t('preferences.locationHelp')}</p>
@@ -92,11 +92,11 @@ export default function JobPreferences({ profile, onSaved }: Props) {
         </fieldset>
       </div>
     </fieldset>
-    <div className="flex flex-wrap items-center gap-3">
-      <Button type="submit" disabled={!dirty || status === 'saving'}><Save aria-hidden="true" className="h-4 w-4" />{t(status === 'saving' ? 'preferences.saving' : 'user.saveChanges')}</Button>
-      <Button type="button" variant="secondary" disabled={!dirty || status === 'saving'} onClick={reset}>{t('preferences.reset')}</Button>
+    <div className="grid grid-cols-2 items-center gap-3 sm:flex sm:flex-wrap">
+      <Button type="submit" className="min-w-0" disabled={!dirty || status === 'saving'}><Save aria-hidden="true" className="h-4 w-4" />{t(status === 'saving' ? 'preferences.saving' : 'user.saveChanges')}</Button>
+      <Button type="button" className="min-w-0" variant="secondary" disabled={!dirty || status === 'saving'} onClick={reset}>{t('preferences.reset')}</Button>
       {(status === 'error' || status === 'invalid' || status === 'conflict') ? <p role="alert" className="text-sm text-red-600 dark:text-red-400">{t(`preferences.${status}`)}</p> :
-        <p role="status" className="text-sm text-gray-500 dark:text-white/60">{status === 'saved' ? t('preferences.saved') : dirty ? t('preferences.unsaved') : ''}</p>}
+        <p role="status" className="col-span-2 text-sm text-gray-500 dark:text-white/60">{status === 'saved' ? t('preferences.saved') : dirty ? t('preferences.unsaved') : ''}</p>}
     </div>
   </form>;
 }

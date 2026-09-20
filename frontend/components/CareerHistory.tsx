@@ -7,7 +7,7 @@ import { Button } from './ui/button';
 import { useCareerEntries } from '../lib/CareerEntriesContext';
 
 const inputClass = 'w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:border-white/10 dark:bg-[#1a1a1a] dark:text-white';
-const cardClass = 'rounded-2xl border border-gray-200 bg-white p-5 sm:p-6 dark:border-white/5 dark:bg-[#1a1a1a]';
+const cardClass = 'rounded-2xl border border-gray-200 bg-white p-4 sm:p-6 dark:border-white/5 dark:bg-[#1a1a1a]';
 const emptyEntry = (kind: CareerKind): CareerEntryInput => ({
   kind, title: '', organization: '', qualification: '', location: '',
   start_month: '', end_month: '', is_current: false, description: '',
@@ -114,7 +114,7 @@ export default function CareerHistory({ kind }: { kind: CareerKind }) {
           <h2 className="flex items-center gap-3 text-xl font-bold"><Icon aria-hidden="true" className="h-5 w-5" />{label('heading')}</h2>
           <p className="text-sm text-gray-500 dark:text-white/60">{label('intro')}</p>
         </div>
-        <Button ref={addRef} onClick={() => begin()} disabled={loading || !!loadError || !!draft || busy}>
+        <Button ref={addRef} className="w-full sm:w-auto" onClick={() => begin()} disabled={loading || !!loadError || !!draft || busy}>
           <Plus aria-hidden="true" className="h-4 w-4" />{label('add')}
         </Button>
       </div>
@@ -148,9 +148,9 @@ export default function CareerHistory({ kind }: { kind: CareerKind }) {
               <input name="skills" aria-describedby={`${kind}-skills-hint`} className={inputClass} value={skillsText} onChange={e => { setSkillsText(e.target.value); setDiscard(false); }} />
             </label>
           </fieldset>
-          <div className="flex flex-wrap gap-3">
-            <Button type="submit" disabled={busy}><Save aria-hidden="true" className="h-4 w-4" />{busy ? common('saving') : common('save')}</Button>
-            <Button type="button" variant="secondary" disabled={busy} onClick={() => setDiscard(true)}>{common('cancel')}</Button>
+          <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
+            <Button type="submit" className="min-w-0" disabled={busy}><Save aria-hidden="true" className="h-4 w-4" />{busy ? common('saving') : common('save')}</Button>
+            <Button type="button" className="min-w-0" variant="secondary" disabled={busy} onClick={() => setDiscard(true)}>{common('cancel')}</Button>
           </div>
           {discard && <div className="space-y-3 rounded-xl border border-gray-200 p-4 dark:border-white/10">
             <p>{common('discardConfirm')}</p><div className="flex flex-wrap gap-3"><Button type="button" variant="secondary" onClick={close}>{common('discard')}</Button><Button type="button" onClick={() => setDiscard(false)}>{common('keepEditing')}</Button></div>
@@ -168,12 +168,12 @@ export default function CareerHistory({ kind }: { kind: CareerKind }) {
               <p className="text-sm text-gray-500 dark:text-white/60">{formatMonth(entry.start_month)} – {entry.is_current ? common('present') : entry.end_month ? formatMonth(entry.end_month) : ''}</p>
               {entry.qualification && <p className="text-sm">{entry.qualification}</p>}
             </div>
-            <div className="flex gap-2"><Button variant="secondary" disabled={!!draft || busy} onClick={() => begin(entry)} aria-label={`${label('edit')}: ${entry.title}`}>{common('edit')}</Button>
-              <Button variant="ghost" disabled={!!draft || busy} onClick={() => { setDeleteId(entry.id); setError(''); }} aria-label={`${common('delete')}: ${entry.title}`}>{common('delete')}</Button></div>
+            <div className="flex w-full gap-2 sm:w-auto"><Button className="flex-1 sm:flex-none" variant="secondary" disabled={!!draft || busy} onClick={() => begin(entry)} aria-label={`${label('edit')}: ${entry.title}`}>{common('edit')}</Button>
+              <Button className="flex-1 sm:flex-none" variant="ghost" disabled={!!draft || busy} onClick={() => { setDeleteId(entry.id); setError(''); }} aria-label={`${common('delete')}: ${entry.title}`}>{common('delete')}</Button></div>
           </div>
           {(['description', 'achievements', 'learned', 'strengths'] as const).map(name => entry[name] && <div key={name}><h4 className="text-sm font-semibold">{label(name)}</h4><p className="mt-1 whitespace-pre-wrap text-sm text-gray-600 dark:text-white/70">{entry[name]}</p></div>)}
           {!!entry.skills.length && <div className="flex flex-wrap gap-2" aria-label={common('skills')}>{entry.skills.map(skill => <span key={skill} className="rounded-full bg-purple-50 px-3 py-1 text-sm text-purple-800 dark:bg-purple-500/10 dark:text-purple-200">{skill}</span>)}</div>}
-          {deleteId === entry.id && <div className="space-y-3 border-t border-gray-200 pt-4 dark:border-white/10"><p>{t('career.deleteConfirm', { title: entry.title })}</p><div className="flex gap-3"><Button disabled={busy} onClick={() => void remove(entry)}>{common('confirmDelete')}</Button><Button variant="secondary" disabled={busy} onClick={() => setDeleteId(null)}>{common('cancel')}</Button></div></div>}
+          {deleteId === entry.id && <div className="space-y-3 border-t border-gray-200 pt-4 dark:border-white/10"><p>{t('career.deleteConfirm', { title: entry.title })}</p><div className="grid grid-cols-2 gap-3 sm:flex"><Button className="min-w-0" disabled={busy} onClick={() => void remove(entry)}>{common('confirmDelete')}</Button><Button className="min-w-0" variant="secondary" disabled={busy} onClick={() => setDeleteId(null)}>{common('cancel')}</Button></div></div>}
         </article>
       ))}
     </div>

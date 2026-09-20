@@ -87,7 +87,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="flex flex-col h-screen w-14 lg:w-48 bg-white dark:bg-[#111] text-slate-800 dark:text-white border-r border-slate-200 dark:border-white/10 flex-shrink-0">
+    <aside className="flex h-[100dvh] w-14 flex-shrink-0 flex-col border-r border-slate-200 bg-white text-slate-800 dark:border-white/10 dark:bg-[#111] dark:text-white lg:w-48">
       {/* top branding */}
       <div className="mt-5 px-3 lg:px-4">
         <Link

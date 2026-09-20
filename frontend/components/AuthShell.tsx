@@ -34,11 +34,11 @@ export default function AuthShell({
 }: AuthShellProps) {
   const { t } = useTranslation('common');
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-gray-50 dark:bg-[#0d0d0d]">
+    <div className="flex min-h-[100dvh] w-full overflow-x-hidden bg-gray-50 dark:bg-[#0d0d0d] sm:h-[100dvh] sm:overflow-hidden">
       {/* Form panel: full-width on mobile, fixed sidebar on sm+ */}
-      <div className="w-full sm:w-[30vw] sm:min-w-[360px] h-full flex flex-col justify-center overflow-y-auto bg-white dark:bg-[#1a1a1a] sm:border-r sm:border-gray-200 sm:dark:border-white/5 p-8 sm:p-16">
-        <div className="mb-12">
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+      <div className="flex min-h-[100dvh] w-full flex-col justify-center overflow-y-auto bg-white px-5 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-[calc(2rem+env(safe-area-inset-top))] dark:bg-[#1a1a1a] sm:h-full sm:min-h-0 sm:w-[30vw] sm:min-w-[360px] sm:border-r sm:border-gray-200 sm:p-12 sm:dark:border-white/5 lg:p-16">
+        <div className="mb-8 sm:mb-12">
+          <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
             {title}
           </h2>
           <p className="mt-2 text-sm text-gray-500 dark:text-white/60">

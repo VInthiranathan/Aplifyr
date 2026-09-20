@@ -95,7 +95,7 @@ export default function CvPage() {
   const grade = getSession().matched.find(j => j.id === id)?.matchGrade;
   return <div className="app-page-shell space-y-6">
     <header className="app-page-header"><h1 className="app-page-title">{t('cv.title')}</h1><p className="app-page-subtitle">{t('cv.description')}</p></header>
-    <section className="app-card-base sticky top-0 z-10 p-4 space-y-2 bg-white dark:bg-[#1a1a1a]">
+    <section className="app-card-base sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-10 space-y-2 rounded-2xl bg-white p-4 dark:bg-[#1a1a1a] md:top-0">
       <p className="text-sm text-gray-500 dark:text-white/60">{t('cv.forJob')}</p>
       <h2 className="text-xl font-semibold">{job?.title || t('jobDetail.defaultJobTitle')}</h2>
       {job?.company && <p>{job.company}</p>}{job?.location && <p>{job.location}</p>}
@@ -109,7 +109,7 @@ export default function CvPage() {
         <legend className="text-lg font-semibold">{t('cv.templates.title')}</legend>
         <p id="cv-template-help" className="text-sm text-gray-600 dark:text-white/70">{t('cv.templates.help')}</p>
         <div data-testid="cv-template-gallery" className="-mx-1 flex snap-x snap-mandatory gap-4 overflow-x-auto px-1 pb-4 [scrollbar-width:thin]">
-          {cvTemplateIds.map(styleId => <label key={styleId} data-template-card={styleId} className={`app-card-base app-hover-standard relative w-[15rem] shrink-0 snap-start cursor-pointer p-3 focus-within:ring-2 focus-within:ring-sky-700 ${template === styleId ? 'ring-2 ring-sky-700 dark:ring-sky-400' : ''}`}>
+          {cvTemplateIds.map(styleId => <label key={styleId} data-template-card={styleId} className={`app-card-base app-hover-standard relative w-[min(15rem,82vw)] shrink-0 snap-start cursor-pointer rounded-2xl p-3 focus-within:ring-2 focus-within:ring-sky-700 ${template === styleId ? 'ring-2 ring-sky-700 dark:ring-sky-400' : ''}`}>
             <input type="radio" name="cv-template" value={styleId} checked={template === styleId} onChange={() => setTemplate(styleId)} className="sr-only" />
             <CvTemplateThumbnail
               template={styleId}
@@ -130,11 +130,11 @@ export default function CvPage() {
       <p>{t('cv.disclosure')}</p>
       {consentOpen && <AiGenerationConsent key={id} onClose={()=>setConsentOpen(false)} onConfirm={()=>{setConsentOpen(false);void generate();}} />}
       <div className="flex flex-wrap gap-3 items-center">
-        <Button disabled={busy || downloading} onClick={()=>setConsentOpen(true)}>{busy && <Loader2 className="animate-spin mr-2" size={16} />}{t(busy ? 'cv.generating' : cv ? 'cv.regenerate' : 'cv.generate')}</Button>
+        <Button className="w-full sm:w-auto" disabled={busy || downloading} onClick={()=>setConsentOpen(true)}>{busy && <Loader2 className="animate-spin mr-2" size={16} />}{t(busy ? 'cv.generating' : cv ? 'cv.regenerate' : 'cv.generate')}</Button>
         <Link className="underline" href="/user">{t('cv.profile')}</Link>
       </div>
       <p role="status" aria-live="polite">{busy ? t('cv.progress') : cv ? t('cv.saved', { date: new Intl.DateTimeFormat(i18n?.language ?? router.locale ?? 'en', { dateStyle: 'medium' }).format(new Date(cv.expires_at)) }) : t('cv.ready')}</p>
-      {cv && <><div className="flex flex-wrap gap-3"><Button disabled={downloading || busy || deleting} onClick={download}>{t(downloading ? 'cv.downloading' : 'cv.download')}</Button><Button variant="secondary" disabled={deleting || busy || downloading} onClick={deleteCv}>{deleting ? <Loader2 className="animate-spin mr-2" size={16} /> : <Trash2 className="mr-2" size={16} />}{t(deleting ? 'cv.deleting' : 'cv.delete')}</Button></div><p>{t('cv.review')}</p>{cv.metadata.sourceLimited && <p>{t('cv.limited')}</p>}{cv.content.omittedUnsupportedContent && <p role="status" data-testid="cv-omissions" className="app-card-base p-4">{t('cv.omissions')}</p>}<CvPreview content={cv.content} template={template} /></>}
+      {cv && <><div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap"><Button className="min-w-0" disabled={downloading || busy || deleting} onClick={download}>{t(downloading ? 'cv.downloading' : 'cv.download')}</Button><Button className="min-w-0" variant="secondary" disabled={deleting || busy || downloading} onClick={deleteCv}>{deleting ? <Loader2 className="animate-spin mr-2" size={16} /> : <Trash2 className="mr-2" size={16} />}{t(deleting ? 'cv.deleting' : 'cv.delete')}</Button></div><p>{t('cv.review')}</p>{cv.metadata.sourceLimited && <p>{t('cv.limited')}</p>}{cv.content.omittedUnsupportedContent && <p role="status" data-testid="cv-omissions" className="app-card-base p-4">{t('cv.omissions')}</p>}<CvPreview content={cv.content} template={template} /></>}
     </>}
   </div>;
 }

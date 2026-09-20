@@ -16,14 +16,14 @@ export default function CareerOverview({ onManage }: { onManage: (kind: CareerKi
       const Icon = kind === 'work' ? Briefcase : GraduationCap;
       const history = entries.filter(entry => entry.kind === kind).sort((a, b) =>
         Number(b.is_current) - Number(a.is_current) || b.start_month.localeCompare(a.start_month) || a.id.localeCompare(b.id));
-      return <section key={kind} aria-labelledby={`overview-${kind}`} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-white/5 dark:bg-[#1a1a1a] sm:p-6">
+      return <section key={kind} aria-labelledby={`overview-${kind}`} className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/5 dark:bg-[#1a1a1a] sm:p-6">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-300"><Icon aria-hidden="true" className="h-5 w-5" /></span>
             <h2 id={`overview-${kind}`} className="text-lg font-bold text-gray-900 dark:text-white">{t(`career.${kind}.heading`)}</h2>
             {!loading && !loadError && <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600 dark:bg-white/5 dark:text-white/60">{history.length}</span>}
           </div>
-          <Button variant="secondary" className="h-auto px-3 py-2" onClick={() => onManage(kind)} aria-label={t('career.overview.manageLabel', { section: t(`career.${kind}.heading`) })}>
+          <Button variant="secondary" className="h-auto w-full px-3 py-2 sm:w-auto" onClick={() => onManage(kind)} aria-label={t('career.overview.manageLabel', { section: t(`career.${kind}.heading`) })}>
             {t('career.overview.manage')}<ArrowUpRight aria-hidden="true" className="h-4 w-4" />
           </Button>
         </div>

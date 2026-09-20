@@ -259,14 +259,14 @@ export default function UserPage({ user }: Props) {
 
   return (
     <CareerEntriesProvider key={user?.id ?? "profile"}>
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0d0d0d]">
+    <div className="min-h-full min-w-0 overflow-x-hidden bg-gray-50 dark:bg-[#0d0d0d]">
       {/* Banner — shorter on mobile */}
-      <div className="h-28 sm:h-48 bg-gradient-to-r from-orange-300 via-purple-500 to-purple-700" />
+      <div className="h-20 bg-gradient-to-r from-orange-300 via-purple-500 to-purple-700 sm:h-48" />
 
       {/* Main container */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-8 -mt-16 sm:-mt-24 pb-10">
+      <div className="mx-auto -mt-10 max-w-7xl px-4 pb-6 sm:-mt-24 sm:px-8 sm:pb-10">
         {/* Profile Card */}
-        <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-4 sm:p-8 border border-gray-200 dark:border-white/5 shadow-xl mb-8">
+        <div className="mb-5 rounded-2xl border border-gray-200 bg-white p-4 shadow-lg dark:border-white/5 dark:bg-[#1a1a1a] sm:mb-8 sm:rounded-3xl sm:p-8 sm:shadow-xl">
           <div className="flex flex-wrap items-center gap-4 sm:gap-6">
             {/* Square Avatar */}
             <div className="relative flex-shrink-0">
@@ -277,15 +277,15 @@ export default function UserPage({ user }: Props) {
 
             {/* User Info */}
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-3">
+              <h1 className="mb-1 break-words text-xl font-bold text-gray-900 dark:text-white [overflow-wrap:anywhere] sm:mb-3 sm:text-4xl">
                 {clientProfile?.name ?? ""}
               </h1>
-              <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-gray-600 dark:text-white/60">
+              <div className="flex min-w-0 flex-col gap-1 text-sm text-gray-600 dark:text-white/60 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4 sm:text-base">
                 <div className="flex items-center gap-2">
                   <Briefcase className="w-4 h-4" />
                   <span>{(clientProfile && clientProfile.title) || ""}</span>
                 </div>
-                <span className="text-gray-400 dark:text-white/30">•</span>
+                <span className="hidden text-gray-400 dark:text-white/30 sm:inline">•</span>
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4" />
                   <span>{(clientProfile && clientProfile.location) || ""}</span>
@@ -312,12 +312,12 @@ export default function UserPage({ user }: Props) {
           </div>
         </div>
 
-        <div role="tablist" aria-label={t('career.tabs.label')} className="mb-6 flex gap-2 overflow-x-auto rounded-2xl border border-gray-200 bg-white p-2 dark:border-white/5 dark:bg-[#1a1a1a]">
+        <div role="tablist" aria-label={t('career.tabs.label')} className="mb-5 grid grid-cols-2 gap-1 rounded-2xl border border-gray-200 bg-white p-1.5 dark:border-white/5 dark:bg-[#1a1a1a] sm:mb-6 sm:flex sm:gap-2 sm:p-2">
           {profileTabs.map((tab, index) => (
             <button key={tab} id={`profile-tab-${tab}`} type="button" role="tab"
               aria-selected={activeTab === tab} aria-controls={`profile-panel-${tab}`}
               tabIndex={activeTab === tab ? 0 : -1}
-              className={`shrink-0 rounded-xl px-4 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 ${activeTab === tab ? 'bg-purple-100 text-purple-900 dark:bg-purple-500/20 dark:text-purple-200' : 'app-hover-standard text-gray-600 dark:text-white/60'}`}
+              className={`min-w-0 rounded-xl px-2 py-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 sm:shrink-0 sm:px-4 sm:text-sm ${activeTab === tab ? 'bg-purple-100 text-purple-900 dark:bg-purple-500/20 dark:text-purple-200' : 'app-hover-standard text-gray-600 dark:text-white/60'}`}
               onClick={() => selectTab(tab)}
               onKeyDown={event => {
                 const nextIndex = event.key === 'ArrowRight' ? (index + 1) % profileTabs.length
@@ -354,7 +354,7 @@ export default function UserPage({ user }: Props) {
           {/* Left column - Main content */}
           <div className="min-w-0 space-y-6 lg:col-span-2 xl:col-span-3">
             {/* About Me */}
-            <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-6 border border-gray-200 dark:border-white/5 shadow-sm">
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/5 dark:bg-[#1a1a1a] sm:p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-500/10 flex items-center justify-center">
                   <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -386,7 +386,7 @@ export default function UserPage({ user }: Props) {
             </div>
 
             {/* Tech stack */}
-            <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-6 border border-gray-200 dark:border-white/5 shadow-sm">
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/5 dark:bg-[#1a1a1a] sm:p-6">
               <div className="flex items-center gap-3 mb-5">
                 <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-500/10 flex items-center justify-center">
                   <Tag className="w-5 h-5 text-green-600 dark:text-green-400" />
@@ -439,11 +439,11 @@ export default function UserPage({ user }: Props) {
 
       {/* Edit Profile Modal */}
       {isEditModalOpen && editedUser && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div ref={editDialog} tabIndex={-1} role="dialog" aria-modal="true" aria-label={t('user.editModalTitle')} className="bg-white dark:bg-[#1a1a1a] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-white/5 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+          <div ref={editDialog} tabIndex={-1} role="dialog" aria-modal="true" aria-label={t('user.editModalTitle')} className="flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-gray-200 bg-white shadow-2xl dark:border-white/5 dark:bg-[#1a1a1a] sm:rounded-2xl">
             {/* Modal Header */}
-            <div className="sticky top-0 bg-white dark:bg-[#1a1a1a] border-b border-gray-200 dark:border-white/5 p-6 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            <div className="flex items-center justify-between border-b border-gray-200 bg-white p-4 dark:border-white/5 dark:bg-[#1a1a1a] sm:p-6">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">
                 {t("user.editModalTitle")}
               </h2>
               <Button
@@ -458,7 +458,7 @@ export default function UserPage({ user }: Props) {
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 space-y-6">
+            <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4 sm:p-6">
               {editSection === "profile" && (
                 <>
                   {/* Profile Picture */}
@@ -570,16 +570,16 @@ export default function UserPage({ user }: Props) {
             </div>
 
             {/* Modal Footer */}
-            <div className="sticky bottom-0 bg-white dark:bg-[#1a1a1a] border-t border-gray-200 dark:border-white/5 p-6 flex items-center justify-end gap-3">
+            <div className="grid grid-cols-2 gap-3 border-t border-gray-200 bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] dark:border-white/5 dark:bg-[#1a1a1a] sm:flex sm:items-center sm:justify-end sm:p-6">
               <button
                 onClick={() => setIsEditModalOpen(false)}
-                className="app-secondary-button px-6 py-3"
+                className="app-secondary-button min-w-0 px-3 py-3 sm:px-6"
               >
                 {t("user.cancel")}
               </button>
               <button
                 onClick={handleSaveProfile}
-                className="app-primary-button px-6 py-3"
+                className="app-primary-button min-w-0 px-3 py-3 sm:px-6"
               >
                 <Save className="w-4 h-4" />
                 {t("user.saveChanges")}
