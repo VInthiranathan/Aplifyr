@@ -480,7 +480,10 @@
     "omissions": "Vissa AI-formuleringar eller uppgifter kunde inte bekräftas mot din profil och har utelämnats. Granska CV:t före användning. Förtydliga gärna profilen om viktig information saknas.",
     "templates": {
       "title": "Välj CV-stil",
-      "help": "Svep i sidled för att se fyra ATS-vänliga exempel. Byt mall före eller efter generering utan nya AI-anrop. Den valda designen används även i PDF-filen.",
+      "help": "Svep i sidled eller använd pilarna för att se fyra ATS-vänliga exempel. Byt mall före eller efter generering utan nya AI-anrop. Den valda designen används även i PDF-filen.",
+      "navigation": "Bläddra bland CV-mallar",
+      "previous": "Visa föregående CV-mall",
+      "next": "Visa nästa CV-mall",
       "elegant": {
         "name": "Elegant",
         "description": "Vinröda detaljer och en mjuk rubrikyta med generöst utrymme.",

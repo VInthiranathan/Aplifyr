@@ -28,7 +28,12 @@ test('saved CV returns after remount; consent precedes generation and failures p
  await act(async()=>view.root.findByProps({role:'dialog'}).findAllByType('button')[0].props.onClick());
  const requestsBeforeStyle=calls.length;
  assert.equal(view.root.findAllByProps({type:'radio'}).length,4);
- assert.ok(view.root.findByProps({'data-testid':'cv-template-gallery'}).props.className.includes('overflow-x-auto'));
+ const gallery=view.root.findByProps({'data-testid':'cv-template-gallery'});
+ assert.ok(gallery.props.className.includes('overflow-x-auto'));
+ assert.ok(gallery.props.className.includes('touch-pan-x'));
+ assert.ok(gallery.props.className.includes('snap-proximity'));
+ assert.equal(view.root.findAllByProps({'aria-label':'cv.templates.previous'}).length,1);
+ assert.equal(view.root.findAllByProps({'aria-label':'cv.templates.next'}).length,1);
  for(const style of ['nordic','professional','accent','elegant']){
   await act(async()=>view.root.findByProps({type:'radio',value:style}).props.onChange());
   assert.equal(view.root.findByType('article').props['data-template'],style);

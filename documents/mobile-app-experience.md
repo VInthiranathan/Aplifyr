@@ -22,7 +22,7 @@ The rules apply to authenticated pages, job search and details, profile and care
 - Profile tabs form a two-column control on mobile instead of requiring horizontal page movement.
 - Profile editing, AI consent, and cover-letter views use bottom-sheet behavior on mobile, with independently scrollable content and safe-area-aware actions.
 - Primary paired actions use equal-width mobile grids where practical. Touch targets remain at least approximately 44 pixels high.
-- The CV template gallery remains intentionally horizontal and snap-scrollable because it is a visual chooser; each card is capped to the mobile viewport width.
+- The CV template gallery remains intentionally horizontal because it is a visual chooser. It supports native touch panning, momentum, proximity snapping, previous/next controls, and a partial next-card cue; each card is capped to the mobile viewport width. The job context card above it stays in normal flow instead of covering mobile content.
 
 ## Adding or changing UI
 

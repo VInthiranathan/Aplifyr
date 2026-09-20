@@ -480,7 +480,10 @@
     "omissions": "Some AI wording or details could not be verified against your profile and have been omitted. Review the CV before using it. Clarify your profile if important information is missing.",
     "templates": {
       "title": "Choose CV style",
-      "help": "Scroll sideways to explore four ATS-friendly examples. Switch before or after generation without new AI calls. The selected design is also used in the PDF.",
+      "help": "Swipe sideways or use the arrows to explore four ATS-friendly examples. Switch before or after generation without new AI calls. The selected design is also used in the PDF.",
+      "navigation": "Browse CV templates",
+      "previous": "Show previous CV template",
+      "next": "Show next CV template",
       "elegant": {
         "name": "Elegant",
         "description": "Burgundy details and a soft header panel with generous spacing.",

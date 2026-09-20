@@ -4,7 +4,7 @@ import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { Loader2, Trash2 } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import AiGenerationConsent from '../../../components/AiGenerationConsent';
 import CvTemplateThumbnail from '../../../components/CvTemplateThumbnail';
@@ -25,6 +25,7 @@ export default function CvPage() {
   const [downloading, setDownloading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const downloads = useRef(0);
+  const templateGallery = useRef<HTMLDivElement | null>(null);
   const downloadingRef = useRef(false);
   const [consentOpen, setConsentOpen] = useState(false);
   const request = useRef<AbortController | null>(null);
@@ -92,24 +93,36 @@ export default function CvPage() {
     } catch (e) { displayError(e); }
     finally { setDeleting(false); }
   }
+  function scrollTemplates(direction: -1 | 1) {
+    const gallery = templateGallery.current;
+    if (!gallery) return;
+    gallery.scrollBy({ left: direction * Math.max(gallery.clientWidth * 0.82, 240), behavior: 'smooth' });
+  }
   const grade = getSession().matched.find(j => j.id === id)?.matchGrade;
   return <div className="app-page-shell space-y-6">
     <header className="app-page-header"><h1 className="app-page-title">{t('cv.title')}</h1><p className="app-page-subtitle">{t('cv.description')}</p></header>
-    <section className="app-card-base sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-10 space-y-2 rounded-2xl bg-white p-4 dark:bg-[#1a1a1a] md:top-0">
+    <section className="app-card-base space-y-2 rounded-2xl p-4">
+      {id && <Link className="mb-1 inline-flex min-h-11 items-center gap-2 rounded-xl text-sm font-semibold text-sky-700 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 dark:text-sky-400" href={`/jobs/${encodeURIComponent(id)}`}><ArrowLeft aria-hidden="true" size={18} />{t('cv.back')}</Link>}
       <p className="text-sm text-gray-500 dark:text-white/60">{t('cv.forJob')}</p>
-      <h2 className="text-xl font-semibold">{job?.title || t('jobDetail.defaultJobTitle')}</h2>
+      <h2 className="break-words text-lg font-semibold sm:text-xl">{job?.title || t('jobDetail.defaultJobTitle')}</h2>
       {job?.company && <p>{job.company}</p>}{job?.location && <p>{job.location}</p>}
       {grade && <p>{t('cv.match', { grade })}</p>}
-      {id && <Link className="underline" href={`/jobs/${encodeURIComponent(id)}`}>{t('cv.back')}</Link>}
     </section>
     {loading && <p role="status">{t('cv.loading')}</p>}
     {error && <p role="alert" className="app-card-base p-4">{error}</p>}
     {job && <>
-      <fieldset disabled={downloading} aria-describedby="cv-template-help" className="space-y-3">
-        <legend className="text-lg font-semibold">{t('cv.templates.title')}</legend>
+      <fieldset disabled={downloading} aria-describedby="cv-template-help" className="min-w-0 space-y-3">
+        <legend className="sr-only">{t('cv.templates.title')}</legend>
+        <div className="flex items-center justify-between gap-3">
+          <span aria-hidden="true" className="text-lg font-semibold">{t('cv.templates.title')}</span>
+          <div className="flex shrink-0 gap-2" aria-label={t('cv.templates.navigation')}>
+            <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 disabled:opacity-50 dark:border-white/15 dark:bg-white/5 dark:text-white dark:hover:bg-white/10" onClick={() => scrollTemplates(-1)} aria-label={t('cv.templates.previous')}><ChevronLeft aria-hidden="true" /></button>
+            <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 disabled:opacity-50 dark:border-white/15 dark:bg-white/5 dark:text-white dark:hover:bg-white/10" onClick={() => scrollTemplates(1)} aria-label={t('cv.templates.next')}><ChevronRight aria-hidden="true" /></button>
+          </div>
+        </div>
         <p id="cv-template-help" className="text-sm text-gray-600 dark:text-white/70">{t('cv.templates.help')}</p>
-        <div data-testid="cv-template-gallery" className="-mx-1 flex snap-x snap-mandatory gap-4 overflow-x-auto px-1 pb-4 [scrollbar-width:thin]">
-          {cvTemplateIds.map(styleId => <label key={styleId} data-template-card={styleId} className={`app-card-base app-hover-standard relative w-[min(15rem,82vw)] shrink-0 snap-start cursor-pointer rounded-2xl p-3 focus-within:ring-2 focus-within:ring-sky-700 ${template === styleId ? 'ring-2 ring-sky-700 dark:ring-sky-400' : ''}`}>
+        <div ref={templateGallery} data-testid="cv-template-gallery" className="-mx-1 flex max-w-full touch-pan-x snap-x snap-proximity gap-4 overflow-x-auto overscroll-x-contain scroll-smooth px-1 pb-4 pr-10 [scrollbar-width:thin] [-webkit-overflow-scrolling:touch]">
+          {cvTemplateIds.map(styleId => <label key={styleId} data-template-card={styleId} className={`app-card-base app-hover-standard relative w-[min(15rem,calc(100vw-4rem))] shrink-0 snap-start cursor-pointer rounded-2xl p-3 focus-within:ring-2 focus-within:ring-sky-700 ${template === styleId ? 'ring-2 ring-sky-700 dark:ring-sky-400' : ''}`}>
             <input type="radio" name="cv-template" value={styleId} checked={template === styleId} onChange={() => setTemplate(styleId)} className="sr-only" />
             <CvTemplateThumbnail
               template={styleId}

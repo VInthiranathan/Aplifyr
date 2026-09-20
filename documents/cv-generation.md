@@ -5,8 +5,14 @@
 `frontend/pages/jobs/[id].tsx` links to `/jobs/[id]/cv`. The Pages Router CV page obtains
 canonical JobTech context from `GET /api/cvs/{jobId}` with a bearer session. The stable
 ID in the route survives refresh. Job title, company, municipality and a link to the
-same job remain above the generator and preview. An existing session match grade is
+same job remain above the generator and preview. The job context card stays in the normal
+page flow on mobile so it cannot cover the template chooser, and its back link is a compact,
+touch-sized control. An existing session match grade is
 shown when available; it is not fabricated or treated as authorization. No CV upload.
+
+The visual template chooser supports native horizontal touch scrolling with momentum and
+proximity snapping. Previous/next controls provide an explicit alternative to swiping, and
+the partially visible next card indicates that more templates are available.
 
 Gemini **rewrites** the professional summary, work-experience bullets and education
 bullets to emphasize the facts relevant to the job. It can summarize, combine evidence
