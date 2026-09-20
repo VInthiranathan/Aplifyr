@@ -7,7 +7,8 @@ import Link from 'next/link';
 import { Loader2, Trash2 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import AiGenerationConsent from '../../../components/AiGenerationConsent';
-import { cvTemplateIds, cvTemplate, type CvTemplateId } from '../../../lib/cvTemplates';
+import CvTemplateThumbnail from '../../../components/CvTemplateThumbnail';
+import { cvTemplateIds, type CvTemplateId } from '../../../lib/cvTemplates';
 import CvPreview from '../../../components/CvPreview';
 import { getPublicBackendUrl } from '../../../lib/backendUrl';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
@@ -18,7 +19,7 @@ export default function CvPage() {
   const router = useRouter(); const { t, i18n } = useTranslation('common'); const { getSession } = useMatchSession();
   const id = typeof router.query.id === 'string' ? router.query.id : '';
   const [job, setJob] = useState<CvJobContext | null>(null);
-  const [template, setTemplate] = useState<CvTemplateId>('classic');
+  const [template, setTemplate] = useState<CvTemplateId>('elegant');
   const [cv, setCv] = useState<GeneratedCv | null>(null);
   const [loading, setLoading] = useState(true); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
   const [downloading, setDownloading] = useState(false);
@@ -51,7 +52,7 @@ export default function CvPage() {
   useEffect(() => {
     if (!router.isReady) return;
     const controller = new AbortController(); request.current = controller;
-    downloads.current = 0; setTemplate('classic');
+    downloads.current = 0; setTemplate('elegant');
     setConsentOpen(false); setJob(null); setCv(null); setError(''); setLoading(true); setBusy(false); generating.current = false;
     if (!/^[A-Za-z0-9_-]{1,100}$/.test(id)) { setError(t('cv.errors.invalidJob')); setLoading(false); return; }
     call(false, controller).catch(e => { if (!controller.signal.aborted) displayError(e); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
@@ -107,21 +108,22 @@ export default function CvPage() {
       <fieldset disabled={downloading} aria-describedby="cv-template-help" className="space-y-3">
         <legend className="text-lg font-semibold">{t('cv.templates.title')}</legend>
         <p id="cv-template-help" className="text-sm text-gray-600 dark:text-white/70">{t('cv.templates.help')}</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {cvTemplateIds.map(styleId => <label key={styleId} className="app-card-base app-hover-standard cursor-pointer p-4 space-y-3 focus-within:ring-2 focus-within:ring-sky-700">
-            <div className="flex items-center gap-2">
-              <input type="radio" name="cv-template" value={styleId} checked={template === styleId} onChange={() => setTemplate(styleId)} className="h-4 w-4 accent-sky-800" />
+        <div data-testid="cv-template-gallery" className="-mx-1 flex snap-x snap-mandatory gap-4 overflow-x-auto px-1 pb-4 [scrollbar-width:thin]">
+          {cvTemplateIds.map(styleId => <label key={styleId} data-template-card={styleId} className={`app-card-base app-hover-standard relative w-[15rem] shrink-0 snap-start cursor-pointer p-3 focus-within:ring-2 focus-within:ring-sky-700 ${template === styleId ? 'ring-2 ring-sky-700 dark:ring-sky-400' : ''}`}>
+            <input type="radio" name="cv-template" value={styleId} checked={template === styleId} onChange={() => setTemplate(styleId)} className="sr-only" />
+            <CvTemplateThumbnail
+              template={styleId}
+              name={t(`cv.templates.${styleId}.sampleName`)}
+              title={t(`cv.templates.${styleId}.sampleTitle`)}
+              summaryLabel={t('cv.summary')}
+              experienceLabel={t('cv.experience')}
+              educationLabel={t('cv.education')}
+            />
+            <span className="mt-3 flex items-center justify-between gap-3">
               <span className="font-semibold">{t(`cv.templates.${styleId}.name`)}</span>
-            </div>
-            <div aria-hidden="true" className="bg-white border border-gray-200 rounded-sm p-3 h-36 space-y-2" style={{ borderTop: styleId === 'modern' ? '4px solid #164e63' : undefined }}>
-              <div style={{ background: cvTemplate(styleId).accent, width: styleId === 'modern' ? '65%' : '45%', height: styleId === 'compact' ? 5 : 8 }} />
-              <div className="h-1 w-1/3 bg-gray-400" />
-              {[0, 1].map(row => <div key={row} className={styleId === 'compact' ? 'space-y-1' : 'space-y-2'}>
-                <div style={{ background: cvTemplate(styleId).accent }} className="h-1 w-1/2" />
-                <div className="h-1 w-full bg-gray-200" /><div className="h-1 w-4/5 bg-gray-200" />
-              </div>)}
-            </div>
-            <p className="text-sm text-gray-600 dark:text-white/70">{t(`cv.templates.${styleId}.description`)}</p>
+              <span aria-hidden="true" className={`h-3 w-3 rounded-full border ${template === styleId ? 'border-sky-700 bg-sky-700 ring-2 ring-sky-200' : 'border-gray-400'}`} />
+            </span>
+            <span className="mt-1 block text-sm text-gray-600 dark:text-white/70">{t(`cv.templates.${styleId}.description`)}</span>
           </label>)}
         </div>
       </fieldset>

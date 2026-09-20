@@ -69,5 +69,5 @@ test('all CV templates preserve text order, paginate long entries and retain fin
   assert.equal(pdfText[0],content.name);assert.equal(JSON.stringify(content),before);
   documents.push(pdf.output());
  }
- assert.notEqual(documents[0],documents[1]);assert.notEqual(documents[1],documents[2]);
+ assert.equal(documents.length,4);assert.equal(new Set(documents).size,4);
 });
