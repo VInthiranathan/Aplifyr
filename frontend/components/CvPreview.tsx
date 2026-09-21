@@ -29,6 +29,13 @@ export default function CvPreview({ content, template = 'elegant' }: { content: 
     </section>;
   }
   const isBand = style.header === 'band';
+  const contact = content.contact;
+  const contactItems = [
+    contact?.email ? { value: contact.email, href: `mailto:${contact.email}` } : null,
+    contact?.phone ? { value: contact.phone, href: `tel:${contact.phone.replace(/[^0-9+]/g, '')}` } : null,
+    contact?.website ? { value: contact.website, href: contact.website } : null,
+    contact?.linkedin ? { value: contact.linkedin, href: contact.linkedin } : null,
+  ].filter((item): item is { value: string; href: string } => item !== null);
   return <article lang={content.language} aria-label={t('cv.preview')} data-template={template} style={{ fontSize: `${style.bodySize}pt`, lineHeight: style.lineHeight / 0.3528 }} className="relative mx-auto min-h-[70vh] w-full max-w-[210mm] overflow-hidden break-words rounded-xl border border-gray-200 bg-white text-gray-900 shadow-sm [overflow-wrap:anywhere] sm:rounded-none">
     {style.header === 'panel' ? <div aria-hidden="true" className="h-3" style={{ backgroundColor: style.accent }} /> : null}
     <header
@@ -40,6 +47,9 @@ export default function CvPreview({ content, template = 'elegant' }: { content: 
       </div> : null}
       <h1 className="font-bold uppercase tracking-[0.08em]" style={{ color: isBand ? '#ffffff' : style.accent, fontSize: `${style.nameSize}pt` }}>{content.name}</h1>
       <p className={`text-lg ${isBand ? 'text-white/90' : ''}`}>{content.title}</p><p className={isBand ? 'text-white/75' : ''}>{content.location}</p>
+      {!!contactItems.length && <address className={`flex flex-wrap justify-start gap-x-3 gap-y-1 text-sm not-italic ${style.headerAlign === 'center' ? 'justify-center' : ''} ${isBand ? 'text-white/80' : 'text-gray-600'}`}>
+        {contactItems.map(item => <a key={item.href} className="break-all underline-offset-2 hover:underline" href={item.href} target={item.href.startsWith('https://') ? '_blank' : undefined} rel={item.href.startsWith('https://') ? 'noopener noreferrer' : undefined}>{item.value}</a>)}
+      </address>}
     </header>
     <div style={{ padding: `0 clamp(20px, 5vw, ${style.margin}mm) clamp(20px, 5vw, ${style.margin}mm)` }}>
       {!!content.professionalSummary.length && <section style={sectionStyle} className="space-y-2"><h2 style={headingStyle} className="font-semibold">{t('cv.summary')}</h2>{content.professionalSummary.map(f => <p key={`${f.sourceFactId}:${f.text}`}>{f.text}</p>)}</section>}

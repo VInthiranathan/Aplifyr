@@ -4,6 +4,14 @@
 
 `AiConsent` on job detail and `/privacy` provides separate, initially unchecked choices for Gemini and Groq. Users can withdraw even when the provider is disabled. Search/profile access do not require AI consent. Failed writes do not optimistically grant consent. No blanket account, analytics or marketing consent is added. [IMY consent requirements](https://www.imy.se/verksamhet/dataskydd/det-har-galler-enligt-gdpr/rattslig-grund/samtycke/).
 
+Optional CV contact email, telephone, website and LinkedIn values are ordinary profile
+data, not a new external-processing purpose. Registration therefore does not add a bundled
+consent checkbox. The controller must document and confirm the applicable legal basis,
+purpose and retention in the public privacy notice; this implementation does not invent
+those decisions. Fields are optional, owner-scoped by the existing profile RLS, included
+in account export, editable and removed with the cascading profile row on account deletion.
+Their database constraints reduce malformed/direct writes but do not establish compliance.
+
 `GET/PUT /api/account/consent` uses verified cookie identity, the anon key, no-store and safe JSON mutations. PUT validates provider/version/boolean and calls `set_ai_consent`; SQL assigns the owner. Direct table mutations are revoked. `ai_consents` records current choices; `ai_consent_receipts` retains the last grant/withdrawal per reviewed provider/version, not every toggle. Accepted notice texts are immutable. New processing requires a new reviewed version and new consent. Receipts/texts are included in export via `export_ai_consents()` and cascade on account deletion. The controller must define their retention while the account exists.
 
 `ai_privacy_notices` starts disabled with empty texts. Populate both languages and enable each provider only after verifying purpose, recipients, contracts, retention and international transfers. Configure the main privacy notice/contact as well. These operational facts are not invented by the migration.
@@ -33,6 +41,20 @@ The page loads plain-text, reviewed notices from server-side `PRIVACY_NOTICE_SV`
 `GET /api/account/export` uses cookie-aware `lib/serverSupabase.ts` with the anon key and `auth.getUser()`. Client-supplied owner IDs are ignored. Responses are `private, no-store`; POST and other methods return 405, unauthenticated calls 401, unavailable auth/database or incomplete reads 503 with generic errors.
 
 Response: `{ exportedAt, account: { id, email, createdAt }, profile, career, aiConsent, generatedCvs, generatedCoverLetters }`. Profile, career and active generated-document fields are explicitly selected. No full Auth object, tokens, hashes or admin metadata are exported. The browser adds `localFavorites` from the authenticated owner's storage key; unavailable/malformed storage becomes null, distinguishable from an empty list. The page downloads a JSON Blob, then revokes its object URL. It creates no export record on the server.
+
+The profile export includes the four optional CV contact fields. During CV generation,
+the backend reads them with the owner's bearer session but excludes them from the Gemini
+input and factual-review input. They are deterministically attached only after the AI
+response has passed validation. The saved seven-day CV snapshot and locally downloaded
+PDF can therefore contain those details; changing the profile does not rewrite an already
+saved CV. Users must regenerate or delete it, and downloaded files remain outside app
+retention controls.
+
+Supabase Auth can deliberately obscure whether an email already exists. The registration
+UI recognizes only the documented signup response/error signals and provides a localized
+sign-in/reset message. It does not query `auth.users`, expose a service-role key or add a
+public account-lookup endpoint. This preserves Supabase's server-side anti-enumeration
+behavior where the hosted configuration withholds a definitive result.
 
 Purpose is user access to their stored facts; the controller must document the applicable legal basis and retention for the broader processing. This is not a complete Article 15 response or a guarantee of Article 20 applicability. Logs, provider copies, backups, other devices and required processing information need the manual rights process. Protect the downloaded file; it contains personal data.
 

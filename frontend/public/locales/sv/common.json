@@ -241,6 +241,12 @@
     "useInitials": "Använd initialer",
     "name": "Namn",
     "titleLabel": "Titel",
+    "contactDetails": "Kontaktuppgifter för ditt CV",
+    "contactDetailsHelp": "Valfritt. Uppgifterna läggs direkt i genererade CV:n och skickas inte till AI-leverantören.",
+    "contactEmail": "Kontaktmejl",
+    "phone": "Telefonnummer",
+    "phonePlaceholder": "+46 70 123 45 67",
+    "website": "Webbplats eller portfolio",
     "aboutMeLabel": "Om mig",
     "skillsCommaSeparated": "Färdigheter (kommaseparerade)",
     "rolesCommaSeparated": "Önskade roller (kommaseparerade)",
@@ -321,7 +327,8 @@
       "missingEmail": "E-post krävs.",
       "missingEmailOrPassword": "E-post och lösenord krävs.",
       "missingNewPassword": "Ange och bekräfta ditt nya lösenord.",
-      "passwordsDoNotMatch": "Lösenorden matchar inte."
+      "passwordsDoNotMatch": "Lösenorden matchar inte.",
+      "emailAlreadyRegistered": "Den här mejladressen är redan registrerad. Logga in eller återställ lösenordet."
     },
     "verifyEmailTitle": "Bekräfta ditt konto",
     "verifyEmailSubtitle": "Ett sista steg innan du kan börja använda Aplifyr",
@@ -453,7 +460,7 @@
     "education": "Utbildning",
     "present": "Pågående",
     "profile": "Uppdatera profil",
-    "disclosure": "CV-genereringen delar utvalda profil- och karriäruppgifter med Google Gemini. Ditt namn och din plats läggs till av Aplifyr. Det färdiga CV:t sparas på ditt konto i sju dagar och kan tas bort tidigare.",
+    "disclosure": "CV-genereringen delar utvalda profil- och karriäruppgifter med Google Gemini. Aplifyr lägger till namn, plats och valfria kontaktuppgifter efter AI-svaret; kontaktuppgifterna skickas inte till Gemini. Det färdiga CV:t sparas på ditt konto i sju dagar och kan tas bort tidigare.",
     "review": "AI:n har anpassat formuleringarna efter jobbet och kontrollerat dem mot din profil. Granska ändå uppgifterna innan du ansöker.",
     "limited": "Din profil var omfattande. CV:t använder ett begränsat urval av fakta. Kontrollera att relevanta uppgifter finns med.",
     "errors": {

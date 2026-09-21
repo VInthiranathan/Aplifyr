@@ -241,6 +241,12 @@
     "useInitials": "Use Initials",
     "name": "Name",
     "titleLabel": "Title",
+    "contactDetails": "Contact details for your CV",
+    "contactDetailsHelp": "Optional. These details are added directly to generated CVs and are not sent to the AI provider.",
+    "contactEmail": "Contact email",
+    "phone": "Phone number",
+    "phonePlaceholder": "+46 70 123 45 67",
+    "website": "Website or portfolio",
     "aboutMeLabel": "About Me",
     "skillsCommaSeparated": "Skills (comma-separated)",
     "rolesCommaSeparated": "Desired Roles (comma-separated)",
@@ -321,7 +327,8 @@
       "missingEmail": "Email is required.",
       "missingEmailOrPassword": "Email and password are required.",
       "missingNewPassword": "Enter and confirm your new password.",
-      "passwordsDoNotMatch": "Passwords do not match."
+      "passwordsDoNotMatch": "Passwords do not match.",
+      "emailAlreadyRegistered": "This email address is already registered. Sign in or reset your password."
     },
     "verifyEmailTitle": "Confirm your account",
     "verifyEmailSubtitle": "One last step before you can start using Aplifyr",
@@ -453,7 +460,7 @@
     "education": "Education",
     "present": "Present",
     "profile": "Update profile",
-    "disclosure": "CV generation shares selected profile and career information with Google Gemini. Aplifyr adds your name and location. The completed CV is saved to your account for seven days and can be deleted earlier.",
+    "disclosure": "CV generation shares selected profile and career information with Google Gemini. Aplifyr adds your name, location and optional contact details after the AI response; contact details are not sent to Gemini. The completed CV is saved to your account for seven days and can be deleted earlier.",
     "review": "AI has tailored the wording to the job and checked it against your profile. Review the facts before applying.",
     "limited": "Your profile was large. The CV uses a bounded selection of facts; review that the relevant details are included.",
     "errors": {

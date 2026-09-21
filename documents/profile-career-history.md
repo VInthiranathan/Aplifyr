@@ -33,6 +33,13 @@ Visited panels remain mounted so switching tabs preserves drafts. Closing an edi
 before discarding; full-page navigation/refresh uses the browser's beforeunload warning.
 Both English and Swedish, light and dark themes, and responsive form columns are supported.
 
+The profile editor also stores optional CV contact details: contact email, telephone,
+HTTPS website/portfolio and an HTTPS LinkedIn profile. They are visible in the profile
+header and are included as readable text in newly generated CV previews and PDFs. LinkedIn
+is kept as plain link text rather than QR-only content so ATS readers and printed copies do
+not depend on image decoding. Empty values are stored as null. API and database validation
+enforce length, URL scheme/host and telephone character limits.
+
 ## Storage and API
 
 `public.profile_career_entries` stores one record per experience or education, with `kind`
@@ -70,6 +77,10 @@ seven-day `expiresAt` deadline.
 The migration can be applied through the project's established SQL migration workflow
 or as the complete script in the Supabase SQL editor. It must be applied once. This
 change does not execute remote migrations automatically.
+
+The optional CV contact fields require
+`supabase/migrations/20260921184722_add_profile_contact_details.sql` before deploying the
+matching frontend/backend. Existing profiles remain valid with all four fields empty.
 
 ## Verification
 

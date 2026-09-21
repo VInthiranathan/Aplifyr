@@ -89,7 +89,12 @@ export default function AuthPage() {
         });
 
         if (error) {
-          setError(error.message);
+          setError(error.code === "user_already_exists" ? t("auth.errors.emailAlreadyRegistered") : error.message);
+          return;
+        }
+
+        if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+          setError(t("auth.errors.emailAlreadyRegistered"));
           return;
         }
 
@@ -275,4 +280,3 @@ export default function AuthPage() {
     </AuthShell>
   );
 }
-

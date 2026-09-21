@@ -25,6 +25,27 @@ test('long text-based CV exports across pages with an embedded Swedish font',()=
  if(process.env.CV_PDF_FIXTURE)fs.writeFileSync(process.env.CV_PDF_FIXTURE,Buffer.from(doc.output('arraybuffer')));
 });
 
+test('CV preview and PDF include optional contact details as readable ATS text',async()=>{
+ const React=require('react');const {create,act}=require('react-test-renderer');
+ const previewModule={exports:{}};
+ const previewCode=ts.transpileModule(fs.readFileSync(path.join(__dirname,'../components/CvPreview.tsx'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+ vm.runInNewContext(previewCode,{module:previewModule,exports:previewModule.exports,require:n=>n==='../lib/cvTemplates'?templatesModule.exports:n==='../lib/cvDocumentLanguage'?languageModule.exports:n==='next-i18next'?{useTranslation:()=>({t:k=>k})}:require(n)});
+ const content={name:'Applicant',title:'Developer',location:'Malmö',contact:{email:'cv@example.com',phone:'+46 70 123 45 67',website:'https://portfolio.example',linkedin:'https://www.linkedin.com/in/applicant'},professionalSummary:[],skills:[],experience:[],education:[]};
+ let view;await act(async()=>{view=create(React.createElement(previewModule.exports.default,{content}));});
+ const links=view.root.findAllByType('a');assert.deepEqual(links.map(link=>link.children[0]),['cv@example.com','+46 70 123 45 67','https://portfolio.example','https://www.linkedin.com/in/applicant']);
+ assert.equal(links[0].props.href,'mailto:cv@example.com');assert.equal(links[2].props.href,'https://portfolio.example');await act(async()=>view.unmount());
+ const font=fs.readFileSync(path.join(__dirname,'../public/fonts/DejaVuSans.ttf')).toString('base64');pdfText.length=0;
+ const pdf=buildCvPdf(content,font,k=>k);assert.ok(pdfText.some(value=>typeof value==='string'&&value.includes('cv@example.com')&&value.includes('linkedin.com')));assert.ok(pdf.output().startsWith('%PDF-'));
+});
+
+test('CV contact details are attached after generation and excluded from Gemini input',()=>{
+ const controller=fs.readFileSync(path.join(__dirname,'../../backend/Controllers/CvsController.cs'),'utf8');
+ const payload=controller.slice(controller.indexOf('var data = JsonSerializer.Serialize'),controller.indexOf('if (data.Length > 90000)'));
+ assert.doesNotMatch(payload,/contact_email|phone|website_url|linkedin_url/);
+ const content=fs.readFileSync(path.join(__dirname,'../../backend/Cv/CvContent.cs'),'utf8');
+ for(const field of ['contact_email','phone','website_url','linkedin_url'])assert.match(content,new RegExp(`Text\\(profile, "${field}"\\)`));
+});
+
 test('CV headings and current-date labels use the ad language despite the opposite UI language',()=>{
  for(const language of ['en','sv']){
   const target=require('../public/locales/'+language+'/common.json').cv;

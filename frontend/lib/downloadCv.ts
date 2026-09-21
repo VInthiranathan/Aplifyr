@@ -49,12 +49,17 @@ export function buildCvPdf(content: CvContent, font: string, t: (key: string) =>
       y += 3;
     }
   }
+  const contactLine = content.contact ? [content.contact.email, content.contact.phone, content.contact.website, content.contact.linkedin].filter(Boolean).join(' · ') : '';
+  pdf.setFontSize(9);
+  const contactLineCount = contactLine ? (pdf.splitTextToSize(contactLine, width) as string[]).length : 0;
+  const bandHeight = Math.max(40, 34 + contactLineCount * 4);
+  const panelHeight = Math.max(32, 26 + contactLineCount * 4);
   if (style.header === 'panel') {
     pdf.setFillColor(style.accent); pdf.rect(0, 0, 210, 4, 'F');
-    pdf.setFillColor(style.headerBackground ?? '#f3f1f1'); pdf.rect(margin, 10, width, 32, 'F');
+    pdf.setFillColor(style.headerBackground ?? '#f3f1f1'); pdf.rect(margin, 10, width, panelHeight, 'F');
     y = 20;
   } else if (style.header === 'band') {
-    pdf.setFillColor(style.accent); pdf.rect(0, 0, 210, 40, 'F');
+    pdf.setFillColor(style.accent); pdf.rect(0, 0, 210, bandHeight, 'F');
     y = 15;
   } else if (style.header === 'dots') {
     [style.accent, style.secondaryAccent, '#9a9a70'].forEach((color, index) => {
@@ -65,9 +70,10 @@ export function buildCvPdf(content: CvContent, font: string, t: (key: string) =>
   const headerAlign = style.headerAlign;
   pdf.setTextColor(style.header === 'band' ? '#ffffff' : style.accent); text(content.name, style.nameSize, 0, headerAlign);
   pdf.setTextColor(style.header === 'band' ? '#ffffff' : '#111827'); text(content.title, 12, 0, headerAlign); text(content.location, 10, 0, headerAlign);
+  if (contactLine) text(contactLine, 9, 0, headerAlign);
   pdf.setTextColor('#111827');
-  if (style.header === 'band' && y < 46) y = 46;
-  if (style.header === 'panel' && y < 48) y = 48;
+  if (style.header === 'band' && y < bandHeight + 6) y = bandHeight + 6;
+  if (style.header === 'panel' && y < panelHeight + 16) y = panelHeight + 16;
   if (content.professionalSummary.length) { heading(t('cv.summary')); content.professionalSummary.forEach(f => text(f.text)); }
   if (content.skills.length) { heading(t('cv.skills')); text(content.skills.join(' · ')); }
   entries(t('cv.experience'), content.experience); entries(t('cv.education'), content.education);

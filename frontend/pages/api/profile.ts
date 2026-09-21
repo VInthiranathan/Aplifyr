@@ -97,7 +97,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'GET') {
     const { data: profile, error } = await supabase
       .from('profiles')
-      .select('id,full_name,title,location,bio,tech_stack,roles,location_preferences,created_at,updated_at')
+      .select('id,full_name,title,location,contact_email,phone,website_url,linkedin_url,bio,tech_stack,roles,location_preferences,created_at,updated_at')
       .eq('id', user.id)
       .maybeSingle()
 
@@ -124,7 +124,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const query = version === null ? table.insert({ id: user.id, ...fields }) :
         table.update(fields).eq('id', user.id).eq('updated_at', version)
       const { data: profile, error } = await query
-        .select('id,full_name,title,location,bio,tech_stack,roles,location_preferences,created_at,updated_at')
+        .select('id,full_name,title,location,contact_email,phone,website_url,linkedin_url,bio,tech_stack,roles,location_preferences,created_at,updated_at')
         .maybeSingle()
       if ((!error && !profile) || error?.code === '23505') {
         res.status(409).json({ error: 'Profile changed; reload before saving' })
@@ -158,6 +158,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           upsertObj[column] = body[input]
         }
       }
+      for (const [input, column] of Object.entries({ contactEmail: 'contact_email', phone: 'phone', websiteUrl: 'website_url', linkedinUrl: 'linkedin_url' })) {
+        if (input in body) {
+          if (typeof body[input] !== 'string') { res.status(400).json({ error: 'Invalid profile' }); return }
+          const normalized = body[input].trim()
+          upsertObj[column] = normalized || null
+        }
+      }
       for (const [input, column] of Object.entries({ locationPreferences: 'location_preferences', tags: 'tech_stack', roles: 'roles' })) {
         if (input in body) upsertObj[column] = normalizeStringArray(body[input])
       }
@@ -166,7 +173,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const { id, ...fields } = upsertObj
       const write = version === null ? table.insert(upsertObj) : table.update(fields).eq('id', user.id).eq('updated_at', version)
       const { data: updated, error } = await write
-        .select('id,full_name,title,location,bio,tech_stack,roles,location_preferences,created_at,updated_at')
+        .select('id,full_name,title,location,contact_email,phone,website_url,linkedin_url,bio,tech_stack,roles,location_preferences,created_at,updated_at')
         .maybeSingle()
 
       if ((!error && !updated) || error?.code === '23505') {

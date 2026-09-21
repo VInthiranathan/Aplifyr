@@ -51,6 +51,10 @@ export interface User {
   name: string;
   title: string;
   location: string;
+  contactEmail: string;
+  phone: string;
+  websiteUrl: string;
+  linkedinUrl: string;
   locationPreferences: string[];
   bio: string;
   tags: string[];
@@ -175,6 +179,7 @@ export interface CvContent {
   language?: 'en' | 'sv';
   omittedUnsupportedContent?: boolean;
   schemaVersion: 1; template: 'ats-basic'; name: string; title: string; location: string;
+  contact?: { email: string; phone: string; website: string; linkedin: string };
   professionalSummary: CvFact[]; skills: string[]; experience: CvEntry[]; education: CvEntry[];
   analysis: { keywords: string[]; responsibilities: string[]; mandatory: string[]; desirable: string[]; domain: string };
 }

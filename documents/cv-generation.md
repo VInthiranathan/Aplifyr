@@ -20,6 +20,13 @@ and improve wording without changing meaning. Employer names, titles, qualificat
 dates and the skills list remain deterministically sourced. Generated prose must cite
 supporting profile facts and pass a separate source-only factual review before returning the result.
 
+Optional contact email, telephone, portfolio/website and LinkedIn values are attached by
+the backend after generation and factual review. They are not included in Gemini prompts.
+Preview and PDF render them as ordinary selectable text in the header. Links are not
+QR-only because ATS parsing and printed accessibility must not depend on image decoding.
+The renderer omits empty contact values and older saved CVs remain compatible without a
+`contact` object.
+
 Generation uses the shared consent UI (Gemini only), preserves the old preview while
 regenerating and after failure, and stores the validated CV for the requesting owner. The progress
 message describes the combined operation; it does not pretend to stream individual

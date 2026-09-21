@@ -13,6 +13,9 @@ test('registration routes pending email confirmations to the dedicated page', ()
   assert.match(auth, /if \(!data\.session\)[\s\S]*router\.replace\("\/auth\/verify-email"\)/);
   assert.match(verify, /auth\.verifyEmailInstructions/);
   assert.match(verify, /router\.push\("\/auth"\)/);
+  assert.match(auth, /data\.user\.identities/);
+  assert.match(auth, /user_already_exists/);
+  assert.match(auth, /auth\.errors\.emailAlreadyRegistered/);
 });
 
 test('animation is refined without changing the auth form shell', () => {
@@ -33,6 +36,7 @@ test('auth and profile labels are localized in every supported language', () => 
     assert.ok(translations.auth.verifyEmailTitle);
     assert.ok(translations.auth.verifyEmailInstructions);
     assert.ok(translations.auth.verifyEmailSpamHint);
+    assert.ok(translations.auth.errors.emailAlreadyRegistered);
     assert.notEqual(translations.user.techStack.toLowerCase(), 'tech stack');
     assert.notEqual(translations.user.techStack.toLowerCase(), 'teknikstack');
   }

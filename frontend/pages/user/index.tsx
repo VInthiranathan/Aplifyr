@@ -12,6 +12,10 @@ import { isSupabaseConfigured } from "../../lib/supabaseClient";
 import {
   MapPin,
   Briefcase,
+  Globe,
+  Linkedin,
+  Mail,
+  Phone,
   Edit,
   FileText,
   Tag,
@@ -75,7 +79,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("id,full_name,title,location,bio,tech_stack,roles,location_preferences,created_at,updated_at")
+        .select("id,full_name,title,location,contact_email,phone,website_url,linkedin_url,bio,tech_stack,roles,location_preferences,created_at,updated_at")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -86,6 +90,10 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
             name: profile.full_name ?? "",
             title: profile.title ?? "",
             location: profile.location ?? "",
+            contactEmail: profile.contact_email ?? "",
+            phone: profile.phone ?? "",
+            websiteUrl: profile.website_url ?? "",
+            linkedinUrl: profile.linkedin_url ?? "",
             locationPreferences: profile.location_preferences ?? [],
             bio: profile.bio ?? "",
             tags: profile.tech_stack ?? [],
@@ -130,6 +138,10 @@ const emptyUser: User = {
   name: "",
   title: "",
   location: "",
+  contactEmail: "",
+  phone: "",
+  websiteUrl: "",
+  linkedinUrl: "",
   locationPreferences: [],
   bio: "",
   tags: [],
@@ -151,6 +163,10 @@ const mapProfileToUser = (profile: Record<string, any>): User => ({
   name: profile.full_name ?? "",
   title: profile.title ?? "",
   location: profile.location ?? "",
+  contactEmail: profile.contact_email ?? "",
+  phone: profile.phone ?? "",
+  websiteUrl: profile.website_url ?? "",
+  linkedinUrl: profile.linkedin_url ?? "",
   locationPreferences: Array.from(
     new Set(
       (profile.location_preferences ?? [])
@@ -173,7 +189,11 @@ const mapProfileToUser = (profile: Record<string, any>): User => ({
 });
 
 const saveProfile = async (nextUser: User, section: "profile" | "bio" | "skills") => {
-  const fields = section === "profile" ? { name: nextUser.name, title: nextUser.title, location: nextUser.location }
+  const fields = section === "profile" ? {
+    name: nextUser.name, title: nextUser.title, location: nextUser.location,
+    contactEmail: nextUser.contactEmail, phone: nextUser.phone,
+    websiteUrl: nextUser.websiteUrl, linkedinUrl: nextUser.linkedinUrl,
+  }
     : section === "bio" ? { bio: nextUser.bio } : { tags: nextUser.tags };
   const res = await fetch("/api/profile", {
     method: "PUT",
@@ -291,6 +311,14 @@ export default function UserPage({ user }: Props) {
                   <span>{(clientProfile && clientProfile.location) || ""}</span>
                 </div>
               </div>
+              {(clientProfile?.contactEmail || clientProfile?.phone || clientProfile?.websiteUrl || clientProfile?.linkedinUrl) && (
+                <div className="mt-3 flex min-w-0 flex-col gap-2 text-sm text-gray-600 dark:text-white/60 sm:flex-row sm:flex-wrap sm:gap-x-4">
+                  {clientProfile.contactEmail && <a className="flex min-w-0 items-center gap-2 hover:underline" href={`mailto:${clientProfile.contactEmail}`}><Mail aria-hidden="true" className="h-4 w-4 shrink-0" /><span className="break-all">{clientProfile.contactEmail}</span></a>}
+                  {clientProfile.phone && <a className="flex min-w-0 items-center gap-2 hover:underline" href={`tel:${clientProfile.phone.replace(/[^0-9+]/g, '')}`}><Phone aria-hidden="true" className="h-4 w-4 shrink-0" /><span>{clientProfile.phone}</span></a>}
+                  {clientProfile.websiteUrl && <a className="flex min-w-0 items-center gap-2 hover:underline" href={clientProfile.websiteUrl} target="_blank" rel="noopener noreferrer"><Globe aria-hidden="true" className="h-4 w-4 shrink-0" /><span className="break-all">{t('user.website')}</span></a>}
+                  {clientProfile.linkedinUrl && <a className="flex min-w-0 items-center gap-2 hover:underline" href={clientProfile.linkedinUrl} target="_blank" rel="noopener noreferrer"><Linkedin aria-hidden="true" className="h-4 w-4 shrink-0" /><span>LinkedIn</span></a>}
+                </div>
+              )}
             </div>
 
             {/* Edit Profile Button */}
@@ -527,6 +555,31 @@ export default function UserPage({ user }: Props) {
                       }
                       className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
+                  </div>
+
+                  <div className="border-t border-gray-200 pt-6 dark:border-white/10">
+                    <h3 className="font-semibold text-gray-900 dark:text-white">{t('user.contactDetails')}</h3>
+                    <p className="mt-1 text-sm text-gray-600 dark:text-white/60">{t('user.contactDetailsHelp')}</p>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-gray-900 dark:text-white" htmlFor="profile-contact-email">{t('user.contactEmail')}</label>
+                    <input id="profile-contact-email" type="email" autoComplete="email" maxLength={254} value={editedUser.contactEmail} onChange={(e) => setEditedUser({ ...editedUser, contactEmail: e.target.value })} className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white" />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-gray-900 dark:text-white" htmlFor="profile-phone">{t('user.phone')}</label>
+                    <input id="profile-phone" type="tel" autoComplete="tel" maxLength={32} value={editedUser.phone} onChange={(e) => setEditedUser({ ...editedUser, phone: e.target.value })} placeholder={t('user.phonePlaceholder')} className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white" />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-gray-900 dark:text-white" htmlFor="profile-website">{t('user.website')}</label>
+                    <input id="profile-website" type="url" inputMode="url" maxLength={2048} value={editedUser.websiteUrl} onChange={(e) => setEditedUser({ ...editedUser, websiteUrl: e.target.value })} placeholder="https://example.com" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white" />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-gray-900 dark:text-white" htmlFor="profile-linkedin">LinkedIn</label>
+                    <input id="profile-linkedin" type="url" inputMode="url" maxLength={2048} value={editedUser.linkedinUrl} onChange={(e) => setEditedUser({ ...editedUser, linkedinUrl: e.target.value })} placeholder="https://www.linkedin.com/in/..." className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white" />
                   </div>
                 </>
               )}
