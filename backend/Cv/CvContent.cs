@@ -167,7 +167,9 @@ public static class CvContent
         foreach (var field in new[] { "keywords", "responsibilities", "mandatory", "desirable" }) StringItems(analysis.GetProperty(field), field == "keywords" ? 20 : field == "responsibilities" ? 8 : 10, 300);
         if (analysis.GetProperty("domain").ValueKind != JsonValueKind.String || Text(analysis, "domain").Length > 200) throw new CvFailure(502, "invalidOutput");
         if (summary.Length + selectedSkills.Length + experience.Length + education.Length == 0) throw new CvFailure(422, omittedUnsupportedContent ? "unsupportedFact" : "profileEmpty");
-        return new { schemaVersion = Version, template = "ats-basic", name = Text(profile, "full_name"), title = Text(profile, "title"), location = Text(profile, "location"),
+        var contact = new { email = Text(profile, "contact_email"), phone = Text(profile, "phone"),
+            website = Text(profile, "website_url"), linkedin = Text(profile, "linkedin_url") };
+        return new { schemaVersion = Version, template = "ats-basic", name = Text(profile, "full_name"), title = Text(profile, "title"), location = Text(profile, "location"), contact,
             professionalSummary = summary, skills = selectedSkills, experience, education, omittedUnsupportedContent, analysis = analysis.Clone() };
     }
 }

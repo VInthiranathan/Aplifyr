@@ -26,7 +26,7 @@ public sealed class CvStore(HttpContext context, IConfiguration configuration)
     }
     public async Task<(JsonElement Profile, JsonElement[] Career)> Profile()
     {
-        var profiles = await Request($"profiles?id=eq.{UserId}&select=full_name,title,location,bio,tech_stack,updated_at&limit=1");
+        var profiles = await Request($"profiles?id=eq.{UserId}&select=full_name,title,location,contact_email,phone,website_url,linkedin_url,bio,tech_stack,updated_at&limit=1");
         if (profiles.GetArrayLength() == 0) throw new CvFailure(422, "profileEmpty");
         var career = new List<JsonElement>();
         var cursor = "";

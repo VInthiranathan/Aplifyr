@@ -45,12 +45,19 @@ test('profile rejects malformed or oversized inputs before database access; neve
     '../../lib/apiSecurity': safety,
     '@supabase/auth-helpers-nextjs': { createServerClient: () => ({ auth: { getUser: async () => ({ data: { user: { id: 'owner' } }, error: null }) }, from: () => query }), parseCookieHeader: () => [] },
   }, { NEXT_PUBLIC_SUPABASE_URL: 'https://example.com', NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test' }).default;
-  for (const body of [null, [], 'abc', { name: {} }, { bio: 'a'.repeat(5001) }, { tags: [1] }, { roles: Array(51).fill('x') }]) {
+  for (const body of [null, [], 'abc', { name: {} }, { bio: 'a'.repeat(5001) }, { tags: [1] }, { roles: Array(51).fill('x') },
+    { contactEmail: 'not-an-email' }, { phone: 'call-me<script>' }, { websiteUrl: 'http://example.com' },
+    { websiteUrl: 'https://user:password@example.com' }, { linkedinUrl: 'https://example.com/in/user' }]) {
     const res = response(); await handler({ method: 'PUT', headers: { 'content-type': 'application/json' }, body }, res); assert.equal(res.code, 400);
   }
   assert.equal(writes.length, 0);
-  const res = response(); await handler({ method: 'PUT', headers: { 'content-type': 'application/json' }, body: { id: 'victim', name: 'Test', tags: ['C#'], updatedAt: null } }, res);
+  const res = response(); await handler({ method: 'PUT', headers: { 'content-type': 'application/json' }, body: {
+    id: 'victim', name: 'Test', tags: ['C#'], contactEmail: ' cv@example.com ', phone: ' +46 70 123 45 67 ',
+    websiteUrl: ' https://portfolio.example/cv ', linkedinUrl: ' https://www.linkedin.com/in/example ', updatedAt: null,
+  } }, res);
   assert.equal(res.code, 200); assert.equal(writes[0].id, 'owner'); assert.equal(res.headers['Cache-Control'], 'private, no-store');
+  assert.equal(writes[0].contact_email, 'cv@example.com'); assert.equal(writes[0].phone, '+46 70 123 45 67');
+  assert.equal(writes[0].website_url, 'https://portfolio.example/cv'); assert.equal(writes[0].linkedin_url, 'https://www.linkedin.com/in/example');
 });
 test('logout rejects GET and cross-site POST without touching auth', async () => {
   let calls = 0;

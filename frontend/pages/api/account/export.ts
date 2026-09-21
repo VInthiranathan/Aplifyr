@@ -12,7 +12,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data: { user }, error } = await supabase.auth.getUser();
     if (error || !user) { res.status(401).json({ error: 'Not authenticated' }); return; }
     const { data: profile, error: profileError } = await supabase.from('profiles')
-      .select('id,full_name,title,location,bio,tech_stack,roles,location_preferences,created_at,updated_at').eq('id', user.id).maybeSingle();
+      .select('id,full_name,title,location,contact_email,phone,website_url,linkedin_url,bio,tech_stack,roles,location_preferences,created_at,updated_at').eq('id', user.id).maybeSingle();
     if (profileError) throw new Error('Profile unavailable');
     const career = await readCareerEntries(supabase, user.id,
       'id,kind,title,organization,location,qualification,start_month,end_month,is_current,description,achievements,learned,skills,strengths,created_at,updated_at');

@@ -14,6 +14,7 @@ Created and extended by:
 - `supabase/migrations/005_remove_cv_feature.sql` (removes legacy document fields)
 - `supabase/migrations/006_secure_profiles.sql` (owner-only row-level access)
 - `supabase/migrations/007_personal_data_limits.sql` (profile/skill limits, initially NOT VALID for legacy rows)
+- `supabase/migrations/20260921184722_add_profile_contact_details.sql` (optional validated CV contact fields)
 
 Current columns:
 
@@ -21,6 +22,10 @@ Current columns:
 - `full_name text`
 - `title text`
 - `location text`
+- `contact_email text`
+- `phone text`
+- `website_url text`
+- `linkedin_url text`
 - `bio text`
 - `tech_stack text[]`
 - `roles text[]`
@@ -61,6 +66,12 @@ entries intact and retires legacy document storage; see `retire-file-storage.md`
 ## Notes for Future Work
 
 Migration 007 limits profile name/title/location to 200 characters, bio to 5,000, and profile lists to 50 non-null items of at most 100 characters. Career skill items receive the same per-item constraint. Older invalid rows are preserved until reviewed; new writes are checked. Total career count is not limited by this migration. See [the runbook](gdpr-supabase-runbook.md) before applying or validating constraints. Existing production RLS must be inspected, not assumed missing or replaced blindly.
+
+Migration `20260921184722_add_profile_contact_details.sql` adds optional contact email,
+telephone, HTTPS website/portfolio and HTTPS LinkedIn fields to the existing owner-only
+profile row. Database checks bound their lengths and reject malformed direct writes.
+It does not add grants or policies; migration 006/008 ownership enforcement continues
+to apply to the whole row.
 
 Migration 009 adds `generated_cvs`, keyed by `(user_id, job_id)`, with owner-only SELECT/DELETE, backend-only validated writes, bounded JSON and account-deletion cascade. Migration `20260918164504_prepared_jobs_and_generated_document_retention.sql` adds `expires_at`, creates `generated_cover_letters` with the same owner/job key, and makes the latest CV and cover letter readable for seven days from generation. Regeneration replaces the relevant row and restarts its independent seven-day period; no version history is stored. The legacy CV save RPC delegates to the retention-aware RPC during rolling deployment. An hourly Supabase Cron job physically deletes expired rows after RLS has already hidden them.
 

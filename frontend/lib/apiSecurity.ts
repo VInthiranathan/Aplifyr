@@ -18,5 +18,22 @@ export function validProfile(body: unknown): body is Record<string, unknown> {
     if (list != null && (!Array.isArray(list) || list.length > 50 ||
       list.some(item => typeof item !== 'string' || item.length > 100))) return false;
   }
+  for (const [key, max] of Object.entries({ contactEmail: 254, phone: 32, websiteUrl: 2048, linkedinUrl: 2048 })) {
+    const item = value[key];
+    if (item != null && (typeof item !== 'string' || item.length > max || /[\u0000-\u001f\u007f]/.test(item))) return false;
+  }
+  const email = typeof value.contactEmail === 'string' ? value.contactEmail.trim() : '';
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false;
+  const phone = typeof value.phone === 'string' ? value.phone.trim() : '';
+  if (phone && (phone.length < 3 || !/^[0-9+(). /-]+$/.test(phone))) return false;
+  for (const key of ['websiteUrl', 'linkedinUrl']) {
+    const raw = typeof value[key] === 'string' ? value[key].trim() : '';
+    if (!raw) continue;
+    try {
+      const url = new URL(raw);
+      if (url.protocol !== 'https:' || url.username || url.password) return false;
+      if (key === 'linkedinUrl' && (!/(^|\.)linkedin\.com$/i.test(url.hostname) || url.pathname === '/')) return false;
+    } catch { return false; }
+  }
   return true;
 }
