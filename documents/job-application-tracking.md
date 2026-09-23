@@ -9,6 +9,7 @@ The application tracker lets a signed-in user record a submitted job application
 - `/jobs/[id]` checks whether the current job already has an application record.
 - **Mark as applied** creates one idempotently with status `applied` and the user's local calendar date.
 - `/applications` lists the user's records and defaults to active processes.
+- `/jobs` fetches the signed-in user's application IDs and statuses once and marks matching job cards as **Applied** or **Applied · current status**. The job search remains usable if this supplementary status request fails and refreshes statuses when the window regains focus.
 - Filters cover active, all and each individual status: applied, screening, interview, offer, accepted, rejected and withdrawn.
 - A record can be updated or permanently deleted. Optimistic concurrency prevents an older browser tab from overwriting a newer change.
 - On mobile, Applications is a primary bottom-navigation destination. Favorites remains available in the settings drawer; both remain present in the desktop sidebar.
@@ -18,6 +19,7 @@ The application tracker lets a signed-in user record a submitted job application
 `frontend/pages/api/applications.ts` accepts cookie-authenticated requests only and returns `private, no-store` responses.
 
 - `GET ?jobId=...` returns `{ application }` or `null`.
+- `GET` without `jobId` returns at most 500 owner-visible `{ job_id, status }` records for list badges; notes and other application details are not included.
 - `POST` accepts `jobId`, `jobContext` and `appliedAt`; repeat calls preserve the existing record.
 - `PUT` accepts all editable fields plus `updatedAt` and returns `409` for a stale revision.
 - `DELETE` requires the same owner/job/revision identity and returns `409` for a stale revision.

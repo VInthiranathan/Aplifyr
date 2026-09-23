@@ -205,6 +205,8 @@
     "addFavorite": "Lägg till i favoriter",
     "removeFavorite": "Ta bort från favoriter",
     "match": "Match",
+    "applied": "Ansökt",
+    "appliedWithStatus": "Ansökt · {{status}}",
     "deadline": "Sista ansökningsdag: {{date}}",
     "totalAds": "{{countLabel}} annonser",
     "filteredTotalAds": "{{shown}} av {{total}} annonser",
