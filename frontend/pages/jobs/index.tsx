@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import type { GetServerSideProps } from "next";
-import type { ExternalJob, AFSearchResult } from "../../types/api";
+import type { ApplicationStatus, ExternalJob, AFSearchResult } from "../../types/api";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import employmentOptionsData from "../../data/employment_types.json";
@@ -13,6 +13,7 @@ import {
   ExternalLink,
   Loader2,
   Bookmark,
+  ClipboardCheck,
   X,
 } from "lucide-react";
 import { formatLocation } from "../../lib/utils";
@@ -87,7 +88,34 @@ export default function AllJobsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
+  const [applicationStatuses, setApplicationStatuses] = useState<Record<string, ApplicationStatus>>({});
   const LIMIT = 20;
+
+  const loadApplicationStatuses = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const response = await fetch("/api/applications", { signal });
+      if (!response.ok) return;
+      const body = await response.json() as { applications?: Array<{ job_id: string; status: ApplicationStatus }> };
+      const next: Record<string, ApplicationStatus> = {};
+      for (const application of body.applications ?? []) next[application.job_id] = application.status;
+      if (!signal?.aborted) setApplicationStatuses(next);
+    } catch (cause) {
+      if (!(cause instanceof Error && cause.name === "AbortError")) {
+        // Application status is supplementary; job discovery must remain usable.
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void loadApplicationStatuses(controller.signal);
+    const refresh = () => void loadApplicationStatuses();
+    window.addEventListener("focus", refresh);
+    return () => {
+      controller.abort();
+      window.removeEventListener("focus", refresh);
+    };
+  }, [loadApplicationStatuses]);
 
   useEffect(() => {
     if (!showLocationPanel) return;
@@ -559,8 +587,9 @@ export default function AllJobsPage() {
       {/* ── Job cards ── */}
       {!loading && filteredJobs.length > 0 && (
         <div className="space-y-3">
-          {filteredJobs.map((job) => (
-            <JobListCard
+          {filteredJobs.map((job) => {
+            const applicationStatus = applicationStatuses[job.id];
+            return <JobListCard
               key={job.id}
               title={
                 <Link
@@ -570,9 +599,17 @@ export default function AllJobsPage() {
                   {job.headline}
                 </Link>
               }
-              badges={
-                job.matchGrade ? (
-                  <span
+              badges={(applicationStatus || job.matchGrade) ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  {applicationStatus && (
+                    <span className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300">
+                      <ClipboardCheck size={13} aria-hidden="true" />
+                      {applicationStatus === "applied"
+                        ? t("jobs.applied")
+                        : t("jobs.appliedWithStatus", { status: t(`applications.status.${applicationStatus}`) })}
+                    </span>
+                  )}
+                  {job.matchGrade && <span
                     className={`flex-shrink-0 text-xs font-bold px-3 py-1 rounded-full ${
                       job.matchGrade === "A"
                         ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-300 dark:border-green-800/50"
@@ -582,9 +619,9 @@ export default function AllJobsPage() {
                     }`}
                   >
                     {job.matchGrade} {t("jobs.match")}
-                  </span>
-                ) : null
-              }
+                  </span>}
+                </div>
+              ) : null}
               leading={
                 <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-300 dark:text-white/20 overflow-hidden">
                   <Briefcase size={20} />
@@ -674,8 +711,8 @@ export default function AllJobsPage() {
                   </div>
                 ) : null
               }
-            />
-          ))}
+            />;
+          })}
         </div>
       )}
 

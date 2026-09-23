@@ -29,6 +29,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (req.method === "GET") {
       const jobId = Array.isArray(req.query.jobId) ? req.query.jobId[0] : req.query.jobId;
+      if (jobId === undefined) {
+        const { data, error } = await table().select("job_id,status").eq("user_id", user.id)
+          .order("updated_at", { ascending: false }).limit(500);
+        if (error) return res.status(503).json({ code: "loadError" });
+        return res.status(200).json({ applications: data ?? [] });
+      }
       if (!isJobId(jobId)) return res.status(400).json({ field: "jobId", code: "invalid" });
       const { data, error } = await table().select(columns).eq("user_id", user.id).eq("job_id", jobId).maybeSingle();
       if (error) return res.status(503).json({ code: "loadError" });

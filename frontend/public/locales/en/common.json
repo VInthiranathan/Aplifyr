@@ -205,6 +205,8 @@
     "addFavorite": "Add to favorites",
     "removeFavorite": "Remove from favorites",
     "match": "Match",
+    "applied": "Applied",
+    "appliedWithStatus": "Applied · {{status}}",
     "deadline": "Application deadline: {{date}}",
     "totalAds": "{{countLabel}} ads",
     "filteredTotalAds": "{{shown}} of {{total}} ads",
