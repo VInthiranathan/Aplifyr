@@ -17,12 +17,13 @@ import { getSupabaseBrowserClient, isSupabaseConfigured } from "../lib/supabaseC
 import Link from "next/link";
 import JobListCard from "../components/JobListCard";
 import { useFavorites } from "../lib/useFavorites";
-import { MapPin, Wifi, Briefcase, Bookmark, RefreshCw, Eye, FileText } from "lucide-react";
+import { MapPin, Wifi, Briefcase, Bookmark, RefreshCw, Eye, FileText, ClipboardCheck } from "lucide-react";
 import { formatLocation } from "../lib/utils";
 import { useMatchSession } from "../lib/matchSessionContext";
 import { getPublicBackendUrl } from "../lib/backendUrl";
 import { collectMatchSkills, matchProfileKey } from "../lib/matchProfile";
 import { useState, useEffect } from "react";
+import { useApplicationStatuses } from "../lib/useApplicationStatuses";
 
 const HOME_INITIAL_COUNT = 30;
 const HOME_VIEW_MORE_STEP = 15;
@@ -150,6 +151,7 @@ function HomeContent({ matchReq, preparedJobs: initialPreparedJobs, showDebug, p
   const [deletingCv, setDeletingCv] = useState<string | null>(null);
   const [deletingLetter, setDeletingLetter] = useState<string | null>(null);
   const [preparedError, setPreparedError] = useState("");
+  const applicationStatuses = useApplicationStatuses();
 
   // ── Session context — persists matched jobs across SPA navigations ────────
   const { getSession, updateSession } = useMatchSession();
@@ -529,8 +531,9 @@ function HomeContent({ matchReq, preparedJobs: initialPreparedJobs, showDebug, p
         {/* Matched job cards — sliced to visible count */}
         {matched.slice(0, visibleCount).length > 0 && (
           <div className="grid gap-4">
-            {matched.slice(0, visibleCount).map((job) => (
-              <JobListCard
+            {matched.slice(0, visibleCount).map((job) => {
+              const applicationStatus = applicationStatuses[job.id];
+              return <JobListCard
                 key={job.id}
                 leading={
                   <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-300 dark:text-white/20 overflow-hidden">
@@ -546,42 +549,52 @@ function HomeContent({ matchReq, preparedJobs: initialPreparedJobs, showDebug, p
                   </Link>
                 }
                 badges={
-                  <div className="relative group/grade flex-shrink-0">
-                    <span
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpenGradeId(openGradeId === job.id ? null : job.id);
-                      }}
-                      className={`text-xs font-bold px-3 py-1 rounded-full cursor-pointer ${
-                        job.matchGrade === "A"
-                          ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-300 dark:border-green-800/50"
-                          : job.matchGrade === "B"
-                            ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border border-yellow-300 dark:border-yellow-800/50"
-                            : "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border border-orange-300 dark:border-orange-800/50"
-                      }`}
-                    >
-                      {job.matchGrade} {t("home.match")}
-                    </span>
-                    {/* Score tooltip — visible on hover (desktop) or tap (mobile) */}
-                    <div
-                      className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20
+                  <div className="flex flex-wrap items-center gap-2">
+                    {applicationStatus && (
+                      <span className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300">
+                        <ClipboardCheck size={13} aria-hidden="true" />
+                        {applicationStatus === "applied"
+                          ? t("jobs.applied")
+                          : t("jobs.appliedWithStatus", { status: t(`applications.status.${applicationStatus}`) })}
+                      </span>
+                    )}
+                    <div className="relative group/grade flex-shrink-0">
+                      <span
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenGradeId(openGradeId === job.id ? null : job.id);
+                        }}
+                        className={`text-xs font-bold px-3 py-1 rounded-full cursor-pointer ${
+                          job.matchGrade === "A"
+                            ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-300 dark:border-green-800/50"
+                            : job.matchGrade === "B"
+                              ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border border-yellow-300 dark:border-yellow-800/50"
+                              : "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border border-orange-300 dark:border-orange-800/50"
+                        }`}
+                      >
+                        {job.matchGrade} {t("home.match")}
+                      </span>
+                      {/* Score tooltip — visible on hover (desktop) or tap (mobile) */}
+                      <div
+                        className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20
                         pointer-events-none transition-opacity duration-150
                         bg-gray-900 dark:bg-[#111] text-white text-xs rounded-xl p-3
                         shadow-xl border border-white/10 whitespace-nowrap
                         ${openGradeId === job.id ? 'opacity-100' : 'opacity-0 group-hover/grade:opacity-100'}`}
-                    >
-                      <div className="font-semibold text-white/90 mb-1.5">
-                        {t("home.gradeScoreLabel")}: {job.matchDebug.totalScore}
-                      </div>
-                      <div className="text-white/60">{job.matchDebug.scoreBreakdown}</div>
-                      <div className="text-white/60 mt-0.5">
-                        {locationTierLabel[job.matchDebug.locationTier] ?? job.matchDebug.locationTier}
-                      </div>
-                      {/* Caret pointing down */}
-                      <div
-                        className="absolute top-full left-1/2 -translate-x-1/2
+                      >
+                        <div className="font-semibold text-white/90 mb-1.5">
+                          {t("home.gradeScoreLabel")}: {job.matchDebug.totalScore}
+                        </div>
+                        <div className="text-white/60">{job.matchDebug.scoreBreakdown}</div>
+                        <div className="text-white/60 mt-0.5">
+                          {locationTierLabel[job.matchDebug.locationTier] ?? job.matchDebug.locationTier}
+                        </div>
+                        {/* Caret pointing down */}
+                        <div
+                          className="absolute top-full left-1/2 -translate-x-1/2
                           border-[5px] border-transparent border-t-gray-900 dark:border-t-[#111]"
-                      />
+                        />
+                      </div>
                     </div>
                   </div>
                 }
@@ -665,8 +678,8 @@ function HomeContent({ matchReq, preparedJobs: initialPreparedJobs, showDebug, p
                     </div>
                   ) : undefined
                 }
-              />
-            ))}
+              />;
+            })}
           </div>
         )}
 

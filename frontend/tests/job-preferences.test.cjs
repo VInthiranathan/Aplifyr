@@ -115,16 +115,17 @@ test('preference translations are complete in Swedish and English',()=>{
   assert.deepEqual(Object.keys(sv.preferences),Object.keys(en.preferences));
   assert.equal(sv.career.tabs.preferences,'Jobbpreferenser');
 });
-function home(fetch) {
+function home(fetch, applicationStatuses={}) {
   let poll; let session={matched:[],matchReqHash:''};
   const Component=load('pages/index.tsx',{
     '../lib/matchProfile':load('lib/matchProfile.ts'),
     '../lib/backendUrl':{getPublicBackendUrl:()=>''},
     '../lib/supabaseClient':{isSupabaseConfigured:false},
     '../lib/useFavorites':{useFavorites:()=>({toggleFavorite(){},isFavorite:()=>false})},
+    '../lib/useApplicationStatuses':{useApplicationStatuses:()=>applicationStatuses},
     '../lib/utils':{formatLocation:()=>''},
     '../lib/matchSessionContext':{useMatchSession:()=>({getSession:()=>session,updateSession:patch=>session={...session,...patch}})},
-    '../components/JobListCard':({title})=>React.createElement('article',null,title),
+    '../components/JobListCard':({title,badges})=>React.createElement('article',null,title,badges),
     'next/link':({children,href})=>React.createElement('a',{href},children),
     'next-i18next':{useTranslation:()=>({t:key=>key})},
     'next-i18next/serverSideTranslations':{serverSideTranslations:async()=>({})},
@@ -132,7 +133,7 @@ function home(fetch) {
   },{fetch,AbortController,process:{env:{}},setInterval:fn=>{poll=fn;return 1;},clearInterval(){},document:{visibilityState:'visible',addEventListener(){},removeEventListener(){}}}).default;
   return {Component,tick:()=>poll(),session:()=>session};
 }
-const homeProps=roles=>({profileId:'owner',matchReq:{roles},showDebug:false,progression:{applied:0,readyToApply:0,readyToGenerate:0}});
+const homeProps=roles=>({profileId:'owner',matchReq:{roles},preparedJobs:[],showDebug:false,progression:{applied:0,readyToApply:0,readyToGenerate:0}});
 const matchResponse=(name,complete=false)=>({ok:true,json:async()=>({matched:Array.from({length:30},(_,i)=>({id:String(i),headline:name+i,matchGrade:'B',matchDebug:{totalScore:2,scoreBreakdown:'',locationTier:'no_preference'}})),stats:{fetchComplete:complete},profileUsed:{desiredRolesSource:'roles'}})});
 test('home replaces matches after profile changes and refreshes a full page when polling adds jobs',async()=>{
   const requests=[];let revision=0;
@@ -158,5 +159,11 @@ test('home exposes a retry after failed matching and recovers',async()=>{
   await act(async()=>view.root.findAllByType('button').find(b=>b.props.children==='career.retry').props.onClick());
   assert.equal(view.root.findAllByProps({role:'alert'}).length,0);
   assert.equal(view.root.findAllByType('article').length,30);
+  await act(async()=>view.unmount());
+});
+test('home marks an applied job in the matched jobs list',async()=>{
+  const app=home(async()=>matchResponse('Matched',true),{'0':'applied'});let view;
+  await act(async()=>{view=create(React.createElement(app.Component,homeProps(['Developer'])));});
+  assert.ok(JSON.stringify(view.toJSON()).includes('jobs.applied'));
   await act(async()=>view.unmount());
 });
