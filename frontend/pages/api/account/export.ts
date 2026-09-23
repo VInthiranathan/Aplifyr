@@ -18,10 +18,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       'id,kind,title,organization,location,qualification,start_month,end_month,is_current,description,achievements,learned,skills,strengths,created_at,updated_at');
     const {data:aiConsent,error:consentError}=await supabase.rpc('export_ai_consents');
     if(consentError || !aiConsent || JSON.stringify(aiConsent).length>8*1024*1024) throw new Error('Consent export unavailable');
-    const [generatedCvs, generatedCoverLetters] = await Promise.all([
+    const [generatedCvs, generatedCoverLetters, jobApplicationsResult] = await Promise.all([
       readGeneratedCvs(supabase, user.id),
       readGeneratedCoverLetters(supabase, user.id),
+      supabase.from('job_applications')
+        .select('job_id,job_context,status,applied_at,next_step,next_step_at,notes,created_at,updated_at')
+        .eq('user_id', user.id).order('updated_at', { ascending: false }).limit(500),
     ]);
-    res.status(200).json({ generatedCvs, generatedCoverLetters, exportedAt: new Date().toISOString(), account: { id: user.id, email: user.email, createdAt: user.created_at }, profile, career, aiConsent });
+    if (jobApplicationsResult.error) throw new Error('Applications unavailable');
+    res.status(200).json({
+      generatedCvs,
+      generatedCoverLetters,
+      jobApplications: jobApplicationsResult.data ?? [],
+      exportedAt: new Date().toISOString(),
+      account: { id: user.id, email: user.email, createdAt: user.created_at },
+      profile,
+      career,
+      aiConsent,
+    });
   } catch { res.status(503).json({ error: 'Export temporarily unavailable' }); }
 }

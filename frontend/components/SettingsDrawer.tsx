@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { useTranslation } from "next-i18next";
 import { useRouter } from "next/router";
-import { Sun, Moon, LogOut, ShieldCheck, HelpCircle, X } from "lucide-react";
+import { Sun, Moon, LogOut, ShieldCheck, HelpCircle, X, Bookmark } from "lucide-react";
 import { Button } from "./ui/button";
 
 interface Props {
@@ -76,6 +76,9 @@ export default function SettingsDrawer({ open, onClose }: Props) {
         </div>
 
         <div className="flex flex-col gap-2 p-4 flex-1">
+          <Button asChild variant="secondary" className="w-full justify-start gap-2">
+            <Link href="/favorites" onClick={onClose}><Bookmark size={16} />{t('nav.favorites')}</Link>
+          </Button>
           <Button asChild variant="secondary" className="w-full justify-start gap-2">
             <Link href="/privacy#ai-consent" onClick={onClose}><ShieldCheck size={16} />{t('privacy.menu')}</Link>
           </Button>

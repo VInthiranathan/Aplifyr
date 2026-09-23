@@ -201,6 +201,28 @@ export interface PreparedJob {
   updated_at: string;
 }
 
+export type ApplicationStatus =
+  | 'applied'
+  | 'screening'
+  | 'interview'
+  | 'offer'
+  | 'accepted'
+  | 'rejected'
+  | 'withdrawn';
+
+/** User-owned record for tracking one submitted job application. */
+export interface JobApplication {
+  job_id: string;
+  job_context: CvJobContext;
+  status: ApplicationStatus;
+  applied_at: string;
+  next_step: string | null;
+  next_step_at: string | null;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface GeneratedCoverLetter {
   job_id: string;
   content: string;

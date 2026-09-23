@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useTranslation } from "next-i18next";
-import { Home, Bookmark, Briefcase, User } from "lucide-react";
+import { Home, ClipboardList, Briefcase, User } from "lucide-react";
 
 const tabs = [
   { key: "nav.home", href: "/", icon: Home },
-  { key: "nav.favorites", href: "/favorites", icon: Bookmark },
+  { key: "nav.applications", href: "/applications", icon: ClipboardList },
   { key: "nav.allJobs", href: "/jobs", icon: Briefcase },
   { key: "nav.userDetails", href: "/user", icon: User },
 ];

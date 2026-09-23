@@ -27,6 +27,13 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 - requires a signed-in session when Supabase is configured
 - see [Job preferences and matching](job-preferences-matching.md) for scoring, caching, pagination, and verification
 
+### Job application tracking
+
+- `/applications` shows owner-scoped submitted applications with process status, dates, next action and private notes
+- `/jobs/[id]` creates an application only after the user explicitly marks the job as applied
+- updates use optimistic concurrency; records are included in account export and remain until user/account deletion
+- see [Job application tracking](job-application-tracking.md) for routes, persistence, security and verification
+
 ### External Job Search
 
 - frontend page: `frontend/pages/jobs/index.tsx`

@@ -33,7 +33,8 @@ test('career pagination fails explicitly on repeated cursor or database error',a
 test('export verifies identity, ignores supplied owner, omits auth secrets and fails closed',async()=>{
   let user={id:'owner',email:'owner@example.test',created_at:'date',app_metadata:{secret:'SECRET'}};
   let fail=false;const calls=[];
-  const query={select:s=>{calls.push(['select',s]);return query;},eq:(...a)=>{calls.push(['eq',...a]);return query;},maybeSingle:async()=>({data:{id:'owner'},error:fail?{}:null})};
+  const query={select:s=>{calls.push(['select',s]);return query;},eq:(...a)=>{calls.push(['eq',...a]);return query;},order:()=>query,limit:()=>query,maybeSingle:async()=>({data:{id:'owner'},error:fail?{}:null})};
+  query.then=resolve=>Promise.resolve({data:[],error:fail?{}:null}).then(resolve);
   const handler=load('pages/api/account/export.ts',{
     '../../../lib/serverSupabase':{serverSupabase:()=>({auth:{getUser:async()=>({data:{user}})},from:()=>query,rpc:async()=>({data:{current:[],receipts:[]}})})},
     '../../../lib/readGeneratedCvs':{readGeneratedCvs:async(_client,owner)=>{assert.equal(owner,'owner');return [];}},

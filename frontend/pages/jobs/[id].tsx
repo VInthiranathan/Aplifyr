@@ -7,13 +7,14 @@ import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Briefcase, MapPin, Wifi, Loader2, Bookmark } from "lucide-react";
+import { Briefcase, MapPin, Wifi, Loader2, Bookmark, ClipboardCheck } from "lucide-react";
 import { getPublicBackendUrl } from "../../lib/backendUrl";
 import { formatLocation } from "../../lib/utils";
 import CoverLetterModal from "../../components/CoverLetterModal";
 import { Button } from "../../components/ui/button";
 import { getSupabaseBrowserClient } from "../../lib/supabaseClient";
 import { useFavorites } from "../../lib/useFavorites";
+import type { JobApplication } from "../../types/api";
 
 const BACKEND = getPublicBackendUrl();
 
@@ -50,6 +51,9 @@ export default function JobDetailPage() {
   const [letter, setLetter] = useState<string | null>(null);
   const [letterExpiresAt, setLetterExpiresAt] = useState<string | null>(null);
   const [deletingLetter, setDeletingLetter] = useState(false);
+  const [application, setApplication] = useState<JobApplication | null>(null);
+  const [applicationLoading, setApplicationLoading] = useState(true);
+  const [applicationSaving, setApplicationSaving] = useState(false);
   // debug toggle removed
   const [consentOpen, setConsentOpen] = useState(false);
   const requestGeneration = () => { if (!generating) { setShowModal(false); setConsentOpen(true); } };
@@ -176,6 +180,45 @@ export default function JobDetailPage() {
     });
     return () => { controller.abort(); generationRequest.current?.abort(); subscription.unsubscribe(); };
   }, [id, router.isReady, router.query.letter]);
+
+  useEffect(() => {
+    if (!router.isReady || typeof id !== "string" || !/^[A-Za-z0-9_-]{1,100}$/.test(id)) return;
+    const controller = new AbortController();
+    setApplication(null); setApplicationLoading(true);
+    void fetch(`/api/applications?jobId=${encodeURIComponent(id)}`, { signal: controller.signal })
+      .then(async response => response.ok ? (await response.json()).application : null)
+      .then(saved => { if (!controller.signal.aborted) setApplication(saved ?? null); })
+      .catch(error => { if (!(error instanceof Error && error.name === "AbortError")) setApplication(null); })
+      .finally(() => { if (!controller.signal.aborted) setApplicationLoading(false); });
+    return () => controller.abort();
+  }, [id, router.isReady]);
+
+  const markAsApplied = async () => {
+    if (!job || typeof id !== "string" || applicationSaving) return;
+    setApplicationSaving(true); setFetchError(null);
+    const today = new Date();
+    const appliedAt = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    try {
+      const response = await fetch("/api/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jobId: id,
+          appliedAt,
+          jobContext: {
+            id,
+            title: String(job.headline ?? job.title ?? t("jobDetail.defaultJobTitle")).slice(0, 200),
+            company: String(job.employer?.name ?? job.advertiser ?? "").slice(0, 200),
+            location: formatLocation(job.workplace_address).slice(0, 200),
+          },
+        }),
+      });
+      if (!response.ok) throw new Error("save");
+      setApplication((await response.json()).application as JobApplication);
+    } catch {
+      setFetchError(t("applications.markError"));
+    } finally { setApplicationSaving(false); }
+  };
 
   const generate = async () => {
     if (!job || generating) return;
@@ -482,6 +525,16 @@ export default function JobDetailPage() {
                         </>
                       );
                     })()}
+                    {!applicationLoading && (application ? (
+                      <Button asChild variant="secondary" className="h-auto w-full px-4 py-2.5">
+                        <Link href="/applications"><ClipboardCheck size={15} />{t("applications.openTracker")}</Link>
+                      </Button>
+                    ) : (
+                      <Button type="button" variant="secondary" disabled={applicationSaving} onClick={() => void markAsApplied()} className="h-auto w-full px-4 py-2.5">
+                        {applicationSaving ? <Loader2 size={14} className="animate-spin" /> : <ClipboardCheck size={15} />}
+                        {t(applicationSaving ? "applications.marking" : "applications.markApplied")}
+                      </Button>
+                    ))}
                   </div>
                 </div>
 

@@ -83,6 +83,9 @@ test('one job action opens the saved letter without requesting generation',async
  assert.equal(findButton(view,'jobDetail.generateCoverLetter'),undefined);
  await act(async()=>findButton(view,'coverLetter.openSaved').props.onClick());
  assert.equal(view.root.findByType('article').children[0],'Saved letter');
- assert.equal(calls.length,1);assert.equal(view.root.findAllByProps({'data-consent':true}).length,0);
+ assert.equal(calls.length,2);
+ assert.ok(calls.some(([url])=>url==='/api/applications?jobId=123'));
+ assert.ok(calls.some(([url])=>url==='/api/coverletters/123'));
+ assert.equal(view.root.findAllByProps({'data-consent':true}).length,0);
  await act(async()=>view.unmount());
 });

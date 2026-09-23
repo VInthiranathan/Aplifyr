@@ -40,7 +40,9 @@ The page loads plain-text, reviewed notices from server-side `PRIVACY_NOTICE_SV`
 
 `GET /api/account/export` uses cookie-aware `lib/serverSupabase.ts` with the anon key and `auth.getUser()`. Client-supplied owner IDs are ignored. Responses are `private, no-store`; POST and other methods return 405, unauthenticated calls 401, unavailable auth/database or incomplete reads 503 with generic errors.
 
-Response: `{ exportedAt, account: { id, email, createdAt }, profile, career, aiConsent, generatedCvs, generatedCoverLetters }`. Profile, career and active generated-document fields are explicitly selected. No full Auth object, tokens, hashes or admin metadata are exported. The browser adds `localFavorites` from the authenticated owner's storage key; unavailable/malformed storage becomes null, distinguishable from an empty list. The page downloads a JSON Blob, then revokes its object URL. It creates no export record on the server.
+Response: `{ exportedAt, account: { id, email, createdAt }, profile, career, aiConsent, generatedCvs, generatedCoverLetters, jobApplications }`. Profile, career, active generated-document and application-tracking fields are explicitly selected. No full Auth object, tokens, hashes or admin metadata are exported. The browser adds `localFavorites` from the authenticated owner's storage key; unavailable/malformed storage becomes null, distinguishable from an empty list. The page downloads a JSON Blob, then revokes its object URL. It creates no export record on the server.
+
+Application tracking stores job context, process status, dates, next action and optional notes as owner-scoped personal data. It is not sent to an AI provider. Records remain until the user deletes them or deletes the account; the operator must document the actual purpose, legal basis and organizational retention policy before launch. The implementation adds no bundled consent checkbox and does not claim that consent is the applicable legal basis.
 
 The profile export includes the four optional CV contact fields. During CV generation,
 the backend reads them with the owner's bearer session but excludes them from the Gemini
