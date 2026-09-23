@@ -9,7 +9,7 @@ The application tracker lets a signed-in user record a submitted job application
 - `/jobs/[id]` checks whether the current job already has an application record.
 - **Mark as applied** creates one idempotently with status `applied` and the user's local calendar date.
 - `/applications` lists the user's records and defaults to active processes.
-- `/jobs` fetches the signed-in user's application IDs and statuses once and marks matching job cards as **Applied** or **Applied · current status**. The job search remains usable if this supplementary status request fails and refreshes statuses when the window regains focus.
+- `/jobs` and the home page's **Matched jobs** tab fetch the signed-in user's application IDs and statuses and mark matching job cards as **Applied** or **Applied · current status**. Job discovery remains usable if this supplementary request fails. Statuses refresh when the window regains focus or a cached page is restored after back navigation.
 - Filters cover active, all and each individual status: applied, screening, interview, offer, accepted, rejected and withdrawn.
 - A record can be updated or permanently deleted. Optimistic concurrency prevents an older browser tab from overwriting a newer change.
 - On mobile, Applications is a primary bottom-navigation destination. Favorites remains available in the settings drawer; both remain present in the desktop sidebar.

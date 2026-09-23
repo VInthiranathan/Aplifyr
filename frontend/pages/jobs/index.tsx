@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import type { GetServerSideProps } from "next";
-import type { ApplicationStatus, ExternalJob, AFSearchResult } from "../../types/api";
+import type { ExternalJob, AFSearchResult } from "../../types/api";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import employmentOptionsData from "../../data/employment_types.json";
@@ -23,6 +23,7 @@ import { useRouter } from "next/router";
 import JobListCard from "../../components/JobListCard";
 import { Button } from "../../components/ui/button";
 import { useFavorites } from "../../lib/useFavorites";
+import { useApplicationStatuses } from "../../lib/useApplicationStatuses";
 
 export const getServerSideProps: GetServerSideProps = async ({ locale }) => ({
   props: { ...(await serverSideTranslations(locale ?? "en", ["common"])) },
@@ -88,34 +89,8 @@ export default function AllJobsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
-  const [applicationStatuses, setApplicationStatuses] = useState<Record<string, ApplicationStatus>>({});
+  const applicationStatuses = useApplicationStatuses();
   const LIMIT = 20;
-
-  const loadApplicationStatuses = useCallback(async (signal?: AbortSignal) => {
-    try {
-      const response = await fetch("/api/applications", { signal });
-      if (!response.ok) return;
-      const body = await response.json() as { applications?: Array<{ job_id: string; status: ApplicationStatus }> };
-      const next: Record<string, ApplicationStatus> = {};
-      for (const application of body.applications ?? []) next[application.job_id] = application.status;
-      if (!signal?.aborted) setApplicationStatuses(next);
-    } catch (cause) {
-      if (!(cause instanceof Error && cause.name === "AbortError")) {
-        // Application status is supplementary; job discovery must remain usable.
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    void loadApplicationStatuses(controller.signal);
-    const refresh = () => void loadApplicationStatuses();
-    window.addEventListener("focus", refresh);
-    return () => {
-      controller.abort();
-      window.removeEventListener("focus", refresh);
-    };
-  }, [loadApplicationStatuses]);
 
   useEffect(() => {
     if (!showLocationPanel) return;

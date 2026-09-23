@@ -10,6 +10,8 @@ test('application tracking is authenticated, conflict-aware and exported', () =>
   const page = read('pages/applications.tsx');
   const detail = read('pages/jobs/[id].tsx');
   const jobs = read('pages/jobs/index.tsx');
+  const home = read('pages/index.tsx');
+  const statusHook = read('lib/useApplicationStatuses.ts');
   const accountExport = read('pages/api/account/export.ts');
   assert.match(api, /auth\.getUser\(\)/);
   assert.match(api, /isSafeMutation/);
@@ -20,9 +22,14 @@ test('application tracking is authenticated, conflict-aware and exported', () =>
   assert.match(detail, /markAsApplied/);
   assert.match(api, /select\("job_id,status"\)/);
   assert.match(api, /\.limit\(500\)/);
-  assert.match(jobs, /fetch\("\/api\/applications"/);
+  assert.match(statusHook, /fetch\("\/api\/applications"/);
+  assert.match(statusHook, /addEventListener\("pageshow", refresh\)/);
+  assert.match(jobs, /useApplicationStatuses\(\)/);
   assert.match(jobs, /applicationStatuses\[job\.id\]/);
   assert.match(jobs, /jobs\.appliedWithStatus/);
+  assert.match(home, /useApplicationStatuses\(\)/);
+  assert.match(home, /applicationStatuses\[job\.id\]/);
+  assert.match(home, /jobs\.appliedWithStatus/);
   assert.match(accountExport, /jobApplications/);
 });
 
