@@ -11,7 +11,7 @@ function load(relative, mocks = {}, extra = {}) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true },
   }).outputText;
   const module = { exports: {} };
-  vm.runInNewContext(code, { module, exports: module.exports, require: name => mocks[name] ?? require(name), console, ...extra });
+  vm.runInNewContext(code, { module, exports: module.exports, require: name => mocks[name] ?? (name.endsWith('/serverSupabase') ? load('lib/serverSupabase.ts', mocks, extra) : require(name)), console, ...extra });
   return module.exports;
 }
 const validation = load('lib/jobPreferences.ts');
@@ -32,7 +32,7 @@ function api({user={id:'owner'}, data={id:'owner'}, error=null} = {}) {
   const handler=load('pages/api/profile.ts', {
     '../../lib/apiSecurity':load('lib/apiSecurity.ts'),
     '../../lib/jobPreferences':validation,
-    '@supabase/auth-helpers-nextjs':{createServerClient:()=>({...query,auth:{getUser:async()=>({data:{user}})}}), parseCookieHeader:()=>[], serializeCookieHeader:()=>''},
+    '@supabase/ssr':{createServerClient:()=>({...query,auth:{getUser:async()=>({data:{user}})}}), parseCookieHeader:()=>[], serializeCookieHeader:()=>''},
   }, {process:{env:{NEXT_PUBLIC_SUPABASE_URL:'https://example.test',NEXT_PUBLIC_SUPABASE_ANON_KEY:'test'}}}).default;
   return {calls, invoke:async(body=prefs, method='PATCH', headers={})=>{
     const res={headers:{}, setHeader(k,v){this.headers[k]=v;},getHeader(k){return this.headers[k];},status(code){this.code=code;return this;},json(body){this.body=body;}};
@@ -129,7 +129,7 @@ function home(fetch, applicationStatuses={}) {
     'next/link':({children,href})=>React.createElement('a',{href},children),
     'next-i18next':{useTranslation:()=>({t:key=>key})},
     'next-i18next/serverSideTranslations':{serverSideTranslations:async()=>({})},
-    '@supabase/auth-helpers-nextjs':{},
+    '@supabase/ssr':{},
   },{fetch,AbortController,process:{env:{}},setInterval:fn=>{poll=fn;return 1;},clearInterval(){},document:{visibilityState:'visible',addEventListener(){},removeEventListener(){}}}).default;
   return {Component,tick:()=>poll(),session:()=>session};
 }

@@ -55,9 +55,7 @@ public sealed class CvsController(IConfiguration configuration, AiPrivacyGate pr
         var content = CvEditing.Apply(row.GetProperty("content"), edits);
         // Compare-and-swap protects against edits, deletion and regeneration in another tab.
         // Only content and revision change: expiry and prepared-job markers are preserved.
-        var updated = await store.Request(path + "&updated_at=eq." + Uri.EscapeDataString(CvContent.Text(row, "updated_at")) +
-            "&select=job_id,content,job_context,metadata,created_at,updated_at,expires_at", HttpMethod.Patch,
-            new { content, updated_at = DateTimeOffset.UtcNow }, service: true);
+        var updated = await store.UpdateCv(jobId, CvContent.Text(row, "updated_at"), content);
         if (updated.GetArrayLength() != 1) throw new CvFailure(409, "editConflict");
         return Ok(new { job = updated[0].GetProperty("job_context"), cv = updated[0] });
     });
@@ -66,18 +64,19 @@ public sealed class CvsController(IConfiguration configuration, AiPrivacyGate pr
     public Task<IActionResult> Delete(string jobId) => Run(async () => {
         if (!ValidId(jobId)) throw new CvFailure(400, "invalidJob");
         var store = new CvStore(HttpContext, configuration);
-        await store.Request($"generated_cvs?user_id=eq.{store.UserId}&job_id=eq.{Uri.EscapeDataString(jobId)}", HttpMethod.Delete, service: true);
+        await store.DeleteCv(jobId);
         return Ok(new { deleted = true });
     });
 
+    [AiGeneration]
     [HttpPost("{jobId}/generate")]
     [RequestSizeLimit(1024)]
     public Task<IActionResult> Generate(string jobId) => Run(async () => {
         if (!ValidId(jobId)) throw new CvFailure(400, "invalidJob");
         GeminiProvider.CheckConfiguration(AiFeature.Cv);
         var store = new CvStore(HttpContext, configuration);
-        // A reviewed notice version specifically covering full career facts and transient CV generation is required.
-        var noticeVersion = configuration["GEMINI_CV_NOTICE_VERSION"];
+        // The shared reservation gate checks the current notice version for each external call.
+        var noticeVersion = AiPrivacyGate.DocumentNoticeVersion;
         if (string.IsNullOrWhiteSpace(noticeVersion)) throw new CvFailure(503, "configuration");
         var consent = await store.Request($"ai_consents?user_id=eq.{store.UserId}&provider=eq.gemini&select=notice_version,granted&limit=1");
         if (consent.GetArrayLength() != 1 || CvContent.Text(consent[0], "notice_version") != noticeVersion ||
@@ -115,16 +114,11 @@ public sealed class CvsController(IConfiguration configuration, AiPrivacyGate pr
         var metadata = new { schemaVersion = CvContent.Version, promptVersion = 4, groundingVersion = 1, provider = "gemini", model = Environment.GetEnvironmentVariable("GEMINI_MODEL"),
             sourceHash, jobHash, noticeVersion, sourceLimited = ranked.Length < career.Length || selectedFacts.Count < facts.Count || skills.Length > 100 || CvContent.Text(profile, "bio").Length > 800 || career.Any(e => new[] { "description", "achievements", "learned", "strengths" }.Any(field => CvContent.Text(e, field).Length > 800)) };
         var jobContext = Context(job);
-        var deadlineJson = await store.Request("rpc/save_generated_cv_v2", HttpMethod.Post, new {
-            p_user = store.UserId, p_job = jobId, p_content = content,
-            p_context = jobContext, p_metadata = metadata
-        }, service: true);
-        if (deadlineJson.ValueKind != JsonValueKind.String ||
-            !DateTimeOffset.TryParse(deadlineJson.GetString(), out var expiresAt))
+        var saved = await store.SaveCv(jobId, content, jobContext, metadata);
+        if (saved.ValueKind != JsonValueKind.Object || CvContent.Text(saved, "job_id") != jobId ||
+            !DateTimeOffset.TryParse(CvContent.Text(saved, "updated_at"), out _))
             throw new CvFailure(503, "storage");
-        var generatedAt = DateTimeOffset.UtcNow;
-        return Ok(new { job = jobContext, cv = new { job_id = jobId, content, job_context = jobContext, metadata,
-            created_at = generatedAt, updated_at = generatedAt, expires_at = expiresAt } });
+        return Ok(new { job = saved.GetProperty("job_context"), cv = saved });
     });
 
     private async Task<IActionResult> Run(Func<Task<IActionResult>> action)

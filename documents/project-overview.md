@@ -77,7 +77,7 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 - TypeScript
 - Tailwind CSS
 - next-i18next for English and Swedish translations
-- Supabase auth helpers for browser and server-side auth handling
+- `@supabase/ssr` for browser/server auth; shared `lib/serverSupabase.ts` for API and SSR cookies
 - mobile-first app shell with safe-area-aware top and bottom navigation, contained page scrolling, responsive filters, and bottom-sheet dialogs; see [Mobile app experience](mobile-app-experience.md)
 
 ### Backend
@@ -120,3 +120,9 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 - `documents/`: setup guides, review notes, and project documentation
 
 The job page reuses its cover-letter button to open an existing letter. The letter modal exports its current text as a local PDF; see [cover-letter setup](cover-letter-setup.md).
+
+## Security hardening — 2026-09-26 (prepared, not deployed)
+
+Backend endpoints now require verified authentication by default; public controllers explicitly opt out. Authentication, generation and document/public traffic have separate admission limits. `CvStore` exposes named, owner-bound write operations. Generated CV responses use the database revision so an immediate edit does not conflict with a fabricated timestamp. Frontend SSR auth and application pagination share implementations; job-ad rendering is extracted to `components/JobAdContent.tsx`.
+
+The accompanying migration tightens grants, validates legacy constraints, enforces the application quota and adds version-bound AI reservations. CI adds secret and dependency checks. The current code requires document notice `2026-09-documents-v2`; the migration deliberately leaves it disabled. See the [rollout section in the runbook](gdpr-supabase-runbook.md#9-härdning-2026-09-26--förberedd-utrullning) for ordering and outstanding production work. Large controllers/pages and client-supplied cover-letter facts remain incremental refactoring work; this is not a complete architectural rewrite.

@@ -6,11 +6,7 @@ import type {
   PreparedJob,
 } from "../types/api";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
-import {
-  createServerClient,
-  parseCookieHeader,
-  serializeCookieHeader,
-} from "@supabase/auth-helpers-nextjs";
+import { serverSupabase } from "../lib/serverSupabase";
 import { useTranslation } from "next-i18next";
 import { isDebugUiEnabled } from "../lib/backendUrl";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "../lib/supabaseClient";
@@ -49,33 +45,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
   let preparedJobs: PreparedJob[] = [];
 
   if (isSupabaseConfigured) {
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
-      {
-        cookies: {
-          getAll() {
-            return parseCookieHeader(req.headers.cookie ?? "").map((c) => ({
-              name: c.name,
-              value: c.value ?? "",
-            }));
-          },
-          setAll(cookies) {
-            const setCookie = cookies.map(({ name, value, options }) =>
-              serializeCookieHeader(name, value, options),
-            );
-            const existing = res.getHeader("Set-Cookie");
-            const existingArray =
-              typeof existing === "string"
-                ? [existing]
-                : Array.isArray(existing)
-                  ? existing
-                  : [];
-            res.setHeader("Set-Cookie", [...existingArray, ...setCookie]);
-          },
-        },
-      },
-    );
+    const supabase = serverSupabase(req, res);
 
     const {
       data: { user },

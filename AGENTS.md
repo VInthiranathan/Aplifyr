@@ -377,3 +377,12 @@ Before marking work complete:
 7. report what changed, what was validated, and anything still unverified
 
 A feature is not complete if required documentation is stale or relevant validation has not been considered.
+
+## 16. Shared security boundaries
+
+- Backend endpoints are authenticated by default. Public endpoints require explicit `AllowAnonymous` metadata and a review of exposed data; do not restore a path-based private allowlist.
+- Keep privileged document writes behind named owner-bound `CvStore` operations. Responses that support optimistic edits must use the persisted database revision.
+- Use `lib/serverSupabase.ts` for frontend API/SSR auth and `lib/readApplications.ts` for complete application reads; preserve cookie refresh, no-store and explicit pagination errors.
+- Keep document notice constants aligned across frontend/backend and reserve every provider attempt against that version. New processing requires a reviewed new notice, not modification of accepted text.
+- Database quotas must also apply to direct client writes. Run the hardening database and authentication boundary regressions when changing these mechanisms.
+- Follow the rollout section of `documents/gdpr-supabase-runbook.md` for migrations and production checks; prepared SQL is not evidence of a completed live rollout.

@@ -154,6 +154,7 @@
     "markApplied": "Markera som ansökt",
     "marking": "Sparar…",
     "markError": "Jobbet kunde inte markeras som ansökt. Försök igen.",
+    "capacity": "Du har nått gränsen på 1 000 sparade ansökningar. Exportera vid behov och radera ansökningar du inte längre behöver innan du lägger till fler.",
     "openTracker": "Öppna i Mina ansökningar"
   },
   "favorites": {

@@ -50,7 +50,7 @@ public class CoverLettersController : ControllerBase
         try
         {
             var store = new CvStore(HttpContext, _configuration);
-            await store.Request($"generated_cover_letters?user_id=eq.{store.UserId}&job_id=eq.{Uri.EscapeDataString(jobId)}", HttpMethod.Delete, service: true);
+            await store.DeleteLetter(jobId);
             return Ok(new { deleted = true });
         }
         catch (CvFailure failure)
@@ -59,6 +59,7 @@ public class CoverLettersController : ControllerBase
         }
     }
 
+    [AiGeneration]
     [HttpPost("generate-all")]
     [RequestSizeLimit(64 * 1024)]
     public async Task<IActionResult> GenerateAll([FromBody] JsonElement request)
@@ -218,13 +219,8 @@ public class CoverLettersController : ControllerBase
         try
         {
             var store = new CvStore(HttpContext, _configuration);
-            var deadline = await store.Request("rpc/save_generated_cover_letter", HttpMethod.Post, new {
-                p_user = store.UserId,
-                p_job = jobId,
-                p_content = content,
-                p_context = new { id = jobId, title, company = employer, location },
-                p_metadata = new { provider }
-            }, service: true);
+            var deadline = await store.SaveLetter(jobId, content,
+                new { id = jobId, title, company = employer, location }, new { provider });
             return deadline.ValueKind == JsonValueKind.String && DateTimeOffset.TryParse(deadline.GetString(), out var expiresAt)
                 ? expiresAt : null;
         }

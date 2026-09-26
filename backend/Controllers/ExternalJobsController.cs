@@ -6,6 +6,8 @@ using System.Text.Json;
 
 namespace Aplifyr.Api.Controllers;
 
+[Microsoft.AspNetCore.Authorization.AllowAnonymous]
+[Microsoft.AspNetCore.Http.Timeouts.RequestTimeout("job-search")]
 [ApiController]
 [Route("api/[controller]")]
 public partial class ExternalJobsController : ControllerBase

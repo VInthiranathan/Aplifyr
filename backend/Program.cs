@@ -41,26 +41,38 @@ else
 }
 
 builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 128 * 1024);
-builder.Services.AddHttpClient("supabase-auth", client => client.Timeout = TimeSpan.FromSeconds(10))
+builder.Services.AddHttpClient("supabase-auth", client => {
+    client.Timeout = TimeSpan.FromSeconds(10);
+    client.MaxResponseContentBufferSize = 32768;
+})
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
-// Fixed process-wide partitions bound anonymous traffic and AI costs without trusting forwarded IPs.
 builder.Services.AddRateLimiter(options => {
     options.RejectionStatusCode = 429;
-    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context => {
-        var ai = context.Request.Path.StartsWithSegments("/api/coverletters") || context.Request.Path.StartsWithSegments("/api/cvs");
-        return RateLimitPartition.GetFixedWindowLimiter(ai ? "ai" : "api", _ => new FixedWindowRateLimiterOptions {
-            PermitLimit = ai ? 10 : 120, Window = TimeSpan.FromMinutes(1), QueueLimit = 0,
-        });
-    });
-    options.GlobalLimiter = PartitionedRateLimiter.CreateChained(options.GlobalLimiter,
-        PartitionedRateLimiter.Create<HttpContext, string>(_ => RateLimitPartition.GetConcurrencyLimiter("requests",
-            _ => new ConcurrencyLimiterOptions { PermitLimit = 8, QueueLimit = 0 })));
+    options.GlobalLimiter = RequestLimits.Create();
+    options.OnRejected = (context, _) => {
+        context.HttpContext.Response.Headers.RetryAfter = "60";
+        return ValueTask.CompletedTask;
+    };
+});
+builder.Services.AddAuthorization(options => options.FallbackPolicy =
+    new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
+// Opt in only after the hosting proxy addresses have been verified. Never trust arbitrary X-Forwarded-For.
+var trustedProxies = (builder.Configuration["TRUSTED_PROXY_ADDRESSES"] ?? "")
+    .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+    .Select(value => System.Net.IPAddress.Parse(value)).ToArray();
+if (trustedProxies.Length > 0) builder.Services.Configure<ForwardedHeadersOptions>(options => {
+    options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor;
+    options.ForwardLimit = 1;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+    foreach (var address in trustedProxies) options.KnownProxies.Add(address);
 });
 builder.Services.AddMemoryCache(options => options.SizeLimit = 32);
 builder.Services.AddHttpClient("privacy-db", client => { client.Timeout = TimeSpan.FromSeconds(5); client.MaxResponseContentBufferSize = 32768; })
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddSingleton<AiPrivacyGate>();
 builder.Services.AddControllers();
+builder.Services.AddRequestTimeouts(options => options.AddPolicy("job-search", TimeSpan.FromSeconds(30)));
 builder.Services.AddHostedService<Aplifyr.Api.Cv.AiProviderDiagnostics>();
 
 var configuredOrigins = builder.Configuration
@@ -102,9 +114,13 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader()));
 
 var app = builder.Build();
+if (trustedProxies.Length > 0) app.UseForwardedHeaders();
+app.UseRouting();
+app.UseRequestTimeouts();
 app.UseCors("AllowFrontend");
-app.UseRateLimiter();
 app.UseMiddleware<AiAuthenticationMiddleware>();
+app.UseAuthorization();
+app.UseRateLimiter();
 app.MapControllers();
-app.MapGet("/", () => Results.Ok(new { status = "OK", service = "Aplifyr.Api" }));
+app.MapGet("/", () => Results.Ok(new { status = "OK", service = "Aplifyr.Api" })).AllowAnonymous();
 app.Run();

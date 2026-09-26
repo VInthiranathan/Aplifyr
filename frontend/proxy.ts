@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import {contentSecurityPolicy} from './lib/contentSecurityPolicy'
 import type { NextRequest } from 'next/server'
-import { createServerClient } from '@supabase/auth-helpers-nextjs'
+import { createServerClient } from '@supabase/ssr'
 
 const PUBLIC_PATHS = ['/auth', '/privacy']
 
@@ -30,7 +30,7 @@ export async function proxy(req: NextRequest) {
   const nonce = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))))
   const headers = new Headers(req.headers)
   headers.set('x-csp-nonce', nonce)
-  const res = NextResponse.next({ request: { headers } })
+  let res = NextResponse.next({ request: { headers } })
   if (!asset) {
     res.headers.set('Content-Security-Policy', contentSecurityPolicy(nonce, process.env.NODE_ENV === 'production', process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_BACKEND_URL))
     res.headers.set('Cache-Control', 'private, no-store')
@@ -59,9 +59,18 @@ export async function proxy(req: NextRequest) {
         return req.cookies.getAll()
       },
       setAll(cookies) {
+        cookies.forEach(({ name, value }) => req.cookies.set(name, value))
+        headers.set('cookie', req.cookies.toString())
+        const previous = res
+        res = NextResponse.next({ request: { headers } })
+        previous.headers.forEach((value, key) => {
+          if (!key.startsWith('x-middleware-') && key !== 'set-cookie') res.headers.set(key, value)
+        })
+        previous.cookies.getAll().forEach(cookie => res.cookies.set(cookie))
         cookies.forEach(({ name, value, options }) => {
           res.cookies.set(name, value, options)
         })
+        res.headers.set('Cache-Control', 'private, no-store')
       },
     },
   })
@@ -84,7 +93,10 @@ export async function proxy(req: NextRequest) {
   const redirectUrl = req.nextUrl.clone()
   redirectUrl.pathname = '/auth'
   redirectUrl.search = ''
-  return NextResponse.redirect(redirectUrl)
+  const redirect = NextResponse.redirect(redirectUrl)
+  res.cookies.getAll().forEach(cookie => redirect.cookies.set(cookie))
+  redirect.headers.set('Cache-Control', 'private, no-store')
+  return redirect
 }
 
 export const config = {

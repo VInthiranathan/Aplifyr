@@ -20,8 +20,8 @@ test('application tracking is authenticated, conflict-aware and exported', () =>
   assert.match(page, /getServerSideProps/);
   assert.match(page, /applications\.status/);
   assert.match(detail, /markAsApplied/);
-  assert.match(api, /select\("job_id,status"\)/);
-  assert.match(api, /\.limit\(500\)/);
+  assert.match(api, /readApplicationStatuses/);
+  assert.doesNotMatch(api, /\.limit\(500\)/);
   assert.match(statusHook, /fetch\("\/api\/applications"/);
   assert.match(statusHook, /addEventListener\("pageshow", refresh\)/);
   assert.match(jobs, /useApplicationStatuses\(\)/);
