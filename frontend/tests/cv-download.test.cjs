@@ -39,8 +39,9 @@ test('CV preview and PDF include optional contact details as readable ATS text',
 });
 
 test('CV contact details are attached after generation and excluded from Gemini input',()=>{
- const controller=fs.readFileSync(path.join(__dirname,'../../backend/Controllers/CvsController.cs'),'utf8');
+ const controller=fs.readFileSync(path.join(__dirname,'../../backend/Cv/CvApplicationService.cs'),'utf8');
  const payload=controller.slice(controller.indexOf('var data = JsonSerializer.Serialize'),controller.indexOf('if (data.Length > 90000)'));
+ assert.ok(payload.length > 100);
  assert.doesNotMatch(payload,/contact_email|phone|website_url|linkedin_url/);
  const content=fs.readFileSync(path.join(__dirname,'../../backend/Cv/CvContent.cs'),'utf8');
  for(const field of ['contact_email','phone','website_url','linkedin_url'])assert.match(content,new RegExp(`Text\\(profile, "${field}"\\)`));

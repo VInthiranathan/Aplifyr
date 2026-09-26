@@ -11,7 +11,17 @@ function load(relative, mocks = {}, extra = {}) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true },
   }).outputText;
   const module = { exports: {} };
-  vm.runInNewContext(code, { module, exports: module.exports, require: name => mocks[name] ?? (name.endsWith('/serverSupabase') ? load('lib/serverSupabase.ts', mocks, extra) : require(name)), console, ...extra });
+  vm.runInNewContext(code, { module, exports: module.exports, require: name => {
+    if(name in mocks) return mocks[name];
+    const key = Object.keys(mocks).find(key => key.startsWith('.') && name.startsWith('.') && key.replace(/^(\.\.\/)+/, '') === name.replace(/^(\.\.\/)+/, ''));
+    if(key) return mocks[key];
+    if(name.startsWith('.')) {
+      const base = path.resolve(__dirname, '..', path.dirname(relative), name);
+      const file = ['.ts', '.tsx'].map(ext=>base+ext).find(file=>fs.existsSync(file));
+      if(file) return load(path.relative(path.resolve(__dirname,'..'),file), mocks, extra);
+    }
+    return require(name);
+  }, console, ...extra });
   return module.exports;
 }
 const validation = load('lib/jobPreferences.ts');

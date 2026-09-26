@@ -386,3 +386,10 @@ A feature is not complete if required documentation is stale or relevant validat
 - Keep document notice constants aligned across frontend/backend and reserve every provider attempt against that version. New processing requires a reviewed new notice, not modification of accepted text.
 - Database quotas must also apply to direct client writes. Run the hardening database and authentication boundary regressions when changing these mechanisms.
 - Follow the rollout section of `documents/gdpr-supabase-runbook.md` for migrations and production checks; prepared SQL is not evidence of a completed live rollout.
+
+## 17. Application and page boundaries
+
+- Keep generation/matching workflow code in `CvApplicationService`, `LetterApplicationService` and `JobMatchingService`; controllers retain transport, authentication and error mapping. Register injectable services through `ApplicationServices`.
+- Reuse `JobMatchingRules` for CV relevance instead of referencing another controller. Keep request/cache state out of static scoring/catalog code.
+- Home/search/detail pages compose `frontend/features/home` and `frontend/features/jobs` hooks/components. Keep SSR at the route, async lifecycles in hooks, and section rendering in components.
+- Preserve provider reservation, owner identity, cancellation, optimistic revisions, cache gates and sanitized HTML when moving code. Run behavior tests plus the production build on the final tree before publishing; earlier successful builds do not cover later edits.

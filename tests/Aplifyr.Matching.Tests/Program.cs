@@ -1,3 +1,4 @@
+using Aplifyr.Api.Jobs;
 using Aplifyr.Api.Controllers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -138,16 +139,23 @@ static class Program
         foreach(var test in tests) { await test.Run(); Console.WriteLine($"PASS {test.Name}"); }
         Console.WriteLine($"{tests.Length} matching regression tests passed.");
     }
-    sealed class Fake(Func<string,int,string> respond) : ExternalJobsController(new MemoryCache(new MemoryCacheOptions()), NullLogger<ExternalJobsController>.Instance)
+    sealed class Fake : ExternalJobsController
+    {
+        private readonly FakeMatches matches;
+        public List<(string Query,int Offset)> Calls => matches.Calls;
+        public bool Delay { get => matches.Delay; init => matches.Delay=value; }
+        public Fake(Func<string,int,string> respond) : this(new FakeMatches(respond)) { }
+        private Fake(FakeMatches service) : base(service,NullLogger<ExternalJobsController>.Instance) { matches=service; ControllerContext=new ControllerContext {HttpContext=new DefaultHttpContext()}; }
+    }
+    sealed class FakeMatches(Func<string,int,string> respond) : JobMatchingService(new MemoryCache(new MemoryCacheOptions()), new HttpClient())
     {
         public List<(string Query,int Offset)> Calls {get;}=new();
-        public bool Delay {get;init;}
-        protected override async Task<string> FetchAfSearchPageRawAsync(string searchTerm,int offset,int limit)
+        public bool Delay {get;set;}
+        protected override async Task<string> FetchAfSearchPageRawAsync(string searchTerm,int offset,int limit,CancellationToken cancellation)
         {
             Calls.Add((searchTerm,offset));
-            if(Delay) await Task.Delay(20);
+            if(Delay) await Task.Delay(20,cancellation);
             return respond(searchTerm,offset);
         }
-
     }
 }

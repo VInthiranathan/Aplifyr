@@ -1,3 +1,4 @@
+using Aplifyr.Api;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using Aplifyr.Api.Security;
@@ -71,6 +72,7 @@ builder.Services.AddMemoryCache(options => options.SizeLimit = 32);
 builder.Services.AddHttpClient("privacy-db", client => { client.Timeout = TimeSpan.FromSeconds(5); client.MaxResponseContentBufferSize = 32768; })
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddSingleton<AiPrivacyGate>();
+builder.Services.AddApplicationServices();
 builder.Services.AddControllers();
 builder.Services.AddRequestTimeouts(options => options.AddPolicy("job-search", TimeSpan.FromSeconds(30)));
 builder.Services.AddHostedService<Aplifyr.Api.Cv.AiProviderDiagnostics>();

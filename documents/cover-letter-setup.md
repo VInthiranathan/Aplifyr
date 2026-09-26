@@ -94,3 +94,7 @@ modal (existing behavior); exporting does not persist them or extend seven-day s
 ## Hardening rollout
 
 The September 26 migration creates the replacement notice disabled; review/activation and fresh user consent are required. The API does not silently accept the older transient-output notice. `CvStore.SaveLetter` and `DeleteLetter` derive the owner from the verified session. Letter profile/job facts are still bounded client-supplied inputs; they are not an authoritative profile lookup or proof that a statement is true.
+
+## Application-service boundary
+
+The controller delegates generation to `LetterApplicationService`. `LetterJobFacts` parses allowlisted ad fields, `LetterPrompt` contains the language/injection/grounding instructions, and `LetterProvider` performs provider calls with a separate reservation per attempt. HTTP status mapping and private-cache headers remain at the controller. Existing result arrays, expiry and optional-provider behavior are preserved; no fallback is enabled by this extraction. The frontend `useCoverLetter` hook owns retrieval, consent-dialog state, generation, cancellation and deletion; the job page composes its UI.

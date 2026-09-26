@@ -168,7 +168,7 @@ Kod och migration är förberedda i en separat arbetskopia. Produktionsdatabas, 
 | F8 nya rutter | Auth som standard, explicit publik metadata | Normal deploy/HTTP-prov |
 | F9 lösenord | Operatörssteg specificerat ovan | Hosted-inställning och eventuell planfråga |
 | F10 tester | Databas-, HTTP-, limiter-, pagination- och cookie-regression; security-CI | Hosted CI och full stagingkedja |
-| F11 ansvar | Gemensam auth/pagination/validering, ägarbundna skrivmetoder, separat annonsrendering | Fortsatt stegvis uppdelning av större controllers/sidflöden |
+| F11 ansvar | Gemensam auth/pagination/validering; separata CV-, brev- och matchningstjänster; uppdelade hem-/sök-/jobbflöden | Hosted kontroll av oförändrade flöden efter godkänd deploy |
 | F12 driftavvikelser | Index/constraint/policy-migration samt dokumenterad ledger-avvikelse | Verifierad historikavstämning och migration |
 
 ### Lokal verifiering av härdningen
@@ -176,3 +176,9 @@ Kod och migration är förberedda i en separat arbetskopia. Produktionsdatabas, 
 Frontend: 88 tester passerade, inklusive uppgradering i PGlite, direktkvoter, 601-posters export, ägarfilter och sessionsförnyelse; produktionsbygget passerade. Backend: Release-build utan varningar/fel, 27 autentiseringsgränsfall samt separata tester av verklig lokal HTTP-routing, limiter, samtyckesreservation och ägarbunden dokumenttransport passerade. Dessutom passerade 93 CV-kontroller och 16 matchningsregressioner. npm:s produktionsaudit och NuGets transitiva audit rapporterade inga kända sårbarheter vid körningen.
 
 PGlite-kedjan kör alla föregående schemamigrationer med syntetiska legacy-data; pg_cron-delen kan inte köras i PGlite och utelämnas. Detta är inte en full Supabase-stagingmiljö. GitHub Actions/secret-skanningen, Docker, verkliga provideranrop och autentiserade produktionsflöden har inte körts som del av denna härdning. De måste verifieras vid godkänd utrullning.
+
+### Publicerad granskningsbranch och fortsatt uppdelning
+
+Ändringarna publiceras på `fix/architecture-security-hardening` i utkast-PR #31. Det innebär inte merge till main. Första PR-körningen hade godkända backend-/Docker-/säkerhetskontroller och 88 frontendtester men frontendbygget stoppades av en saknad `safeHtml`-import efter en sen importändring. Importen har återställts; saneringen behålls. Uppdelningen av controllers och sidflöden kräver nya tester/bygge på den uppdaterade committen, inte återanvändning av det tidigare byggresultatet.
+
+Lokal kontroll efter uppdelningen: 89 frontendtester, TypeScript och frontendens produktionsbygge passerade. Backendens Release-build samt säkerhets-, 93 CV- och 16 matchningskontroller passerade. Säkerhetstestet provar också faktisk HTTP-routing och dependency injection för de nya CV-/brev-/matchningstjänsterna med syntetiska ogiltiga indata. Ett nytt hook-test kontrollerar att ett gammalt söksvar inte skriver över ett nyare. Jobb- och CV-rutterna laddas även med require(ESM) avstängt. Ny hosted CI ska verifieras på den publicerade uppföljningscommitten.

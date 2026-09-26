@@ -364,3 +364,7 @@ Supabase mutations or authenticated visual browser checks were performed.
 Migration `20260926051754_security_hardening_and_document_revisions.sql` adds `save_generated_cv_v3`, which returns the persisted row inside the save transaction. Generate responds with that exact `updated_at`, content and expiry; immediate PATCH therefore uses a real database revision. Editing remains owner/version/expiry filtered and does not extend retention. `CvStore` has separate owner-bound update/delete/save methods rather than a public arbitrary privileged write method.
 
 Every external call now reserves via `reserve_ai_call_v2` with the pinned document notice version. Historical activation statements above describe earlier deployments, not approval of the new notice. The new migration inserts an inactive replacement; generation remains unavailable until the rollout is completed. Local database regression tests cover immediate edit, stale edit, expiry preservation and old/current/withdrawn consent.
+
+## Application-service boundary
+
+`CvsController` now owns HTTP/authentication/error/timeout handling and delegates Get/Edit/Delete/Generate to `CvApplicationService`. `CanonicalJobClient` fetches current ads with the same bounded timeout/response settings. The service retains consent, grounding, source-hash recheck and persisted revision behavior. Skill matching calls the pure `JobMatchingRules`, not another controller. `ApplicationServices` registers these dependencies for the API and HTTP regression host.

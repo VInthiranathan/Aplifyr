@@ -1,3 +1,4 @@
+using Aplifyr.Api;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -61,7 +62,9 @@ Environment.SetEnvironmentVariable("AI_ALLOWED_PROVIDERS", "gemini");
 Environment.SetEnvironmentVariable("GEMINI_API_KEY", "letter-fixture");
 Environment.SetEnvironmentVariable("GEMINI_MODEL", null);
 var letters = new Aplifyr.Api.Controllers.CoverLettersController(
- Microsoft.Extensions.Logging.Abstractions.NullLogger<Aplifyr.Api.Controllers.CoverLettersController>.Instance, gate, privacyConfig) {
+ new Aplifyr.Api.Letters.LetterApplicationService(privacyConfig,
+ new Aplifyr.Api.Letters.LetterProvider(new HttpClient(), gate, Microsoft.Extensions.Logging.Abstractions.NullLogger<Aplifyr.Api.Letters.LetterProvider>.Instance),
+ Microsoft.Extensions.Logging.Abstractions.NullLogger<Aplifyr.Api.Letters.LetterApplicationService>.Instance), privacyConfig) {
  ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext { HttpContext = privacyContext }
 };
 using var letterRequest = System.Text.Json.JsonDocument.Parse("{\"jobs\":[{\"id\":\"synthetic-job\",\"title\":\"Synthetic role\",\"description\":\"Synthetic job\"}]}");
@@ -81,6 +84,10 @@ hostBuilder.Configuration.AddInMemoryCollection(new Dictionary<string,string?> {
 });
 hostBuilder.Services.AddSingleton<IHttpClientFactory>(new FakeFactory(HttpStatusCode.OK,"{\"id\":\"11111111-1111-4111-8111-111111111111\"}"));
 hostBuilder.Services.AddAuthorization(options=>options.FallbackPolicy=new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
+hostBuilder.Services.AddMemoryCache();
+hostBuilder.Services.AddSingleton(gate);
+hostBuilder.Services.AddApplicationServices();
+hostBuilder.Services.AddControllers().AddApplicationPart(typeof(Aplifyr.Api.Controllers.CvsController).Assembly);
 await using(var host=hostBuilder.Build()) {
  host.Urls.Add("http://127.0.0.1:0");
  host.UseRouting();
@@ -88,12 +95,18 @@ await using(var host=hostBuilder.Build()) {
  host.UseAuthorization();
  host.MapGet("/future-private",()=>"private");
  host.MapGet("/health",()=>"ok").AllowAnonymous();
+ host.MapControllers();
  await host.StartAsync();
  using var client=new HttpClient {BaseAddress=new Uri(host.Urls.Single())};
  if((await client.GetAsync("/health")).StatusCode!=HttpStatusCode.OK)throw new Exception("Public health blocked");
  if((await client.GetAsync("/future-private")).StatusCode!=HttpStatusCode.Unauthorized)throw new Exception("New route public by default");
  client.DefaultRequestHeaders.Authorization=new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer","fixture");
  if((await client.GetAsync("/future-private")).StatusCode!=HttpStatusCode.OK)throw new Exception("Verified user rejected");
+ if((await client.GetAsync("/api/cvs/invalid!")).StatusCode!=HttpStatusCode.BadRequest)throw new Exception("CV service/controller registration or validation failed");
+ using var invalidLetter=new StringContent("[]",System.Text.Encoding.UTF8,"application/json");
+ if((await client.PostAsync("/api/coverletters/generate-all",invalidLetter)).StatusCode!=HttpStatusCode.BadRequest)throw new Exception("Letter service/controller registration or validation failed");
+ using var invalidMatch=new StringContent("{\"roles\":[null]}",System.Text.Encoding.UTF8,"application/json");
+ if((await client.PostAsync("/api/externaljobs/match",invalidMatch)).StatusCode!=HttpStatusCode.BadRequest)throw new Exception("Matching service/controller registration or validation failed");
  await host.StopAsync();
 }
 Console.WriteLine("PASS: Real HTTP protects new endpoints by default and preserves explicit public access");
