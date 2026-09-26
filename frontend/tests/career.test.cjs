@@ -13,7 +13,7 @@ function load(relative, imports = {}, environment = {}) {
   }).outputText;
   const module = { exports: {} };
   vm.runInNewContext(code, {
-    module, exports: module.exports, require: name => imports[name] ?? require(name),
+    module, exports: module.exports, require: name => imports[name] ?? (name === '../../lib/serverSupabase' ? load('lib/serverSupabase.ts', imports, environment) : name === '../../lib/apiSecurity' ? load('lib/apiSecurity.ts') : require(name)),
     process: { env: environment }, Date, Error, console,
   }, { filename });
   return module.exports;
@@ -64,7 +64,7 @@ function api({ user = { id: 'owner' }, data = { ...valid, id, updated_at }, erro
   const handler = load('pages/api/career.ts', {
     '../../lib/careerValidation': validation,
     '../../lib/readCareerEntries': load('lib/readCareerEntries.ts'),
-    '@supabase/auth-helpers-nextjs': {
+    '@supabase/ssr': {
       createServerClient: () => ({ auth: { getUser: async () => ({ data: { user }, error: null }) }, from: () => query }),
       parseCookieHeader: () => [], serializeCookieHeader: () => '',
     },

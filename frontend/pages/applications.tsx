@@ -1,5 +1,5 @@
 import type { GetServerSideProps } from "next";
-import { createServerClient, parseCookieHeader, serializeCookieHeader } from "@supabase/auth-helpers-nextjs";
+import { serverSupabase } from "../lib/serverSupabase";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
 import { useMemo, useState } from "react";
@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { BriefcaseBusiness, CalendarDays, Check, ChevronDown, Pencil, Trash2 } from "lucide-react";
 import { Button } from "../components/ui/button";
+import { readApplications } from "../lib/readApplications";
 import { APPLICATION_STATUSES } from "../lib/applicationValidation";
 import { isSupabaseConfigured } from "../lib/supabaseClient";
 import type { ApplicationStatus, JobApplication } from "../types/api";
@@ -28,29 +29,12 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ locale, re
   let applications: JobApplication[] = [];
   let loadError = false;
   if (isSupabaseConfigured) {
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
-      {
-        cookies: {
-          getAll: () => parseCookieHeader(req.headers.cookie ?? "").map(cookie => ({ name: cookie.name, value: cookie.value ?? "" })),
-          setAll(cookies) {
-            const current = res.getHeader("Set-Cookie");
-            res.setHeader("Set-Cookie", [
-              ...(typeof current === "string" ? [current] : Array.isArray(current) ? current : []),
-              ...cookies.map(({ name, value, options }) => serializeCookieHeader(name, value, options)),
-            ]);
-          },
-        },
-      },
-    );
+    const supabase = serverSupabase(req, res);
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { redirect: { destination: "/auth", permanent: false } };
-    const { data, error } = await supabase.from("job_applications")
-      .select("job_id,job_context,status,applied_at,next_step,next_step_at,notes,created_at,updated_at")
-      .eq("user_id", user.id).order("updated_at", { ascending: false }).limit(500);
-    if (error) loadError = true;
-    else applications = (data ?? []) as JobApplication[];
+    try { applications = await readApplications(supabase, user.id); }
+    catch { loadError = true; }
   }
   return { props: { applications, loadError, ...(await serverSideTranslations(locale ?? "en", ["common"])) } };
 };

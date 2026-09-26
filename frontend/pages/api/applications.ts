@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { serverSupabase } from "../../lib/serverSupabase";
 import { isSafeMutation } from "../../lib/apiSecurity";
+import { readApplicationStatuses } from "../../lib/readApplications";
 import {
   ApplicationValidationError,
   isIsoDate,
@@ -30,10 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (req.method === "GET") {
       const jobId = Array.isArray(req.query.jobId) ? req.query.jobId[0] : req.query.jobId;
       if (jobId === undefined) {
-        const { data, error } = await table().select("job_id,status").eq("user_id", user.id)
-          .order("updated_at", { ascending: false }).limit(500);
-        if (error) return res.status(503).json({ code: "loadError" });
-        return res.status(200).json({ applications: data ?? [] });
+        return res.status(200).json({ applications: await readApplicationStatuses(supabase, user.id) });
       }
       if (!isJobId(jobId)) return res.status(400).json({ field: "jobId", code: "invalid" });
       const { data, error } = await table().select(columns).eq("user_id", user.id).eq("job_id", jobId).maybeSingle();
@@ -52,7 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         job_context: jobContext,
         applied_at: body.appliedAt,
       }, { onConflict: "user_id,job_id", ignoreDuplicates: true });
-      if (error) return res.status(503).json({ code: "saveError" });
+      if (error) return res.status(error.code === '54000' ? 409 : 503).json({ code: error.code === '54000' ? 'capacity' : 'saveError' });
       const result = await table().select(columns).eq("user_id", user.id).eq("job_id", body.jobId).single();
       if (result.error) return res.status(503).json({ code: "saveError" });
       return res.status(201).json({ application: result.data });

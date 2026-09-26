@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { serverSupabase } from '../../../lib/serverSupabase';
 import { isSafeMutation } from '../../../lib/apiSecurity';
+import { DOCUMENT_NOTICE_VERSION } from '../../../lib/documentNotice';
 function respond(res: NextApiResponse, status: number, body: unknown): void { res.status(status).json(body); }
 export const config = { api: { bodyParser: { sizeLimit: '2kb' } } };
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -14,6 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if(req.method === 'PUT') {
       const body=req.body;
       if(!body || !['gemini','groq'].includes(body.provider) || typeof body.granted!=='boolean' || typeof body.version!=='string' || body.version.length>100) return respond(res,400, {error:'Invalid consent'});
+      if(body.granted && body.version !== DOCUMENT_NOTICE_VERSION) return respond(res,409, {error:'Notice changed; reload'});
       const {error:writeError}=await client.rpc('set_ai_consent',{p_provider:body.provider,p_version:body.version,p_granted:body.granted});
       if(writeError) return respond(res,409, {error:'Consent could not be saved; reload'});
     }
@@ -22,6 +24,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       client.from('ai_consents').select('provider,notice_version,granted,granted_at,withdrawn_at,changed_at').eq('user_id',user.id),
     ]);
     if(notices.error || consents.error) throw new Error('Unavailable');
-    return respond(res,200, {notices:notices.data,consents:consents.data});
+    return respond(res,200, {notices:notices.data.map(notice=>({...notice,enabled:notice.enabled && notice.version===DOCUMENT_NOTICE_VERSION})),consents:consents.data});
   } catch { return respond(res,503, {error:'Consent service unavailable'}); }
 }

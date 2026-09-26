@@ -154,6 +154,7 @@
     "markApplied": "Mark as applied",
     "marking": "Saving…",
     "markError": "The job could not be marked as applied. Please try again.",
+    "capacity": "You have reached the limit of 1,000 saved applications. Export if needed and delete applications you no longer need before adding more.",
     "openTracker": "Open in My applications"
   },
   "favorites": {

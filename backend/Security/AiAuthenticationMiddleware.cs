@@ -2,14 +2,26 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authorization;
+using System.Threading.RateLimiting;
 
 namespace Aplifyr.Api.Security;
 
 public sealed class AiAuthenticationMiddleware(RequestDelegate next)
 {
+    private static readonly PartitionedRateLimiter<HttpContext> AuthenticationRequests = PartitionedRateLimiter.CreateChained(
+        PartitionedRateLimiter.Create<HttpContext, string>(context => RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown-peer",
+            _ => new FixedWindowRateLimiterOptions { PermitLimit = 120, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 })),
+        PartitionedRateLimiter.Create<HttpContext, string>(context => RateLimitPartition.GetConcurrencyLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown-peer",
+            _ => new ConcurrencyLimiterOptions { PermitLimit = 2, QueueLimit = 0 })),
+        PartitionedRateLimiter.Create<HttpContext, string>(_ => RateLimitPartition.GetConcurrencyLimiter("authentication",
+            _ => new ConcurrencyLimiterOptions { PermitLimit = 8, QueueLimit = 0 })));
     public async Task InvokeAsync(HttpContext context, IHttpClientFactory clients, IConfiguration configuration)
     {
-        if (!context.Request.Path.StartsWithSegments("/api/coverletters") && !context.Request.Path.StartsWithSegments("/api/cvs"))
+        // Protect new endpoints by default. Public access must be explicit endpoint metadata.
+        if (context.GetEndpoint()?.Metadata.GetMetadata<IAllowAnonymous>() != null)
         {
             await next(context);
             return;
@@ -28,6 +40,13 @@ public sealed class AiAuthenticationMiddleware(RequestDelegate next)
             string.IsNullOrWhiteSpace(header.Parameter) || header.Parameter.Length > 16384)
         {
             context.Response.StatusCode = 401;
+            return;
+        }
+        using var admission = AuthenticationRequests.AttemptAcquire(context);
+        if (!admission.IsAcquired)
+        {
+            context.Response.StatusCode = 429;
+            context.Response.Headers.RetryAfter = "1";
             return;
         }
         try
@@ -56,6 +75,8 @@ public sealed class AiAuthenticationMiddleware(RequestDelegate next)
             context.Response.StatusCode = 503;
             return;
         }
+        // Release auth-only capacity before running slower application/AI work.
+        admission.Dispose();
         await next(context);
     }
 }

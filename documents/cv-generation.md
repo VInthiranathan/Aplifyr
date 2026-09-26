@@ -155,7 +155,7 @@ snapshot: a concurrent edit after the final check is still possible.
 ## CV persistence and prepared jobs
 
 After factual validation and the final profile hash check, the backend calls the
-service-role-only `save_generated_cv_v2` RPC. It stores the latest structured CV,
+service-role-only `save_generated_cv_v3` RPC. It stores the latest structured CV,
 bounded job context and metadata in `generated_cvs`, with `expires_at` exactly seven
 days after the successful write. Regeneration replaces the row and restarts retention.
 The authenticated SELECT policy hides expired rows immediately; an hourly `pg_cron`
@@ -195,9 +195,7 @@ Backend only:
 - **`GEMINI_API_KEY`**: existing Gemini flows, including cover letters.
 - **`GEMINI_MODEL`**: configured shared model supporting structured JSON responses.
 - **`AI_ALLOWED_PROVIDERS`** must include `gemini`.
-- **`GEMINI_CV_NOTICE_VERSION`**: exact active reviewed notice version covering CV
-  generation and factual review, selected career descriptions/achievements/learning,
-  seven-day account storage, deletion and local preview/download.
+- **Document notice `2026-09-documents-v2`**: pinned in `AiPrivacyGate` and frontend `lib/documentNotice.ts`; it covers generation, factual review, seven-day storage and deletion. The old `GEMINI_CV_NOTICE_VERSION` environment setting is no longer read. Both code constants must change together for a future processing version.
 - existing `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
 
 Do not reuse a letter-only notice as consent for broader CV disclosure. Configure a
@@ -360,3 +358,13 @@ TypeScript checking and the final frontend production build passed. Backend Rele
 build passed with no warnings/errors; 93 CV checks and the authentication/privacy
 security suite passed using synthetic fixtures. No live Gemini requests, hosted
 Supabase mutations or authenticated visual browser checks were performed.
+
+## Revision and consent hardening — 2026-09-26
+
+Migration `20260926051754_security_hardening_and_document_revisions.sql` adds `save_generated_cv_v3`, which returns the persisted row inside the save transaction. Generate responds with that exact `updated_at`, content and expiry; immediate PATCH therefore uses a real database revision. Editing remains owner/version/expiry filtered and does not extend retention. `CvStore` has separate owner-bound update/delete/save methods rather than a public arbitrary privileged write method.
+
+Every external call now reserves via `reserve_ai_call_v2` with the pinned document notice version. Historical activation statements above describe earlier deployments, not approval of the new notice. The new migration inserts an inactive replacement; generation remains unavailable until the rollout is completed. Local database regression tests cover immediate edit, stale edit, expiry preservation and old/current/withdrawn consent.
+
+## Application-service boundary
+
+`CvsController` now owns HTTP/authentication/error/timeout handling and delegates Get/Edit/Delete/Generate to `CvApplicationService`. `CanonicalJobClient` fetches current ads with the same bounded timeout/response settings. The service retains consent, grounding, source-hash recheck and persisted revision behavior. Skill matching calls the pure `JobMatchingRules`, not another controller. `ApplicationServices` registers these dependencies for the API and HTTP regression host.

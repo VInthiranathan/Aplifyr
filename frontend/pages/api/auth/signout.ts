@@ -1,10 +1,10 @@
+import { serverSupabase } from '../../../lib/serverSupabase'
 import { isSafeMutation } from '../../../lib/apiSecurity'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import {
-  createServerClient,
   parseCookieHeader,
   serializeCookieHeader,
-} from '@supabase/auth-helpers-nextjs'
+} from '@supabase/ssr'
 
 function appendSetCookie(res: NextApiResponse, values: string[]) {
   const existing = res.getHeader('Set-Cookie')
@@ -41,22 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const cookieHeader = req.headers.cookie ?? ''
   const incomingCookies = parseCookieHeader(cookieHeader)
 
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll() {
-        return incomingCookies.map((c) => ({
-          name: c.name,
-          value: c.value ?? '',
-        }))
-      },
-      setAll(cookies) {
-        const setCookie = cookies.map(({ name, value, options }) =>
-          serializeCookieHeader(name, value, options),
-        )
-        appendSetCookie(res, setCookie)
-      },
-    },
-  })
+  const supabase = serverSupabase(req, res)
 
   try {
     await supabase.auth.signOut()

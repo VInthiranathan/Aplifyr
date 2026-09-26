@@ -73,3 +73,9 @@ Auth changes also clear the in-memory match session. Backend request limits are 
 - Frontend and backend production builds are required. Matching tests also run in CI.
 - Live authenticated browser verification and live JobTech results require the configured
   application environment; fixture tests do not substitute for that integration check.
+
+## Responsibility boundaries
+
+`JobMatchingService` owns bounded cache entries and serialized initial/continuation requests; it accepts a cancellation token independently of MVC. `JobMatchingRules` owns scoring, synonyms and response construction using `JobSearchCatalog`; `MatchProfileRequest` lives beside these services. Controllers map controlled failures to the existing status/body contract. All 16 matching regressions run through the thin controller with an injected synthetic matching transport, including failed-page retry and concurrent cursor changes.
+
+On the frontend, `features/home/useHomeMatches.ts` handles session restoration, fetch/poll/retry, shuffling and visible count. `MatchedJobs`, `PreparedJobs` and `MatchGradeSummary` render the home sections. `features/jobs/useJobSearch.ts` handles filters, debounce, result ordering and pagination; `JobSearchFilters` owns its location overlay. Routes still load translations through Pages Router SSR.
