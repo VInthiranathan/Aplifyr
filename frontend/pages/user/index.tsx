@@ -3,11 +3,7 @@ import {useDialogFocus} from '../../lib/useDialogFocus';
 import type { User } from "../../types/api";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
-import {
-  createServerClient,
-  parseCookieHeader,
-  serializeCookieHeader,
-} from "@supabase/auth-helpers-nextjs";
+import { serverSupabase } from "../../lib/serverSupabase";
 import { isSupabaseConfigured } from "../../lib/supabaseClient";
 import {
   MapPin,
@@ -43,26 +39,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
   res.setHeader("Cache-Control", "private, no-store");
   try {
     if (isSupabaseConfigured) {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
-      const supabaseAnonKey = process.env
-        .NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
-
-      const parsed = parseCookieHeader(req.headers.cookie ?? "");
-
-      const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-        cookies: {
-          getAll() {
-            return parsed.map((c) => ({ name: c.name, value: c.value ?? "" }));
-          },
-          setAll(cookies) {
-            const setCookie = cookies.map(({ name, value, options }) =>
-              serializeCookieHeader(name, value, options),
-            );
-            const existing = res.getHeader("Set-Cookie");
-            res.setHeader("Set-Cookie", [...(typeof existing === "string" ? [existing] : Array.isArray(existing) ? existing : []), ...setCookie]);
-          },
-        },
-      });
+      const supabase = serverSupabase(req, res);
 
       const {
         data: { user },

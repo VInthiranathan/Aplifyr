@@ -6,6 +6,8 @@ namespace Aplifyr.Api.Security;
 
 public sealed class AiPrivacyGate(IHttpClientFactory clients, IConfiguration configuration)
 {
+    // New generation requires an informed choice covering stored CVs AND letters.
+    public const string DocumentNoticeVersion = "2026-09-documents-v2";
     private async Task<JsonElement?> Rpc(string name, object body, CancellationToken cancellation)
     {
         var key = configuration["SUPABASE_SERVICE_ROLE_KEY"];
@@ -27,7 +29,7 @@ public sealed class AiPrivacyGate(IHttpClientFactory clients, IConfiguration con
         if (context.User.Identity?.IsAuthenticated != true || !Guid.TryParse(context.User.FindFirstValue(ClaimTypes.NameIdentifier), out var user)) return null;
         try
         {
-            var result = await Rpc("reserve_ai_call", new { p_user = user, p_provider = provider }, context.RequestAborted);
+            var result = await Rpc("reserve_ai_call_v2", new { p_user = user, p_provider = provider, p_version = DocumentNoticeVersion }, context.RequestAborted);
             return result is { ValueKind: JsonValueKind.String } value && Guid.TryParse(value.GetString(), out var ticket)
                 ? new Lease(this, user, ticket) : null;
         }

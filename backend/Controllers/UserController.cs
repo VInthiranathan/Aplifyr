@@ -3,6 +3,7 @@ using System.Text.Json;
 
 namespace Aplifyr.Api.Controllers;
 
+[Microsoft.AspNetCore.Authorization.AllowAnonymous]
 [ApiController]
 [Route("api/[controller]")]
 public class UserController : ControllerBase

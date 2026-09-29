@@ -80,3 +80,16 @@ The same migration adds `prepared_jobs`, keyed by `(user_id, job_id)`. It stores
 ## Job applications
 
 Migration `20260923122723_job_application_tracker.sql` adds `public.job_applications`, keyed by `(user_id, job_id)`. It stores bounded job context, one validated process status, application date, optional next action/date, notes and timestamps. The authenticated role has CRUD access only through owner-scoped RLS policies; UPDATE uses both `USING` and `WITH CHECK`. Records cascade when the Auth user is deleted. See [Job application tracking](job-application-tracking.md).
+
+## September 26 hardening migration
+
+`20260926051754_security_hardening_and_document_revisions.sql`:
+
+- Revokes authenticated TRUNCATE, REFERENCES and TRIGGER on profiles/career; CRUD remains governed by existing RLS.
+- Adds provider/version foreign-key indexes, optimizes only recognized historical profile policies and validates `profiles_personal_data_limits` and `career_skill_item_limits` without deleting invalid records (validation failure aborts migration).
+- Adds private RLS-protected `aplifyr_application_counts`, backfills exact counts and installs an atomic 1,000-row application quota/immutable-identity trigger. Clients cannot read/write counters or execute the trigger directly. Existing excess rows can be edited/deleted; account deletion cascades.
+- Adds service-only `save_generated_cv_v3`, delegating retention-aware saving and returning the actual persisted revision inside the same transaction.
+- Adds service-only `reserve_ai_call_v2`, requiring the requested current notice version before delegating to the existing quota/lease reservation under the same locks.
+- Inserts Gemini notice `2026-09-documents-v2` disabled; no consent grants or older notice edits.
+
+This describes the checked-in migration, not an applied production change. The hosted application-tracker migration was recorded as `20260923152826` whereas the file is `20260923122723`; compare SQL/schema before any ledger repair. See the runbook.

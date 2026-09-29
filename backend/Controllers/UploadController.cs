@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Aplifyr.Api.Controllers;
 
+[Microsoft.AspNetCore.Authorization.AllowAnonymous]
 [ApiController]
 [Route("api/[controller]")]
 public class UploadController : ControllerBase

@@ -4,12 +4,13 @@ test('consent API rejects cross-site/invalid/anonymous writes and assigns identi
  let user={id:'owner'};const writes=[];const query={select(){return this;},eq(_key,owner){assert.equal(owner,'owner');return this;},then(resolve){return Promise.resolve({data:[],error:null}).then(resolve);}};
  const handler=load('pages/api/account/consent.ts',{
   '../../../lib/apiSecurity':load('lib/apiSecurity.ts'),
+  '../../../lib/documentNotice':load('lib/documentNotice.ts'),
   '../../../lib/serverSupabase':{serverSupabase:()=>({auth:{getUser:async()=>({data:{user}})},from:()=>query,rpc:async(name,body)=>{writes.push({name,body});return {};}})},
  }).default;
  async function call(body,headers={'content-type':'application/json'},method='PUT'){
   const res={code:200,setHeader(){},status(n){this.code=n;return this;},json(b){this.body=b;}};await handler({body,headers,method},res);return res;
  }
- assert.equal((await call({provider:'gemini',version:'v1',granted:true,user_id:'victim'})).code,200);
+ assert.equal((await call({provider:'gemini',version:'2026-09-documents-v2',granted:true,user_id:'victim'})).code,200);
  assert.deepEqual(Object.keys(writes[0].body).sort(),['p_granted','p_provider','p_version']);
  assert.equal((await call({provider:'gemini',version:'',granted:false})).code,200);
  assert.equal((await call({provider:'gemini',version:'v1',granted:'true'})).code,400);

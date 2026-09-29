@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { readCareerEntries } from '../../lib/readCareerEntries';
-import { createServerClient, parseCookieHeader, serializeCookieHeader } from '@supabase/auth-helpers-nextjs';
+import { serverSupabase } from '../../lib/serverSupabase';
+import { isSafeMutation } from '../../lib/apiSecurity';
 import { CareerValidationError, isCareerId, validateCareerEntry } from '../../lib/careerValidation';
 
 const columns = 'id,kind,title,organization,location,qualification,start_month,end_month,is_current,description,achievements,learned,skills,strengths,updated_at';
@@ -12,25 +13,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.setHeader('Allow', 'GET, POST, PUT, DELETE');
     return res.status(405).json({ code: 'methodNotAllowed' });
   }
-  // Mutations require JSON and reject cross-site browser requests.
-  if (req.method !== 'GET' && (req.headers['sec-fetch-site'] === 'cross-site' ||
-      !req.headers['content-type']?.startsWith('application/json'))) {
-    return res.status(403).json({ code: 'forbidden' });
-  }
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) return res.status(503).json({ code: 'unavailable' });
+  if (req.method !== 'GET' && !isSafeMutation(req)) return res.status(403).json({ code: 'forbidden' });
   try {
-    const supabase = createServerClient(url, key, { cookies: {
-      getAll: () => parseCookieHeader(req.headers.cookie ?? '').map(c => ({ name: c.name, value: c.value ?? '' })),
-      setAll(cookies) {
-        const existing = res.getHeader('Set-Cookie');
-        res.setHeader('Set-Cookie', [
-          ...(typeof existing === 'string' ? [existing] : Array.isArray(existing) ? existing : []),
-          ...cookies.map(({ name, value, options }) => serializeCookieHeader(name, value, options)),
-        ]);
-      },
-    } });
+    const supabase = serverSupabase(req, res);
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) return res.status(401).json({ code: 'unauthenticated' });
     const table = () => supabase.from('profile_career_entries');
@@ -61,6 +46,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json(req.method === 'DELETE' ? { id: data.id } : { entry: data });
   } catch (error) {
     if (error instanceof CareerValidationError) return res.status(400).json({ field: error.field, code: error.code });
-    return res.status(500).json({ code: 'saveError' });
+    return res.status(503).json({ code: 'saveError' });
   }
 }

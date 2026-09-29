@@ -16,7 +16,7 @@ Their database constraints reduce malformed/direct writes but do not establish c
 
 `ai_privacy_notices` starts disabled with empty texts. Populate both languages and enable each provider only after verifying purpose, recipients, contracts, retention and international transfers. Configure the main privacy notice/contact as well. These operational facts are not invented by the migration.
 
-Backend `AiPrivacyGate` reserves before EACH external attempt, including fallback, through service-role-only `reserve_ai_call`. The verified Auth subject is passed server-side. SQL atomically checks user existence, active notice/current consent, quotas and leases. Defaults: 20 attempts/user/day, 1,000 globally/day, one simultaneous attempt/user and four globally. Reserved failures count; these are call ceilings, not currency budgets. Withdrawal prevents subsequent reservations but cannot recall already authorized/in-flight requests. Leases expire at 60 seconds, provider calls timeout at 30 seconds, and release is scoped by ticket. Missing configuration, denied reservation and DB errors fail closed. `AI_ALLOWED_PROVIDERS`, provider keys and the backend-only `SUPABASE_SERVICE_ROLE_KEY` are independently required.
+Backend `AiPrivacyGate` reserves before EACH external attempt, including fallback, through service-role-only `reserve_ai_call_v2` with the code-pinned document notice version. The verified Auth subject is passed server-side. SQL atomically checks user existence, active notice/current consent, quotas and leases. Defaults: 20 attempts/user/day, 1,000 globally/day, one simultaneous attempt/user and four globally. Reserved failures count; these are call ceilings, not currency budgets. Withdrawal prevents subsequent reservations but cannot recall already authorized/in-flight requests. Leases expire at 60 seconds, provider calls timeout at 30 seconds, and release is scoped by ticket. Missing configuration, denied reservation and DB errors fail closed. `AI_ALLOWED_PROVIDERS`, provider keys and the backend-only `SUPABASE_SERVICE_ROLE_KEY` are independently required.
 
 Users can explicitly choose up to three career entries. Only kind/title/organization/dates/skills are sent; backend strips other career fields. JSON source data is separated from Gemini `systemInstruction` / Groq system instructions prohibiting source-instruction execution and fabricated applicant facts. This reduces injection exposure but cannot guarantee model truthfulness. Human review remains required; no model tools/URL execution are enabled. [Gemini instructions](https://ai.google.dev/api/generate-content).
 
@@ -89,7 +89,7 @@ returns validated content plus job context for an owner-only preview and local P
 The latest generated CV and cover letter are stored in Supabase for seven days, hidden at their
 independent expiry and physically deleted by an hourly database job. Users can delete either one earlier.
 Both AI calls reserve independently through the existing privacy gate. This broader disclosure and retention requires a reviewed notice
-version configured in `GEMINI_CV_NOTICE_VERSION`; the existing reservation and withdrawal rules
+version `2026-09-documents-v2`, pinned in frontend/backend source; the existing reservation and withdrawal rules
 remain mandatory. Changing from transient output to stored output requires a new notice version and fresh consent; a transient-only notice must not be reused. Export includes active `generatedCvs` and `generatedCoverLetters`. Records cascade on Auth account deletion;
 provider/backups and retention remain operational responsibilities. No new legal basis is asserted.
 
@@ -156,3 +156,13 @@ from AI-reviewed statements. CV and cover-letter PDFs are generated locally with
 same-origin font assets. Downloaded files are outside the application's deletion
 and expiry controls. Cover-letter edits in the modal remain local and exportable;
 only CV edits are persisted by this change. See the respective feature documents.
+
+## Current hardening status — 2026-09-26
+
+This section supersedes earlier activation instructions for the new code. Live read-only inspection found the older transient-output notice active, not a reviewed notice for current storage. The prepared migration inserts `2026-09-documents-v2` disabled and preserves previous notices/receipts. Granting any other version through the updated frontend API returns 409; withdrawal remains possible. Every provider reservation independently requires the pinned version, including factual review/fallback. A matching enabled notice and fresh user consent are both required. No contact address, legal basis or provider agreement was invented, and no live notice was activated.
+
+`readApplications` is shared by application SSR, status badges and account export. It uses owner-filtered `job_id` keyset pagination, continues after short pages, and fails explicitly on database errors, repeated cursors or safety bounds (1,001 requests, 10,000 rows, 16 MiB UTF-8). It never silently exports only the first 500 records. Concurrent writes can still change the result between pages; this is not a snapshot export. The new database quota is 1,000 applications; legacy excess rows remain editable/deletable.
+
+Backend public access is explicit endpoint metadata, not a path-name allowlist. Verified users have separate generation/document budgets; unverified tokens consume only bounded authentication capacity. Public search, generation and documents have separate concurrency pools. Limits remain process-local; database AI reservations remain shared. Correct trusted-proxy configuration and staging load tests remain necessary.
+
+The two previously NOT VALID constraints had zero violations during the read-only precheck; the migration validates them transactionally and will abort if invalid data appears before execution. Hosted password protection and production rollout remain pending; see the runbook.

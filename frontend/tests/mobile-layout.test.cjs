@@ -34,7 +34,7 @@ test('mobile navigation keeps four primary destinations and moves support into s
 });
 
 test('high-risk mobile surfaces avoid desktop-only widths', () => {
-  const jobs = read('pages/jobs/index.tsx');
+  const jobs = read('features/jobs/JobSearchFilters.tsx');
   const profile = read('pages/user/index.tsx');
   const coverLetter = read('components/CoverLetterModal.tsx');
 

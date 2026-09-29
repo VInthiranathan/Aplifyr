@@ -1,11 +1,7 @@
 import { isSafeMutation, validProfile } from '../../lib/apiSecurity'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { validateJobPreferences } from '../../lib/jobPreferences'
-import {
-  createServerClient,
-  parseCookieHeader,
-  serializeCookieHeader,
-} from '@supabase/auth-helpers-nextjs'
+import { serverSupabase } from '../../lib/serverSupabase'
 
 function normalizeStringArray(value: unknown) {
   if (!Array.isArray(value)) {
@@ -17,18 +13,6 @@ function normalizeStringArray(value: unknown) {
     .map((entry) => entry.trim())
     .filter(Boolean)
     .filter((v, i, arr) => arr.indexOf(v) === i)
-}
-
-function appendSetCookie(res: NextApiResponse, values: string[]) {
-  const existing = res.getHeader('Set-Cookie')
-  const existingArray =
-    typeof existing === 'string'
-      ? [existing]
-      : Array.isArray(existing)
-      ? existing
-      : []
-
-  res.setHeader('Set-Cookie', [...existingArray, ...values])
 }
 
 export const config = { api: { bodyParser: { sizeLimit: '32kb' } } };
@@ -45,30 +29,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'PUT' && !validProfile(req.body)) {
     res.status(400).json({ error: 'Invalid profile' }); return
   }
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-  const cookieHeader = req.headers.cookie ?? ''
-  const parsed = parseCookieHeader(cookieHeader)
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    res.status(500).json({ error: 'Supabase not configured' })
-    return
-  }
-
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll() {
-        return parsed.map((c) => ({ name: c.name, value: c.value ?? '' }))
-      },
-      setAll(cookies) {
-        const setCookie = cookies.map(({ name, value, options }) =>
-          serializeCookieHeader(name, value, options),
-        )
-        appendSetCookie(res, setCookie)
-      },
-    },
-  })
+  let supabase;
+  try { supabase = serverSupabase(req, res); }
+  catch { res.status(503).json({ error: 'Authentication unavailable' }); return }
 
   let user
   try {

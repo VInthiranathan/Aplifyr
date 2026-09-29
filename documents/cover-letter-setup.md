@@ -14,8 +14,8 @@ The development deployment uses Gemini only:
 - `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
 - an enabled Gemini notice and the user's current saved consent
 
-CV additionally requires its separate `GEMINI_CV_API_KEY` and exact
-`GEMINI_CV_NOTICE_VERSION`; see [CV generation](cv-generation.md).
+CV additionally requires its separate `GEMINI_CV_API_KEY`. Both features require
+the source-pinned `2026-09-documents-v2` notice through `reserve_ai_call_v2`; see [CV generation](cv-generation.md).
 An API key alone does not enable processing. Do not configure Groq as a workaround.
 The legacy Groq path executes only when explicitly allowed, keyed and consented.
 
@@ -90,3 +90,11 @@ paginates long text. Export loads only same-origin font assets, makes no AI call
 sends no letter content to a PDF service. Closing/unmounting cancels pending downloads;
 an export failure preserves the text for retry. Letter edits remain local to the
 modal (existing behavior); exporting does not persist them or extend seven-day storage.
+
+## Hardening rollout
+
+The September 26 migration creates the replacement notice disabled; review/activation and fresh user consent are required. The API does not silently accept the older transient-output notice. `CvStore.SaveLetter` and `DeleteLetter` derive the owner from the verified session. Letter profile/job facts are still bounded client-supplied inputs; they are not an authoritative profile lookup or proof that a statement is true.
+
+## Application-service boundary
+
+The controller delegates generation to `LetterApplicationService`. `LetterJobFacts` parses allowlisted ad fields, `LetterPrompt` contains the language/injection/grounding instructions, and `LetterProvider` performs provider calls with a separate reservation per attempt. HTTP status mapping and private-cache headers remain at the controller. Existing result arrays, expiry and optional-provider behavior are preserved; no fallback is enabled by this extraction. The frontend `useCoverLetter` hook owns retrieval, consent-dialog state, generation, cancellation and deletion; the job page composes its UI.

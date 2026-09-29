@@ -9,7 +9,7 @@ function load(relative, mocks = {}, env = {}) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, esModuleInterop: true },
   }).outputText;
   const module = { exports: {} };
-  vm.runInNewContext(code, { module, exports: module.exports, require: name => mocks[name] ?? require(name), process: { env }, URL, console, Date });
+  vm.runInNewContext(code, { module, exports: module.exports, require: name => mocks[name] ?? (name.endsWith('/serverSupabase') ? load('lib/serverSupabase.ts', mocks, env) : require(name)), process: { env }, URL, console, Date });
   return module.exports;
 }
 const safety = load('lib/apiSecurity.ts');
@@ -43,7 +43,7 @@ test('profile rejects malformed or oversized inputs before database access; neve
   const handler = load('pages/api/profile.ts', {
     '../../lib/jobPreferences': load('lib/jobPreferences.ts'),
     '../../lib/apiSecurity': safety,
-    '@supabase/auth-helpers-nextjs': { createServerClient: () => ({ auth: { getUser: async () => ({ data: { user: { id: 'owner' } }, error: null }) }, from: () => query }), parseCookieHeader: () => [] },
+    '@supabase/ssr': { createServerClient: () => ({ auth: { getUser: async () => ({ data: { user: { id: 'owner' } }, error: null }) }, from: () => query }), parseCookieHeader: () => [] },
   }, { NEXT_PUBLIC_SUPABASE_URL: 'https://example.com', NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test' }).default;
   for (const body of [null, [], 'abc', { name: {} }, { bio: 'a'.repeat(5001) }, { tags: [1] }, { roles: Array(51).fill('x') },
     { contactEmail: 'not-an-email' }, { phone: 'call-me<script>' }, { websiteUrl: 'http://example.com' },
@@ -63,7 +63,7 @@ test('logout rejects GET and cross-site POST without touching auth', async () =>
   let calls = 0;
   const handler = load('pages/api/auth/signout.ts', {
     '../../../lib/apiSecurity': safety,
-    '@supabase/auth-helpers-nextjs': { createServerClient: () => { calls++; throw Error('must not call auth'); } },
+    '@supabase/ssr': { createServerClient: () => { calls++; throw Error('must not call auth'); } },
   }).default;
   for (const [method, headers, expected] of [['GET', {}, 405], ['POST', { 'sec-fetch-site': 'cross-site', 'content-type': 'application/json' }, 403]]) {
     const res = response(); await handler({ method, headers }, res); assert.equal(res.code, expected);

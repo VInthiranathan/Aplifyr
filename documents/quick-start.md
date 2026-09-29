@@ -156,8 +156,8 @@ npm run build
 Apply migration `009_generated_cvs.sql` after 008, then apply
 `20260918164504_prepared_jobs_and_generated_document_retention.sql`. The latter enables Supabase Cron,
 adds independent seven-day retention for generated CVs and cover letters, and adds prepared-job tracking. Verify the cleanup job after deployment.
-Set backend-only `GEMINI_CV_API_KEY` and `GEMINI_CV_NOTICE_VERSION` (the reviewed active Gemini
-notice covering CV/career processing and seven-day storage). Use a new notice version and obtain
+Set backend-only `GEMINI_CV_API_KEY`. The reviewed active Gemini notice must match
+`2026-09-documents-v2`, pinned in both frontend and backend source (no notice-version environment variable). Use a new notice version and obtain
 fresh consent; do not reuse a notice that says generated output is transient. `GEMINI_API_KEY` remains for letters; CV has no key fallback.
 Existing `GEMINI_MODEL`, `AI_ALLOWED_PROVIDERS=gemini` and backend Supabase credentials are required.
 See [CV generation](cv-generation.md) for consent renewal, limits and staging checks.
@@ -201,3 +201,11 @@ CI runs this regression after building. The script turns asynchronous module
 rejections into a nonzero exit status; a successful `require()` return alone is
 not sufficient. This verifies route module initialization, not authenticated live
 job data fetching. Production logs still require authorized Vercel team access.
+
+## Hardening migration and local verification
+
+After the retention, contact-details and application-tracker migrations, apply `20260926051754_security_hardening_and_document_revisions.sql` in a local/staging database. Existing hosted installations must first reconcile their recorded migration identities; do not run the generic `db push` command above against an unreconciled production ledger. Follow the runbook's September 26 rollout. The new notice is disabled until reviewed and explicitly activated, so generation fails closed after deploying this code alone.
+
+`TRUSTED_PROXY_ADDRESSES` is optional and accepts comma-separated verified immediate proxy IP addresses. Empty means forwarding headers are ignored; never populate it with arbitrary client values. Behind a shared proxy, pre-authentication and public IP limits can be shared by users until the actual proxy chain is verified. This setting requires separate hosting approval.
+
+Run frontend `npm test` and `npm run build`, backend Release build and the SecurityTests, CvTests and Matching.Tests executable projects. The new security workflow audits production dependencies and scans git history for secrets; its hosted execution is a separate CI gate.
