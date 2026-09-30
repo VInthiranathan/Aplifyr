@@ -1,7 +1,6 @@
 import { Bookmark,Briefcase,ClipboardCheck,Eye,MapPin,Wifi } from 'lucide-react';
 import { useTranslation } from 'next-i18next';
 import Link from 'next/link';
-import { useEffect,useState } from 'react';
 import JobListCard from '../../components/JobListCard';
 import { useApplicationStatuses } from '../../lib/useApplicationStatuses';
 import { useFavorites } from '../../lib/useFavorites';
@@ -11,27 +10,7 @@ export function MatchedJobs({model, showDebug}: {model: ReturnType<typeof useHom
   const {t} = useTranslation('common');
   const {toggleFavorite, isFavorite} = useFavorites();
   const applicationStatuses = useApplicationStatuses();
-  const [openGradeId, setOpenGradeId] = useState<string | null>(null);
   const {matched, matchLoading, matchError, poolLimited, desiredRolesSource, visibleCount, fetchComplete, retry, loadMore} = model;
-  // Close grade tooltip when clicking anywhere outside
-  useEffect(() => {
-    if (!openGradeId) return;
-    const close = () => setOpenGradeId(null);
-    document.addEventListener("click", close);
-    return () => document.removeEventListener("click", close);
-  }, [openGradeId]);
-
-  const locationTierLabel: Record<string, string> = {
-    same_municipality:  t("home.tierSameMunicipality"),
-    same_region:        t("home.tierSameRegion"),
-    same_region_nearby: t("home.tierNearbyArea"),
-    same_region_strict: t("home.tierSameRegionStrict"),
-    remote:             t("home.tierRemote"),
-    country:            t("home.tierCountry"),
-    no_preference:      t("home.tierNoPreference"),
-    out_of_region:      t("home.tierOutOfRegion"),
-  };
-
   return <>
         {/* Loading skeleton — first paint before matches arrive */}
         {desiredRolesSource === null && !matchError && (
@@ -121,44 +100,17 @@ export function MatchedJobs({model, showDebug}: {model: ReturnType<typeof useHom
                           : t("jobs.appliedWithStatus", { status: t(`applications.status.${applicationStatus}`) })}
                       </span>
                     )}
-                    <div className="relative group/grade flex-shrink-0">
-                      <span
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setOpenGradeId(openGradeId === job.id ? null : job.id);
-                        }}
-                        className={`text-xs font-bold px-3 py-1 rounded-full cursor-pointer ${
-                          job.matchGrade === "A"
-                            ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-300 dark:border-green-800/50"
-                            : job.matchGrade === "B"
-                              ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border border-yellow-300 dark:border-yellow-800/50"
-                              : "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border border-orange-300 dark:border-orange-800/50"
-                        }`}
-                      >
-                        {job.matchGrade} {t("home.match")}
-                      </span>
-                      {/* Score tooltip — visible on hover (desktop) or tap (mobile) */}
-                      <div
-                        className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20
-                        pointer-events-none transition-opacity duration-150
-                        bg-gray-900 dark:bg-[#111] text-white text-xs rounded-xl p-3
-                        shadow-xl border border-white/10 whitespace-nowrap
-                        ${openGradeId === job.id ? 'opacity-100' : 'opacity-0 group-hover/grade:opacity-100'}`}
-                      >
-                        <div className="font-semibold text-white/90 mb-1.5">
-                          {t("home.gradeScoreLabel")}: {job.matchDebug.totalScore}
-                        </div>
-                        <div className="text-white/60">{job.matchDebug.scoreBreakdown}</div>
-                        <div className="text-white/60 mt-0.5">
-                          {locationTierLabel[job.matchDebug.locationTier] ?? job.matchDebug.locationTier}
-                        </div>
-                        {/* Caret pointing down */}
-                        <div
-                          className="absolute top-full left-1/2 -translate-x-1/2
-                          border-[5px] border-transparent border-t-gray-900 dark:border-t-[#111]"
-                        />
-                      </div>
-                    </div>
+                    <span
+                      className={`text-xs font-bold px-3 py-1 rounded-full ${
+                        job.matchGrade === "A"
+                          ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-300 dark:border-green-800/50"
+                          : job.matchGrade === "B"
+                            ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border border-yellow-300 dark:border-yellow-800/50"
+                            : "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border border-orange-300 dark:border-orange-800/50"
+                      }`}
+                    >
+                      {job.matchGrade} {t("home.match")}
+                    </span>
                   </div>
                 }
                 subtitle={job.employer?.name}
