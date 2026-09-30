@@ -47,6 +47,10 @@ Capacity follow-up: cache is bounded to 32 entries/process, 1,000 jobs and 512 K
 - Default ordering is grade, descending score, then ad ID. A nonzero seed intentionally
   shuffles within grade groups for the existing “load different jobs” action.
 
+The matched job cards display the A/B/C grade without a score tooltip on hover or tap.
+Numeric scores, formulas and location tiers are not shown in the ordinary card UI.
+Existing diagnostic reasons remain behind the explicit debug UI gate.
+
 ## Pagination, cache and errors
 
 Matching lives in `ExternalJobsController.Matching.cs`; ordinary search/detail routes are

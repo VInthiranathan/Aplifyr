@@ -18,6 +18,8 @@ The rules apply to authenticated pages, job search and details, profile and care
 
 - Page content uses `app-page-shell`, which constrains desktop width and provides mobile-first spacing.
 - Job cards, profile cards, forms, and empty states use smaller mobile padding and expand at larger breakpoints.
+- Tailwind scans `frontend/pages`, `frontend/components`, and `frontend/features` so extracted feature components retain their spacing and responsive styles.
+- Job filter controls reserve left padding for their icons (`pl-9`), keeping placeholder text and selected values clear of the icons on mobile and desktop.
 - Job filters stack to a single column on mobile. The region and municipality selector becomes a viewport-contained panel instead of a fixed-width desktop popover.
 - Profile tabs form a two-column control on mobile instead of requiring horizontal page movement.
 - Profile editing, AI consent, and cover-letter views use bottom-sheet behavior on mobile, with independently scrollable content and safe-area-aware actions.
