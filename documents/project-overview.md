@@ -152,3 +152,7 @@ The accompanying migration tightens grants, validates legacy constraints, enforc
 | `features/jobs` | Search lifecycle/filter UI, job loading, application tracking and saved-letter/generation hooks |
 
 Pages retain routing/SSR and compose these units. Hooks preserve cancellation/session isolation already covered by behavior tests; rules and services can be tested without a browser. The application services still receive the verified request context for owner-bound storage and AI reservations; they do not return MVC results. Public job search/ad-fallback transport stays in the smaller ExternalJobs controller. This decomposition adds no provider, persistence purpose, migration or deployment setting.
+
+### Approved security dependency patches — 2026-10-01
+
+Next.js is pinned to 16.3.6 and the lockfile resolves DOMPurify to 3.4.16 after owner approval. These address the dependency audit failures found during the guest-access PR. No hosting settings or database schema changes are required.
