@@ -5,7 +5,7 @@ import { getPublicBackendUrl } from '../../lib/backendUrl';
 import { formatLocation } from '../../lib/utils';
 import type { JobApplication } from '../../types/api';
 const BACKEND = getPublicBackendUrl();
-export function useJobApplication(job: any, setFetchError: (message: string | null) => void) {
+export function useJobApplication(job: any, setFetchError: (message: string | null) => void, enabled = true) {
   const router = useRouter();
   const {id} = router.query;
   const {t} = useTranslation('common');
@@ -13,6 +13,7 @@ export function useJobApplication(job: any, setFetchError: (message: string | nu
   const [applicationLoading, setApplicationLoading] = useState(true);
   const [applicationSaving, setApplicationSaving] = useState(false);
   useEffect(() => {
+    if (!enabled) { setApplication(null); setApplicationLoading(false); return; }
     if (!router.isReady || typeof id !== "string" || !/^[A-Za-z0-9_-]{1,100}$/.test(id)) return;
     const controller = new AbortController();
     setApplication(null); setApplicationLoading(true);
@@ -22,10 +23,10 @@ export function useJobApplication(job: any, setFetchError: (message: string | nu
       .catch(error => { if (!(error instanceof Error && error.name === "AbortError")) setApplication(null); })
       .finally(() => { if (!controller.signal.aborted) setApplicationLoading(false); });
     return () => controller.abort();
-  }, [id, router.isReady]);
+  }, [id, router.isReady, enabled]);
 
   const markAsApplied = async () => {
-    if (!job || typeof id !== "string" || applicationSaving) return;
+    if (!enabled || !job || typeof id !== "string" || applicationSaving) return;
     setApplicationSaving(true); setFetchError(null);
     const today = new Date();
     const appliedAt = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;

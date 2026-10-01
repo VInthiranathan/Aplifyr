@@ -1,7 +1,7 @@
 # Cover letter generation and persistence
 
 The job detail page calls `POST /api/coverletters/generate-all` on the backend.
-The generate button opens the shared consent dialog; saving consent and choosing
+The generate button first requires sign-in and a saved profile with name plus background, skills or career history, then opens the shared consent dialog; saving consent and choosing
 continue are separate actions. Sign-in is verified server-side before generation.
 
 ## Configuration

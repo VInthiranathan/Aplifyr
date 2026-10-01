@@ -368,3 +368,7 @@ Every external call now reserves via `reserve_ai_call_v2` with the pinned docume
 ## Application-service boundary
 
 `CvsController` now owns HTTP/authentication/error/timeout handling and delegates Get/Edit/Delete/Generate to `CvApplicationService`. `CanonicalJobClient` fetches current ads with the same bounded timeout/response settings. The service retains consent, grounding, source-hash recheck and persisted revision behavior. Skill matching calls the pure `JobMatchingRules`, not another controller. `ApplicationServices` registers these dependencies for the API and HTTP regression host.
+
+## Guest entry and profile readiness
+
+Job advertisements are public; `/jobs/[id]/cv` and every document API remain authenticated. Sign-in preserves the chosen job. Before consent, an incomplete saved profile routes to `/user` with a return link. Both UI and backend require name plus background, skills or career history; contact fields and employment history are not mandatory. Backend rejects an incomplete profile with `422 profileEmpty` before any AI call. See `project-overview.md` for guest navigation and validation.

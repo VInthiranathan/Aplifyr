@@ -1,3 +1,4 @@
+import { isPublicPage, safeReturnTo } from './lib/guestAccess'
 import { NextResponse } from 'next/server'
 import {contentSecurityPolicy} from './lib/contentSecurityPolicy'
 import type { NextRequest } from 'next/server'
@@ -6,6 +7,7 @@ import { createServerClient } from '@supabase/ssr'
 const PUBLIC_PATHS = ['/auth', '/privacy']
 
 function isPublicPath(pathname: string) {
+  if (isPublicPage(pathname)) return true
   if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return true
 
   // Next internals
@@ -93,6 +95,7 @@ export async function proxy(req: NextRequest) {
   const redirectUrl = req.nextUrl.clone()
   redirectUrl.pathname = '/auth'
   redirectUrl.search = ''
+  redirectUrl.searchParams.set('returnTo', safeReturnTo(pathname))
   const redirect = NextResponse.redirect(redirectUrl)
   res.cookies.getAll().forEach(cookie => redirect.cookies.set(cookie))
   redirect.headers.set('Cache-Control', 'private, no-store')

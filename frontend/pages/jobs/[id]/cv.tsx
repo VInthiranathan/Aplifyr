@@ -1,3 +1,4 @@
+import { generationDestination } from '../../../lib/generationAccess';
 import { useEffect, useRef, useState } from 'react';
 import type { GetServerSideProps } from 'next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
@@ -66,6 +67,13 @@ export default function CvPage() {
     });
     return () => { controller.abort(); request.current?.abort(); subscription.unsubscribe(); };
   }, [id, router.isReady]);
+  async function requestGeneration() {
+    try {
+      const destination = await generationDestination(`/jobs/${id}/cv`);
+      if (destination) { await router.push(destination); return; }
+      setConsentOpen(true);
+    } catch { setError(t("guest.profileUnavailable")); }
+  }
   async function generate() {
     if (generating.current) return;
     generating.current = true; setBusy(true); setError('');
@@ -170,7 +178,7 @@ export default function CvPage() {
       <p>{t('cv.disclosure')}</p>
       {consentOpen && <AiGenerationConsent key={id} onClose={()=>setConsentOpen(false)} onConfirm={()=>{setConsentOpen(false);void generate();}} />}
       <div className="flex flex-wrap gap-3 items-center">
-        <Button className="w-full sm:w-auto" disabled={busy || downloading || !!draft || deleting || saving} onClick={()=>setConsentOpen(true)}>{busy && <Loader2 className="animate-spin mr-2" size={16} />}{t(busy ? 'cv.generating' : cv ? 'cv.regenerate' : 'cv.generate')}</Button>
+        <Button className="w-full sm:w-auto" disabled={busy || downloading || !!draft || deleting || saving} onClick={()=>void requestGeneration()}>{busy && <Loader2 className="animate-spin mr-2" size={16} />}{t(busy ? 'cv.generating' : cv ? 'cv.regenerate' : 'cv.generate')}</Button>
         <Link className="underline" href="/user">{t('cv.profile')}</Link>
       </div>
       <p role="status" aria-live="polite">{busy ? t('cv.progress') : cv ? t('cv.saved', { date: new Intl.DateTimeFormat(i18n?.language ?? router.locale ?? 'en', { dateStyle: 'medium' }).format(new Date(cv.expires_at)) }) : t('cv.ready')}</p>

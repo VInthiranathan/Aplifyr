@@ -1,4 +1,6 @@
 import { signOut } from "../lib/signOut";
+import { useAuthSession } from "../lib/AuthSessionContext";
+import { signInHref } from "../lib/guestAccess";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useTranslation } from "next-i18next";
@@ -32,6 +34,7 @@ const navItemDefs = [
 export default function Sidebar() {
   const { pathname, locale, push, asPath } = useRouter();
   const { t } = useTranslation("common");
+  const { userId, loading: authLoading } = useAuthSession();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -39,11 +42,12 @@ export default function Sidebar() {
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [initials, setInitials] = useState<string>("");
   useEffect(() => {
-    if (!mounted) return;
+    if (!mounted || !userId) { setDisplayName(null); setInitials(""); return; }
+    const controller = new AbortController();
     (async () => {
       try {
         // Use server-side API route which reads profiles using server credentials
-        const res = await fetch("/api/profile", { credentials: "same-origin" });
+        const res = await fetch("/api/profile", { credentials: "same-origin", signal: controller.signal });
         if (!res.ok) return;
         const data = await res.json();
         let name = data?.profile?.full_name ?? null;
@@ -65,6 +69,7 @@ export default function Sidebar() {
           }
         }
 
+        if (controller.signal.aborted) return;
         setDisplayName(name);
 
         const computeInitials = (s: string | null) => {
@@ -79,7 +84,8 @@ export default function Sidebar() {
         // ignore
       }
     })();
-  }, [mounted]);
+    return () => controller.abort();
+  }, [mounted, userId]);
 
   const isDark = resolvedTheme === "dark";
 
@@ -131,7 +137,7 @@ export default function Sidebar() {
 
       {/* nav links */}
       <nav className="flex flex-col gap-1 px-2 mt-4">
-        {navItemDefs.map(({ key, href, icon: Icon }) => {
+        {navItemDefs.filter(item => userId || ["/jobs", "/support", "/privacy#ai-consent"].includes(item.href)).map(({ key, href, icon: Icon }) => {
           const active = pathname === href.split('#')[0];
           return (
             <Link
@@ -156,7 +162,7 @@ export default function Sidebar() {
       <div className="mt-auto px-3 pb-5 flex flex-col gap-2">
         {/* user badge */}
         <Link
-          href="/user"
+          href={userId ? "/user" : signInHref(asPath.split("?")[0])}
           className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
           title={displayName ?? t("nav.guest")}
         >
@@ -169,20 +175,21 @@ export default function Sidebar() {
               {displayName ?? t("nav.guest")}
             </p>
             <p className="text-xs text-slate-400 dark:text-white/40">
-              {t("nav.userDetails")}
+              {t(userId ? "nav.userDetails" : "auth.signIn")}
             </p>
           </div>
         </Link>
 
         {/* sign out button */}
         <Button
-          onClick={signOut}
+          onClick={() => userId ? signOut() : push(signInHref(asPath.split("?")[0]))}
+          disabled={authLoading}
           variant="ghost"
           className="justify-start rounded-lg px-3 py-2 text-sm"
-          title={t("auth.signOut")}
+          title={t(userId ? "auth.signOut" : "auth.signIn")}
         >
           <LogOut size={16} />
-          <span className="hidden lg:block">{t("auth.signOut")}</span>
+          <span className="hidden lg:block">{t(userId ? "auth.signOut" : "auth.signIn")}</span>
         </Button>
       </div>
     </aside>

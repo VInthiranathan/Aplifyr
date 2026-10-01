@@ -29,7 +29,7 @@ test('mobile navigation keeps four primary destinations and moves support into s
   assert.doesNotMatch(bottomNav, /nav\.support/);
   assert.match(drawer, /href="\/support"/);
   assert.match(bottomNav, /nav\.applications/);
-  assert.match(drawer, /href="\/favorites"/);
+  assert.match(drawer, /userId \? "\/favorites" : signInHref\("\/favorites"\)/);
   assert.match(bottomNav, /pathname\.startsWith/);
 });
 

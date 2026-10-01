@@ -33,6 +33,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
   query,
 }) => {
   res.setHeader("Cache-Control", "private, no-store");
+  if (!isSupabaseConfigured) return { redirect: { destination: "/jobs", permanent: false } };
   const showDebug = isDebugUiEnabled() && query.debug === "1";
 
   let matchReq: MatchProfileRequest = {};
@@ -44,12 +45,12 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
 
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
 
     if (!user) {
       return {
         redirect: {
-          destination: "/auth",
+          destination: "/jobs",
           permanent: false,
         },
       };

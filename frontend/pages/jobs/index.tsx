@@ -1,3 +1,5 @@
+import { useAuthSession } from "../../lib/AuthSessionContext";
+import { signInHref } from "../../lib/guestAccess";
 import {
 Bookmark,
 Briefcase,
@@ -25,12 +27,13 @@ export const getServerSideProps: GetServerSideProps = async ({ locale }) => ({
 
 export default function AllJobsPage() {
   const { t } = useTranslation("common");
-  const { locale } = useRouter();
+  const { locale, push, asPath } = useRouter();
+  const { userId } = useAuthSession();
   const { toggleFavorite, isFavorite } = useFavorites();
   const localeTag = locale === "sv" ? "sv-SE" : "en-US";
   const search = useJobSearch();
   const {filteredJobs, total, loading, error, offset, setOffset, LIMIT, totalPages, currentPage} = search;
-  const applicationStatuses = useApplicationStatuses();
+  const applicationStatuses = useApplicationStatuses(!!userId);
 
   return (
     <div className="app-page-shell">
@@ -57,6 +60,7 @@ export default function AllJobsPage() {
         </div>
       </div>
 
+      {!userId && <p className="app-card-base rounded-xl p-4 text-sm">{t("guest.description")} <Link href={signInHref("/jobs")} className="underline">{t("auth.signIn")}</Link></p>}
       <JobSearchFilters model={search} />
 
       {/* Note: previous tag-style multi selects removed — replaced by compact dropdowns above. */}
@@ -166,6 +170,7 @@ export default function AllJobsPage() {
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
+                      if (!userId) { void push(signInHref(asPath)); return; }
                       toggleFavorite({
                         id: job.id,
                         title: job.headline,

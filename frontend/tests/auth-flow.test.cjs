@@ -10,9 +10,9 @@ test('registration routes pending email confirmations to the dedicated page', ()
   const auth = read('pages/auth/index.tsx');
   const verify = read('pages/auth/verify-email.tsx');
 
-  assert.match(auth, /if \(!data\.session\)[\s\S]*router\.replace\("\/auth\/verify-email"\)/);
+  assert.match(auth, /if \(!data\.session\)[\s\S]*router\.replace\(`\/auth\/verify-email\?returnTo=/);
   assert.match(verify, /auth\.verifyEmailInstructions/);
-  assert.match(verify, /router\.push\("\/auth"\)/);
+  assert.match(verify, /router\.push\(signInHref\(safeReturnTo\(router.query.returnTo\)\)\)/);
   assert.match(auth, /data\.user\.identities/);
   assert.match(auth, /user_already_exists/);
   assert.match(auth, /auth\.errors\.emailAlreadyRegistered/);

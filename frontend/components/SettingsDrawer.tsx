@@ -1,5 +1,7 @@
 import { signOut } from "../lib/signOut";
 import {useDialogFocus} from '../lib/useDialogFocus';
+import { useAuthSession } from "../lib/AuthSessionContext";
+import { signInHref } from "../lib/guestAccess";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
@@ -16,6 +18,7 @@ interface Props {
 export default function SettingsDrawer({ open, onClose }: Props) {
   const dialog=useDialogFocus(open,onClose);
   const { t } = useTranslation("common");
+  const { userId, loading: authLoading } = useAuthSession();
   const { resolvedTheme, setTheme } = useTheme();
   const { locale, push, asPath } = useRouter();
   const isDark = resolvedTheme === "dark";
@@ -77,7 +80,7 @@ export default function SettingsDrawer({ open, onClose }: Props) {
 
         <div className="flex flex-col gap-2 p-4 flex-1">
           <Button asChild variant="secondary" className="w-full justify-start gap-2">
-            <Link href="/favorites" onClick={onClose}><Bookmark size={16} />{t('nav.favorites')}</Link>
+            <Link href={userId ? "/favorites" : signInHref("/favorites")} onClick={onClose}><Bookmark size={16} />{t('nav.favorites')}</Link>
           </Button>
           <Button asChild variant="secondary" className="w-full justify-start gap-2">
             <Link href="/privacy#ai-consent" onClick={onClose}><ShieldCheck size={16} />{t('privacy.menu')}</Link>
@@ -114,12 +117,13 @@ export default function SettingsDrawer({ open, onClose }: Props) {
         {/* sign out */}
         <div className="p-4 border-t border-slate-200 dark:border-white/10">
           <Button
-            onClick={signOut}
+            onClick={() => { onClose(); return userId ? signOut() : push(signInHref(asPath.split("?")[0])); }}
+            disabled={authLoading}
             variant="ghost"
             className="w-full justify-start text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-300"
           >
             <LogOut size={16} />
-            {t("auth.signOut")}
+            {t(userId ? "auth.signOut" : "auth.signIn")}
           </Button>
         </div>
       </div>

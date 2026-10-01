@@ -24,7 +24,8 @@
       "timeout": "The AI service took too long to respond. Try again later.",
       "invalidOutput": "The AI service returned an incomplete or unreadable answer. Try again.",
       "provider": "The AI service could not complete the request. Try again later.",
-      "storage": "The letter was created but could not be linked to the job. Please try again later."
+      "storage": "The letter was created but could not be linked to the job. Please try again later.",
+      "profileEmpty": "Enter your name and add background, skills, work experience or education to your profile."
     }
   },
   "privacy": {
@@ -515,7 +516,7 @@
       "invalidJob": "This job reference is invalid.",
       "jobUnavailable": "The job is unavailable or has been removed. A previously saved CV is still available after reloading.",
       "jobLarge": "The job has no usable description or is too long to process.",
-      "profileEmpty": "Add some skills, a profile description, work experience or education first.",
+      "profileEmpty": "Enter your name and add background, skills, work experience or education to your profile.",
       "profileLarge": "Your profile is too large to process safely. Shorten it and try again.",
       "provider": "The AI service could not complete the request. Your saved CV has not changed.",
       "invalidOutput": "The AI response could not be validated. Please try again.",
@@ -574,5 +575,12 @@
     "cancelEdit": "Cancel editing",
     "editHelp": "Edit any sentence or bullet. Leave a field empty to remove it. Save before exporting the PDF. Editing does not extend expiry. Names, titles and dates come from your profile.",
     "editedNotice": "This CV contains your own edits. Review the information before applying."
+  },
+  "guest": {
+    "browse": "Continue without an account",
+    "description": "Search and read jobs without an account. Sign in and complete your profile to create a CV or cover letter.",
+    "completeProfile": "Enter your name and add your background, skills, work experience or education. Save your details, then return to the job.",
+    "returnToJob": "Return to selected job",
+    "profileUnavailable": "Could not check your profile. Please try again."
   }
 }

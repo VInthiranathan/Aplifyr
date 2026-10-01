@@ -1,3 +1,5 @@
+import { useAuthSession } from "../../lib/AuthSessionContext";
+import { signInHref } from "../../lib/guestAccess";
 import { Bookmark,Briefcase,ClipboardCheck,Loader2,MapPin,Wifi } from "lucide-react";
 import type { GetServerSideProps } from "next";
 import { useTranslation } from "next-i18next";
@@ -17,16 +19,17 @@ import { formatLocation } from "../../lib/utils";
 
 export default function JobDetailPage() {
   const router = useRouter();
+  const { userId } = useAuthSession();
   const { t } = useTranslation("common");
   const { id, data } = router.query;
   const { toggleFavorite, isFavorite } = useFavorites();
   const localeTag = router.locale === "sv" ? "sv-SE" : "en-US";
 
   const {job, fetching, fetchError, setFetchError, jobHtml} = useJobDetails();
-  const {application, applicationLoading, applicationSaving, markAsApplied} = useJobApplication(job, setFetchError);
+  const {application, applicationLoading, applicationSaving, markAsApplied} = useJobApplication(job, setFetchError, !!userId);
   const {generating, loadingLetter, letter, letterExpiresAt, deletingLetter, consentOpen, setConsentOpen,
     showModal, setShowModal, career, selectedCareer, setSelectedCareer, careerError, careerLoaded,
-    loadCareer, requestGeneration, generate, deleteCoverLetter} = useCoverLetter(job, setFetchError);
+    loadCareer, requestGeneration, generate, deleteCoverLetter} = useCoverLetter(job, setFetchError, !!userId);
 
   const getApplicationUrl = () => {
     if (!job) return undefined;
@@ -103,6 +106,7 @@ export default function JobDetailPage() {
                   </h1>
                   <Button
                     onClick={() => {
+                      if (!userId) { void router.push(signInHref(`/jobs/${id}`)); return; }
                       toggleFavorite({
                         id: job.id,
                         title: job.headline ?? job.title,
@@ -242,7 +246,7 @@ export default function JobDetailPage() {
                         </>
                       );
                     })()}
-                    {!applicationLoading && (application ? (
+                    {userId && !applicationLoading && (application ? (
                       <Button asChild variant="secondary" className="h-auto w-full px-4 py-2.5">
                         <Link href="/applications"><ClipboardCheck size={15} />{t("applications.openTracker")}</Link>
                       </Button>
@@ -257,7 +261,7 @@ export default function JobDetailPage() {
 
                 <div className="mt-4">
 
-                  <div className="my-3 space-y-2">
+                  {userId && <div className="my-3 space-y-2">
                     <p>{t('consent.careerScope')}</p>
                     {!careerLoaded && <Button variant="secondary" onClick={loadCareer}>{t('consent.chooseFacts')}</Button>}
                     {careerError && <p role="alert">{t('consent.error')}</p>}
@@ -267,9 +271,11 @@ export default function JobDetailPage() {
                       {entry.title} — {entry.organization}
                     </label>)}
                   </div>
+                  }
+                  {!userId && <p className="mb-3 text-sm">{t("guest.description")}</p>}
                   {fetchError && <p role="alert" className="mb-3 text-sm text-red-600 dark:text-red-400">{fetchError}</p>}
                   <Button
-                    onClick={() => letter ? setShowModal(true) : requestGeneration()}
+                    onClick={() => !userId ? router.push(signInHref(`/jobs/${id}`)) : letter ? setShowModal(true) : requestGeneration()}
                     disabled={generating || loadingLetter || deletingLetter}
                     className="h-auto w-full px-4 py-2.5"
                   >

@@ -21,7 +21,7 @@ function load(file, mocks, fetch) {
  return module.exports;
 }
 const auth={getSupabaseBrowserClient:()=>({auth:{getSession:async()=>({data:{session:{access_token:'synthetic',user:{id:'owner'}}}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})}})};
-const shared={'next-i18next':{useTranslation:()=>({t:k=>k,i18n:{language:'sv'}})},'next-i18next/serverSideTranslations':{},'next/link':({children,href})=>React.createElement('a',{href},children)};
+const shared={'../../../lib/generationAccess':{generationDestination:async()=>null},'../../lib/generationAccess':{generationDestination:async()=>null},'../../lib/AuthSessionContext':{useAuthSession:()=>({userId:'owner',loading:false})},'next-i18next':{useTranslation:()=>({t:k=>k,i18n:{language:'sv'}})},'next-i18next/serverSideTranslations':{},'next/link':({children,href})=>React.createElement('a',{href},children)};
 const button=props=>React.createElement('button',props);
 const findButton=(view,text)=>view.root.findAllByType('button').find(b=>b.children.includes(text));
 const job={id:'123',title:'Developer',company:'Company'};

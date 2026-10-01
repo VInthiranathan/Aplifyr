@@ -1,3 +1,6 @@
+import Link from "next/link";
+import { useRouter } from "next/router";
+import { safeReturnTo } from "../../lib/guestAccess";
 import type { GetServerSideProps } from "next";
 import {useDialogFocus} from '../../lib/useDialogFocus';
 import type { User } from "../../types/api";
@@ -190,6 +193,8 @@ const saveProfile = async (nextUser: User, section: "profile" | "bio" | "skills"
 };
 
 export default function UserPage({ user }: Props) {
+  const router = useRouter();
+  const returnTo = safeReturnTo(router.query.returnTo);
   const { t } = useTranslation("common");
   const { clearSession } = useMatchSession();
   const [activeTab, setActiveTab] = useState<ProfileTab>('overview');
@@ -263,6 +268,7 @@ export default function UserPage({ user }: Props) {
       {/* Main container */}
       <div className="mx-auto -mt-10 max-w-7xl px-4 pb-6 sm:-mt-24 sm:px-8 sm:pb-10">
         {/* Profile Card */}
+        {returnTo !== "/" && <div className="app-card-base mb-5 rounded-xl p-4"><p>{t("guest.completeProfile")}</p><Link className="mt-2 inline-block underline" href={returnTo}>{t("guest.returnToJob")}</Link></div>}
         <div className="mb-5 rounded-2xl border border-gray-200 bg-white p-4 shadow-lg dark:border-white/5 dark:bg-[#1a1a1a] sm:mb-8 sm:rounded-3xl sm:p-8 sm:shadow-xl">
           <div className="flex flex-wrap items-center gap-4 sm:gap-6">
             {/* Square Avatar */}

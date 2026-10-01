@@ -61,6 +61,7 @@ public sealed class CvApplicationService(IConfiguration configuration, AiPrivacy
             !consent[0].TryGetProperty("granted", out var granted) || granted.ValueKind != JsonValueKind.True) throw new CvFailure(403, "consent");
         var job = await jobs.Get(jobId, context.RequestAborted); // Never use a search hit, client snapshot or stale ad for new generation.
         var (profile, career) = await store.Profile();
+        GenerationProfile.Require(profile, career);
         var facts = CvContent.Facts(profile, career);
         var skills = CvContent.Strings(profile, "tech_stack").Concat(career.SelectMany(e => CvContent.Strings(e, "skills"))).Distinct().ToArray();
         if (facts.Count + skills.Length + career.Length == 0) throw new CvFailure(422, "profileEmpty");

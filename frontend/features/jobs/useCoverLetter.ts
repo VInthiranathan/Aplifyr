@@ -1,3 +1,4 @@
+import { generationDestination } from '../../lib/generationAccess';
 import { useTranslation } from 'next-i18next';
 import { useRouter } from 'next/router';
 import { useEffect,useRef,useState } from 'react';
@@ -5,7 +6,7 @@ import { aiFailureCode } from '../../lib/aiFailure';
 import { getPublicBackendUrl } from '../../lib/backendUrl';
 import { getSupabaseBrowserClient } from '../../lib/supabaseClient';
 const BACKEND = getPublicBackendUrl();
-export function useCoverLetter(job: any, setFetchError: (message: string | null) => void) {
+export function useCoverLetter(job: any, setFetchError: (message: string | null) => void, enabled = true) {
   const router = useRouter();
   const {id} = router.query;
   const {t} = useTranslation('common');
@@ -17,7 +18,14 @@ export function useCoverLetter(job: any, setFetchError: (message: string | null)
   const [deletingLetter, setDeletingLetter] = useState(false);
   // debug toggle removed
   const [consentOpen, setConsentOpen] = useState(false);
-  const requestGeneration = () => { if (!generating) { setShowModal(false); setConsentOpen(true); } };
+  const requestGeneration = async () => {
+    if (generating) return;
+    try {
+      const destination = await generationDestination(`/jobs/${id}`);
+      if (destination) { await router.push(destination); return; }
+      setShowModal(false); setConsentOpen(true);
+    } catch { setFetchError(t('guest.profileUnavailable')); }
+  };
   useEffect(() => { setConsentOpen(false); }, [id]);
   const [showModal, setShowModal] = useState(false);
   const [career, setCareer] = useState<any[]>([]);
@@ -31,6 +39,7 @@ export function useCoverLetter(job: any, setFetchError: (message: string | null)
   }
 
   useEffect(() => {
+    if (!enabled) { setLetter(null); setShowModal(false); setConsentOpen(false); setLoadingLetter(false); setCareer([]); setSelectedCareer([]); setCareerLoaded(false); return; }
     if (!router.isReady || typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(id)) return;
     const controller = new AbortController();
     generationRequest.current?.abort(); setGenerating(false);
@@ -60,10 +69,10 @@ export function useCoverLetter(job: any, setFetchError: (message: string | null)
       }
     });
     return () => { controller.abort(); generationRequest.current?.abort(); subscription.unsubscribe(); };
-  }, [id, router.isReady, router.query.letter]);
+  }, [id, router.isReady, router.query.letter, enabled]);
 
   const generate = async () => {
-    if (!job || generating) return;
+    if (!enabled || !job || generating) return;
     const controller = new AbortController(); generationRequest.current = controller;
     setGenerating(true);
     setFetchError(null);
@@ -74,6 +83,7 @@ export function useCoverLetter(job: any, setFetchError: (message: string | null)
         data: { session },
       } = await supabase.auth.getSession();
 
+      if (!session) { await router.push(`/auth?returnTo=${encodeURIComponent(`/jobs/${id}`)}`); return; }
       let userProfile = null;
       if (session) {
         try {
@@ -99,6 +109,7 @@ export function useCoverLetter(job: any, setFetchError: (message: string | null)
         }
       }
 
+      if (!userProfile) { setFetchError(t('guest.profileUnavailable')); return; }
       if (controller.signal.aborted) return;
       const res = await fetch(`${BACKEND}/api/coverletters/generate-all`, {
         method: "POST", signal: controller.signal,

@@ -61,10 +61,12 @@ Console.WriteLine("PASS: AI privacy reservations require identity, consent respo
 Environment.SetEnvironmentVariable("AI_ALLOWED_PROVIDERS", "gemini");
 Environment.SetEnvironmentVariable("GEMINI_API_KEY", "letter-fixture");
 Environment.SetEnvironmentVariable("GEMINI_MODEL", null);
+privacyContext.Request.Headers.Authorization = "Bearer fixture";
 var letters = new Aplifyr.Api.Controllers.CoverLettersController(
  new Aplifyr.Api.Letters.LetterApplicationService(privacyConfig,
  new Aplifyr.Api.Letters.LetterProvider(new HttpClient(), gate, Microsoft.Extensions.Logging.Abstractions.NullLogger<Aplifyr.Api.Letters.LetterProvider>.Instance),
- Microsoft.Extensions.Logging.Abstractions.NullLogger<Aplifyr.Api.Letters.LetterApplicationService>.Instance), privacyConfig) {
+ Microsoft.Extensions.Logging.Abstractions.NullLogger<Aplifyr.Api.Letters.LetterApplicationService>.Instance,
+ new Aplifyr.Api.Cv.GenerationProfile(new HttpClient(new ProfileHandler()), new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?> { ["SUPABASE_URL"]="https://example.supabase.co", ["SUPABASE_ANON_KEY"]="fixture" }).Build())), privacyConfig) {
  ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext { HttpContext = privacyContext }
 };
 using var letterRequest = System.Text.Json.JsonDocument.Parse("{\"jobs\":[{\"id\":\"synthetic-job\",\"title\":\"Synthetic role\",\"description\":\"Synthetic job\"}]}");
@@ -75,6 +77,19 @@ privacyFactory.Enabled=false;privacyFactory.Fail=false;
 var deniedLetter = (Microsoft.AspNetCore.Mvc.ObjectResult)await letters.GenerateAll(letterRequest.RootElement);
 if(deniedLetter.StatusCode != 429 || !System.Text.Json.JsonSerializer.Serialize(deniedLetter.Value).Contains("consentOrQuota")) throw new Exception("Letter reservation failure hidden");
 Console.WriteLine("PASS: Letter configuration and reservation failures return explicit HTTP errors");
+var incompleteLetters = new Aplifyr.Api.Controllers.CoverLettersController(
+ new Aplifyr.Api.Letters.LetterApplicationService(privacyConfig,
+ new Aplifyr.Api.Letters.LetterProvider(new HttpClient(), gate, Microsoft.Extensions.Logging.Abstractions.NullLogger<Aplifyr.Api.Letters.LetterProvider>.Instance),
+ Microsoft.Extensions.Logging.Abstractions.NullLogger<Aplifyr.Api.Letters.LetterApplicationService>.Instance,
+ new Aplifyr.Api.Cv.GenerationProfile(new HttpClient(new ProfileHandler(false)), new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?> { ["SUPABASE_URL"]="https://example.supabase.co", ["SUPABASE_ANON_KEY"]="fixture" }).Build())), privacyConfig) {
+ ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext { HttpContext = privacyContext }
+};
+var reservationsBefore = privacyFactory.Calls;
+var incomplete = (Microsoft.AspNetCore.Mvc.ObjectResult)await incompleteLetters.GenerateAll(letterRequest.RootElement);
+if(incomplete.StatusCode != 422 || !System.Text.Json.JsonSerializer.Serialize(incomplete.Value).Contains("profileEmpty") || privacyFactory.Calls != reservationsBefore)
+ throw new Exception("Incomplete stored profile reached provider reservation");
+Console.WriteLine("PASS: Incomplete saved profile blocks letter generation before any AI reservation");
+
 
 // Exercise routing + fallback authorization + authentication over real local HTTP.
 var hostBuilder = WebApplication.CreateBuilder();
@@ -150,6 +165,24 @@ using(var transport = new HttpClient(handler)) {
  catch(Aplifyr.Api.Cv.CvFailure error) when(error.Status==401) { }
 }
 Console.WriteLine("PASS: Document storage binds privileged writes to verified owner and retains exact revisions");
+
+// Saved profile readiness cannot be bypassed with client facts or a name alone.
+foreach (var raw in new[] { "{}", "{\"full_name\":\"Ada\"}", "{\"full_name\":\" \",\"bio\":\"Background\"}" }) {
+ using var value=System.Text.Json.JsonDocument.Parse(raw);
+ try { Aplifyr.Api.Cv.GenerationProfile.Require(value.RootElement, []); throw new Exception("Incomplete profile accepted"); }
+ catch(Aplifyr.Api.Cv.CvFailure failure) when(failure.Status==422 && failure.Code=="profileEmpty") { }
+}
+using(var value=System.Text.Json.JsonDocument.Parse("{\"full_name\":\"Ada\",\"tech_stack\":[\"C#\"]}"))
+ Aplifyr.Api.Cv.GenerationProfile.Require(value.RootElement, []);
+Console.WriteLine("PASS: Document profile readiness requires name and source facts");
+
+sealed class ProfileHandler(bool ready = true) : HttpMessageHandler {
+ protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,CancellationToken token) {
+  if(!request.RequestUri!.Query.Contains("11111111-1111-4111-8111-111111111111"))throw new Exception("Profile lookup lacks owner");
+  var body=request.RequestUri.AbsolutePath.EndsWith("/profiles") ? "[{\"full_name\":\"Ada\",\"bio\":\"Background\"}]" : "[]";
+  return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK){Content=new StringContent(ready ? body : "[]")});
+ }
+}
 
 sealed class StoreHandler : HttpMessageHandler
 {

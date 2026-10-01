@@ -20,6 +20,10 @@ public static class ApplicationServices
             client.Timeout = TimeSpan.FromSeconds(20);
             client.MaxResponseContentBufferSize = 4 * 1024 * 1024;
         });
+        services.AddHttpClient<GenerationProfile>(client => {
+            client.Timeout = TimeSpan.FromSeconds(10);
+            client.MaxResponseContentBufferSize = 5 * 1024 * 1024;
+        }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
         services.AddScoped<CvApplicationService>();
         services.AddScoped<LetterApplicationService>();
         return services;
