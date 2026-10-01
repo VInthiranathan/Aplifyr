@@ -3,7 +3,7 @@ import type { ApplicationStatus } from "../types/api";
 
 type ApplicationStatusMap = Record<string, ApplicationStatus>;
 
-export function useApplicationStatuses() {
+export function useApplicationStatuses(enabled = true) {
   const [applicationStatuses, setApplicationStatuses] = useState<ApplicationStatusMap>({});
 
   const loadApplicationStatuses = useCallback(async (signal?: AbortSignal) => {
@@ -26,10 +26,11 @@ export function useApplicationStatuses() {
   }, []);
 
   useEffect(() => {
+    if (!enabled) { setApplicationStatuses({}); return; }
     const controller = new AbortController();
     void loadApplicationStatuses(controller.signal);
 
-    const refresh = () => void loadApplicationStatuses();
+    const refresh = () => void loadApplicationStatuses(controller.signal);
     window.addEventListener("focus", refresh);
     window.addEventListener("pageshow", refresh);
     return () => {
@@ -37,7 +38,7 @@ export function useApplicationStatuses() {
       window.removeEventListener("focus", refresh);
       window.removeEventListener("pageshow", refresh);
     };
-  }, [loadApplicationStatuses]);
+  }, [loadApplicationStatuses, enabled]);
 
   return applicationStatuses;
 }

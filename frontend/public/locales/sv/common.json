@@ -24,7 +24,8 @@
       "timeout": "AI-tjänsten tog för lång tid på sig att svara. Försök igen senare.",
       "invalidOutput": "AI-tjänsten gav ett ofullständigt eller oläsbart svar. Försök igen.",
       "provider": "AI-tjänsten kunde inte slutföra genereringen. Försök igen senare.",
-      "storage": "Brevet skapades men kunde inte kopplas till jobbet. Försök igen senare."
+      "storage": "Brevet skapades men kunde inte kopplas till jobbet. Försök igen senare.",
+      "profileEmpty": "Fyll i ditt namn och lägg till bakgrund, kompetenser, arbetslivserfarenhet eller utbildning i din profil."
     }
   },
   "privacy": {
@@ -515,7 +516,7 @@
       "invalidJob": "Jobbreferensen är ogiltig.",
       "jobUnavailable": "Jobbet är inte tillgängligt eller har tagits bort. Ett tidigare sparat CV finns kvar efter omladdning.",
       "jobLarge": "Jobbet saknar en användbar beskrivning eller är för långt att bearbeta.",
-      "profileEmpty": "Lägg först till kompetenser, profilbeskrivning, arbetslivserfarenhet eller utbildning.",
+      "profileEmpty": "Fyll i ditt namn och lägg till bakgrund, kompetenser, arbetslivserfarenhet eller utbildning i din profil.",
       "profileLarge": "Din profil är för stor att bearbeta säkert. Korta den och försök igen.",
       "provider": "AI-tjänsten kunde inte slutföra genereringen. Ditt sparade CV har inte ändrats.",
       "invalidOutput": "AI-svaret kunde inte valideras. Försök igen.",
@@ -574,5 +575,12 @@
     "cancelEdit": "Avbryt redigering",
     "editHelp": "Ändra en rad eller punkt direkt. Lämna fältet tomt för att ta bort texten. Spara innan du exporterar PDF. Giltighetstiden förlängs inte. Namn, titlar och datum hämtas från din profil.",
     "editedNotice": "Detta CV innehåller dina egna ändringar. Granska uppgifterna innan du skickar det."
+  },
+  "guest": {
+    "browse": "Fortsätt utan konto",
+    "description": "Sök och läs jobb utan konto. Logga in och fyll i din profil för att skapa CV eller personligt brev.",
+    "completeProfile": "Fyll i ditt namn och lägg till en beskrivning av din bakgrund, kompetenser, arbetslivserfarenhet eller utbildning. Spara uppgifterna och återgå sedan till jobbet.",
+    "returnToJob": "Tillbaka till valt jobb",
+    "profileUnavailable": "Det gick inte att kontrollera din profil. Försök igen."
   }
 }

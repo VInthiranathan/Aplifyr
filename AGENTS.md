@@ -393,3 +393,10 @@ A feature is not complete if required documentation is stale or relevant validat
 - Reuse `JobMatchingRules` for CV relevance instead of referencing another controller. Keep request/cache state out of static scoring/catalog code.
 - Home/search/detail pages compose `frontend/features/home` and `frontend/features/jobs` hooks/components. Keep SSR at the route, async lifecycles in hooks, and section rendering in components.
 - Preserve provider reservation, owner identity, cancellation, optimistic revisions, cache gates and sanitized HTML when moving code. Run behavior tests plus the production build on the final tree before publishing; earlier successful builds do not cover later edits.
+
+## 18. Guest and generation access
+
+- Keep public browsing limited to explicitly public pages; do not make nested CV routes public with a broad `/jobs` prefix.
+- Authentication, owner isolation, profile readiness and AI consent remain independently enforced on the server. Client session state is for navigation only.
+- Reuse the allowlisted return-destination helper across login/profile flows; never redirect to an unvalidated query value.
+- See `documents/project-overview.md` for guest flow and required profile facts; run guest/proxy and backend authentication regressions when changing these boundaries.

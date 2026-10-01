@@ -166,3 +166,7 @@ This section supersedes earlier activation instructions for the new code. Live r
 Backend public access is explicit endpoint metadata, not a path-name allowlist. Verified users have separate generation/document budgets; unverified tokens consume only bounded authentication capacity. Public search, generation and documents have separate concurrency pools. Limits remain process-local; database AI reservations remain shared. Correct trusted-proxy configuration and staging load tests remain necessary.
 
 The two previously NOT VALID constraints had zero violations during the read-only precheck; the migration validates them transactionally and will abort if invalid data appears before execution. Hosted password protection and production rollout remain pending; see the runbook.
+
+## Guest browsing
+
+Job search and advertisements can be read without registration or AI consent. Guest navigation does not request private profile, application or document records. Generation continues to require a verified account, a saved profile with name and source material, and the existing separate AI consent. Optional contact fields stay optional. No new storage, provider, consent purpose, retention period or database policy is introduced. See the guest flow in `project-overview.md`.

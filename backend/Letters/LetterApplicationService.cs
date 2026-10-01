@@ -5,7 +5,7 @@ using static Aplifyr.Api.Letters.LetterJobFacts;
 
 namespace Aplifyr.Api.Letters;
 
-public sealed class LetterApplicationService(IConfiguration configuration, LetterProvider provider, ILogger<LetterApplicationService> logger)
+public sealed class LetterApplicationService(IConfiguration configuration, LetterProvider provider, ILogger<LetterApplicationService> logger, GenerationProfile generationProfile)
 {
     public async Task<object> GenerateAll(HttpContext context, JsonElement request)
     {
@@ -75,6 +75,8 @@ public sealed class LetterApplicationService(IConfiguration configuration, Lette
             logger.LogWarning("[CoverLetters] WARNING: No user profile provided in request");
         }
 
+        // Read the verified owner's saved profile; client-supplied facts cannot bypass readiness.
+        await generationProfile.Require(context);
         var results = new List<object>();
 
         foreach (var jobEl in jobs.EnumerateArray())

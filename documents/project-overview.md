@@ -6,6 +6,17 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 
 ## Main User Flows
 
+### Guest access
+
+- `/jobs`, `/jobs/[id]`, `/support`, `/auth` and `/privacy` are public. Anonymous `/` redirects to job search; authenticated `/` retains personalized matches and prepared jobs.
+- Desktop and mobile navigation offer sign-in for guests; auth also offers **Continue without an account**. Search/filter/ad APIs were already public; no private API or RLS policy is opened.
+- CV pages, profile, application tracking, favorites and document APIs retain authentication. Guest document/favorite actions lead to login with an allowlisted `returnTo` destination. Login and the email-confirmation page preserve the selected job; query payloads and external redirects are rejected.
+- Before either generation flow, the UI checks the saved profile and career data. Missing information leads to profile editing with a link back to the selected job/CV page. Backend independently requires a nonblank name plus a nonblank biography, at least one nonblank skill, or a career entry with a title. Beginners need not have employment history; contact fields remain optional.
+- `GenerationProfile` verifies the saved, owner-scoped profile before letter provider calls; CV uses the same readiness rule. Incomplete profiles return `422 profileEmpty`. Existing consent/reservation, quotas and document retention remain in force. The letter's bounded client-supplied facts remain the existing trust limitation.
+- `AuthSessionProvider` supplies UI state only; server authentication remains authoritative. Guests do not fetch profile/application/saved-letter data on public pages. Public HTML retains CSP and private/no-store caching.
+- Verification: `guest-access.test.cjs`, `proxy-refresh.test.cjs`, auth/CV regressions and backend security tests cover routing, safe return destinations, readiness and protected endpoints. Real hosted registration/email/provider flows still require deployment verification.
+
+
 ### Account registration and sign-in
 
 - `/auth` keeps the existing split sign-in form and uses the refined animated Aplifyr brand panel.

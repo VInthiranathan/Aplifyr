@@ -24,7 +24,7 @@ test('application tracking is authenticated, conflict-aware and exported', () =>
   assert.doesNotMatch(api, /\.limit\(500\)/);
   assert.match(statusHook, /fetch\("\/api\/applications"/);
   assert.match(statusHook, /addEventListener\("pageshow", refresh\)/);
-  assert.match(jobs, /useApplicationStatuses\(\)/);
+  assert.match(jobs, /useApplicationStatuses\(!!userId\)/);
   assert.match(jobs, /applicationStatuses\[job\.id\]/);
   assert.match(jobs, /jobs\.appliedWithStatus/);
   assert.match(home, /useApplicationStatuses\(\)/);

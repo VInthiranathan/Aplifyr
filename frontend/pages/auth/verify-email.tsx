@@ -1,3 +1,4 @@
+import { safeReturnTo, signInHref } from "../../lib/guestAccess";
 import { useEffect, useState } from "react";
 import type { GetServerSideProps } from "next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
@@ -52,7 +53,7 @@ export default function VerifyEmailPage() {
           {t("auth.verifyEmailSpamHint")}
         </p>
       </div>
-      <Button type="button" className="mt-6 h-12 w-full" onClick={() => router.push("/auth")}>
+      <Button type="button" className="mt-6 h-12 w-full" onClick={() => router.push(signInHref(safeReturnTo(router.query.returnTo)))}>
         {t("auth.backToSignIn")}
       </Button>
     </AuthShell>

@@ -1,6 +1,7 @@
 import type { AppProps } from 'next/app'
 import NextApp, {AppContext} from 'next/app'
 import '../styles/globals.css'
+import { AuthSessionProvider } from '../lib/AuthSessionContext'
 import Layout from '../components/Layout'
 import { appWithTranslation } from 'next-i18next'
 import { ThemeProvider } from 'next-themes'
@@ -25,7 +26,7 @@ function App({ Component, pageProps, nonce }: AppProps & {nonce?:string}) {
 
   return (
     <ThemeProvider nonce={nonce} attribute="class" defaultTheme="dark" enableSystem={false}>
-      <MatchSessionProvider>
+      <AuthSessionProvider><MatchSessionProvider>
         {isPublicFullScreenRoute ? (
           <Component {...pageProps} />
         ) : (
@@ -33,7 +34,7 @@ function App({ Component, pageProps, nonce }: AppProps & {nonce?:string}) {
             <Component {...pageProps} />
           </Layout>
         )}
-      </MatchSessionProvider>
+      </MatchSessionProvider></AuthSessionProvider>
     </ThemeProvider>
   )
 }

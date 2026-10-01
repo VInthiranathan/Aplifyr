@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { safeReturnTo } from "../../lib/guestAccess";
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import AuthShell from "../../components/AuthShell";
@@ -20,6 +22,7 @@ export const getServerSideProps: GetServerSideProps = async ({ locale }) => {
 
 export default function AuthPage() {
   const router = useRouter();
+  const returnTo = safeReturnTo(router.query.returnTo);
   const { t } = useTranslation("common");
   const { locale, push, asPath } = router;
   const { theme, setTheme, resolvedTheme } = useTheme();
@@ -99,11 +102,11 @@ export default function AuthPage() {
         }
 
         if (!data.session) {
-          await router.replace("/auth/verify-email");
+          await router.replace(`/auth/verify-email?returnTo=${encodeURIComponent(returnTo)}`);
           return;
         }
 
-        await router.replace("/");
+        await router.replace(returnTo);
         return;
       }
 
@@ -118,7 +121,7 @@ export default function AuthPage() {
       }
 
       if (data.session) {
-        await router.replace("/");
+        await router.replace(returnTo);
       }
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
@@ -144,6 +147,7 @@ export default function AuthPage() {
       isFocused={isFocused}
       footer={
         <div className="mt-8 text-center">
+          <Link href="/jobs" className="mb-4 block text-sm underline">{t("guest.browse")}</Link>
           <span className="text-sm text-gray-500 dark:text-white/60">
             {isLogin ? t("auth.noAccount") : t("auth.haveAccount")}
           </span>
