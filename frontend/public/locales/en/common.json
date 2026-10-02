@@ -591,6 +591,8 @@
     "profileUnavailable": "Could not check your profile. Please try again."
   },
   "workspace": {
+    "adUnavailable": "The advertisement is unavailable. You can still manage your saved notes, documents and applications. New AI generation requires an available advertisement.",
+    "retry": "Try again",
     "title": "Your application workspace",
     "tabs": {
       "overview": "Overview",

@@ -17,6 +17,7 @@ import { signInHref } from "../../lib/guestAccess";
 import type { useCoverLetter } from "./useCoverLetter";
 import type { useJobApplication } from "./useJobApplication";
 interface Props {
+  jobAvailable?: boolean;
   jobId: string;
   active: WorkspaceTab;
   userId: string | null;
@@ -26,6 +27,7 @@ interface Props {
 }
 export function JobWorkspace({
   jobId,
+  jobAvailable = true,
   active,
   userId,
   job,
@@ -63,7 +65,8 @@ export function JobWorkspace({
   return (
     <div className="mt-6 space-y-4">
       <WorkspaceNav jobId={jobId} active={active} />
-      {userId && ready && !l.loadingLetter && !a.applicationLoading && (
+      {!jobAvailable && <p role="status">{t("workspace.adUnavailable")}</p>}
+      {jobAvailable && userId && ready && !l.loadingLetter && !a.applicationLoading && (
         <section className="app-card-base space-y-3 rounded-2xl p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="font-semibold">{t("workspace.title")}</h2>
@@ -124,7 +127,7 @@ export function JobWorkspace({
         (userId ? <JobNotes key={userId + jobId} jobId={jobId} /> : guest)}
       {active === "application" &&
         (userId ? (
-          <ApplicationPanel
+          !jobAvailable && !a.application && !a.applicationLoading ? <p>{t("workspace.adUnavailable")}</p> : <ApplicationPanel
             key={userId + jobId}
             application={a.application}
             loading={a.applicationLoading}
@@ -144,7 +147,7 @@ export function JobWorkspace({
             <p>{t("workspace.letterHelp")}</p>
             {userId ? facts : guest}
             <Button
-              disabled={l.generating || l.loadingLetter}
+              disabled={!jobAvailable || l.generating || l.loadingLetter}
               onClick={() =>
                 !userId
                   ? router.push(signInHref(`/jobs/${jobId}`))
@@ -157,6 +160,7 @@ export function JobWorkspace({
         ) : (
           <CoverLetterModal
             inline
+            canGenerate={jobAvailable}
             jobId={jobId}
             revision={l.letterRevision}
             onSave={l.saveLetter}

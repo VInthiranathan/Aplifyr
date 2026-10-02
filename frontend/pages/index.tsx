@@ -27,6 +27,7 @@ const HOME_VIEW_MORE_STEP = 15;
 interface Props {
   applications: QueueApplication[];
   queueError: boolean;
+  preparedLoadError: boolean;
   matchReq: MatchProfileRequest;
   preparedJobs: PreparedJob[];
   showDebug: boolean;
@@ -45,6 +46,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
 
   let applications: QueueApplication[] = [];
   let queueError = false;
+  let preparedLoadError = false;
   let matchReq: MatchProfileRequest = {};
   let profileId = "";
   let preparedJobs: PreparedJob[] = [];
@@ -84,7 +86,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
         const activeLetter=job.has_cover_letter&&!!job.cover_letter_expires_at&&Date.parse(job.cover_letter_expires_at)>Date.now();
         return {...job,has_cv:activeCv,cv_expires_at:activeCv?job.cv_expires_at:null,has_cover_letter:activeLetter,cover_letter_expires_at:activeLetter?job.cover_letter_expires_at:null};
       }).filter(job=>job.has_cv||job.has_cover_letter);
-    }catch{queueError=true;}
+    }catch{preparedLoadError=true;}
     matchReq = {
       roles: profile?.roles ?? [],
       title: profile?.title ?? "",
@@ -96,7 +98,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
 
   return {
     props: {
-      applications, queueError,
+      applications, queueError, preparedLoadError,
       matchReq,
       profileId,
       preparedJobs,
@@ -112,11 +114,11 @@ export default function Home(props: Props) {
   return <HomeContent key={props.profileId + matchProfileKey(props.matchReq)} {...props} />;
 }
 
-function HomeContent({ applications, queueError, matchReq, preparedJobs: initialPreparedJobs, showDebug, profileId }: Props) {
+function HomeContent({ applications, queueError, preparedLoadError, matchReq, preparedJobs: initialPreparedJobs, showDebug, profileId }: Props) {
   const {t} = useTranslation('common');
   const [activeJobsTab, setActiveJobsTab] = useState<'matched' | 'prepared'>('matched');
   const matches = useHomeMatches(matchReq, profileId);
-  const prepared = usePreparedJobs(initialPreparedJobs);
+  const prepared = usePreparedJobs(initialPreparedJobs, preparedLoadError);
   const {matched, matchLoading, poolLimited, desiredRolesSource, fetchComplete, handleLoadDifferent} = matches;
   const {preparedJobs} = prepared;
   const queue=useWorkQueue(applications,queueError);
@@ -130,7 +132,7 @@ function HomeContent({ applications, queueError, matchReq, preparedJobs: initial
         <p className="app-page-subtitle">{t("home.subtitle")}</p>
       </div>
 
-      <NextActions preparedJobs={preparedJobs} queue={queue} matchCount={matched.filter(j=>!progress[j.id]?.status&&!progress[j.id]?.hasCv&&!progress[j.id]?.hasLetter).length}/>
+      <NextActions preparedError={!!prepared.preparedError} preparedJobs={preparedJobs} queue={queue} matchCount={matched.filter(j=>!progress[j.id]?.status&&!progress[j.id]?.hasCv&&!progress[j.id]?.hasLetter).length}/>
       <WorkQueue model={prepared} queue={queue}/>
 
       {/* Job List Section */}

@@ -59,3 +59,12 @@ Each rewrite provider attempt reserves independently through `AiPrivacyGate`, in
 5. Verify real auth, both document pipelines, paragraph acceptance/save/reload, expiry unchanged after edits, two-tab conflicts, note export/deletion/account cascade and mobile keyboard/scrolling.
 
 Run frontend tests/build, backend Release build, existing CV/security/matching regressions and `dotnet run --project tests/Aplifyr.WorkspaceTests --configuration Release`. Local PGlite fixtures omit pg_cron and do not prove hosted Auth/provider/deletion settings. Live migration, notice activation, deployment and real paid provider calls are separate operations and are not performed just by preparing this branch.
+
+## Review corrections — 2026-10-02
+
+- Missing/expired advertisements no longer hide authenticated notes or saved letters. The workspace remains available using the job ID and any owner application context; notes can be edited/deleted and letters manually edited without an ad or AI consent. New generation/rewrite actions stay disabled without an available advertisement. Saved CV access continues through the existing owner document route.
+- Editing or deleting an application from the Applications page immediately invalidates shared job progress, including mounted list badges. Failed writes do not announce a successful change.
+- Prepared-document read errors are tracked separately from application-queue errors, including SSR failures. The work queue and ready count show failure instead of empty/zero success, with a retry that refreshes both sources.
+- Rewrite evidence includes explicit saved profile/career skills, with the same source restrictions as prose. At most 40 skill facts share the existing 100-fact budget; entry bullets retain only that entry's evidence. Listed skills do not imply proficiency, duration or achievements. Generation and independent factual review receive the same evidence. Contact fields, notes and tracking remain excluded; consent, quota and revision guards are unchanged.
+
+Regression coverage: missing-ad notes CRUD/account switching, manual letter edits with generation disabled, failed prepared reads and retry, immediate shared status refresh after successful edits/deletions, and skills-only profiles through both reserved provider attempts. These corrections do not execute the migration or activate the new notice.

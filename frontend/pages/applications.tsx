@@ -1,3 +1,4 @@
+import { notifyWorkspace } from "../lib/JobProgressContext";
 import {useAuthSession} from '../lib/AuthSessionContext';
 import {localDay,needsFollowUp} from '../lib/jobProgress';
 import type { GetServerSideProps } from "next";
@@ -107,6 +108,7 @@ function ApplicationsContent({applications:initialApplications,loadError}:Props)
       const updated = (await response.json()).application as JobApplication;
       setApplications(current => current.map(item => item.job_id === updated.job_id ? updated : item));
       setEditingId(null); setDraft(null);
+      notifyWorkspace();
     } catch (cause) {
       setError(t(cause instanceof Error && cause.message === "conflict" ? "applications.conflict" : "applications.saveError"));
     } finally { setSavingId(null); }
@@ -128,6 +130,7 @@ function ApplicationsContent({applications:initialApplications,loadError}:Props)
       if (!response.ok) throw new Error("delete");
       setApplications(current => current.filter(item => item.job_id !== application.job_id));
       if (editingId === application.job_id) { setEditingId(null); setDraft(null); }
+      notifyWorkspace();
     } catch (cause) {
       setError(t(cause instanceof Error && cause.message === "conflict" ? "applications.conflict" : "applications.deleteError"));
     } finally { setSavingId(null); }

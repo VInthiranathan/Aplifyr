@@ -54,6 +54,13 @@ function JobDetailContent() {
     );
   };
 
+  const workspace = typeof id === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(id) && (job || userId) ? (
+    <JobWorkspace jobId={id} active={active} userId={userId}
+      jobAvailable={!!job && !jobHtml}
+      job={job ?? { title: application?.job_context.title ?? t('jobDetail.defaultJobTitle') }}
+      letterModel={letterModel} applicationModel={applicationModel} />
+  ) : null;
+
   if (!job && !jobHtml) {
     return (
       <div className="app-page-shell">
@@ -67,6 +74,7 @@ function JobDetailContent() {
         {fetchError && (
           <div className="mt-2 text-red-500 text-sm">{t("jobDetail.error", { message: fetchError })}</div>
         )}
+        {!fetching && workspace}
         <div className="mt-4">
           <Button asChild variant="secondary" className="h-auto px-4 py-2">
             <Link href="/jobs">← {t("jobDetail.backToJobs")}</Link>
@@ -99,6 +107,7 @@ function JobDetailContent() {
             </div>
           </div>
 
+          {workspace}
           <div className="prose max-w-none text-sm text-slate-700 dark:text-white bg-white dark:bg-[#111] p-4 rounded-lg">
             <div dangerouslySetInnerHTML={{ __html: safeHtml(jobHtml ?? "") }} />
           </div>
@@ -173,7 +182,7 @@ function JobDetailContent() {
               </div>
             </div>
 
-            {typeof id==='string'&&<JobWorkspace jobId={id} active={active} userId={userId} job={job} letterModel={letterModel} applicationModel={applicationModel}/>}
+            {workspace}
             <div hidden={active!=='overview'}>
             {userId&&typeof id==='string'&&<div className="mt-4"><MatchExplanation key={userId+id} jobId={id}/></div>}
             {typeof id === 'string' && <Button asChild className="mt-6 w-full sm:w-auto"><Link href={`/jobs/${encodeURIComponent(id)}/cv`}>{t('cv.generate')}</Link></Button>}

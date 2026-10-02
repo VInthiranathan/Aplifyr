@@ -31,6 +31,14 @@ Check(normal.Writes==0,"Suggestion must never save a document");
 Check(normal.Keys.All(k=>k=="synthetic-cv"),"CV key separation");
 var letter=new Fixture();await Service(letter).Suggest(context,"job",Json(Request("letter","I built APIs.","paragraph")));
 Check(letter.Keys.All(k=>k=="synthetic-letter"),"Letter key separation");
+foreach (var kind in new[] {"cv", "letter"}) {
+ var skillsOnly=new Fixture{SkillsOnly=true};
+ await Service(skillsOnly).Suggest(context,"job",Json(Request(kind,"I built APIs.",kind=="cv"?"professionalSummary":"paragraph")));
+ Check(skillsOnly.ProviderCalls==2 && skillsOnly.Reservations==2,"Skills-only profiles must reach both independently reserved attempts");
+ Check(skillsOnly.Evidence.Count==2 && skillsOnly.Evidence.All(f=>f.Any(e=>e.GetProperty("Kind").GetString()=="profile:listed_skill" && e.GetProperty("Text").GetString()=="C#")),"Generation and review must both receive explicit saved skills");
+ Check(skillsOnly.Evidence.All(f=>f.All(e=>!e.GetProperty("Text").GetString()!.Contains("never-disclose"))),"Contact fields must remain excluded");
+}
+await Failure(new Fixture{SkillsOnly=true,Supported=false},502,"unsupportedFact");
 var stale=new Fixture();await Failure(stale,409,"editConflict",Request(text:"Unsaved draft"));Check(stale.ProviderCalls==0,"Stale text must be rejected before provider");
 var badIndex=new Fixture();await Failure(badIndex,400,"invalidEdit",Request(index:99));Check(badIndex.ProviderCalls==0,"Index must be bounded");
 await Failure(new Fixture{Supported=false},502,"unsupportedFact");
@@ -47,6 +55,8 @@ Console.WriteLine($"{checks} workspace checks passed.");
 sealed class Fixture:HttpMessageHandler,IHttpClientFactory {
  public const string Revision="2026-10-02T08:00:00+00:00";
  public int ProviderCalls,Reservations,Releases,Writes,ProfileReads;
+ public bool SkillsOnly;
+ public List<JsonElement[]> Evidence=new();
  public bool Supported=true,ProfileChanged,RevisionChanged,Allowed=true,AllowReview=true;
  public List<string> Keys=new();
  public HttpClient CreateClient(string name)=>new(this,false);
@@ -60,7 +70,10 @@ sealed class Fixture:HttpMessageHandler,IHttpClientFactory {
    var text=prompt.RootElement.GetProperty("contents")[0].GetProperty("parts")[0].GetProperty("text").GetString()!;
    if(text.Contains("synthetic-owner")||text.Contains("contact_email")||text.Contains("Private notes"))throw new Exception("Unnecessary data sent");
    if(ProviderCalls==2&&(text.Contains("externalJob")||text.Contains("description")))throw new Exception("Review received ad");
-   var output=ProviderCalls==1?JsonSerializer.Serialize(new {text="I implemented APIs using C#."}):JsonSerializer.Serialize(new {decisions=new[]{new{id="0",supported=Supported}}});
+   using var input=JsonDocument.Parse(text);
+   var evidence=ProviderCalls==1?input.RootElement.GetProperty("facts"):input.RootElement[0].GetProperty("evidence");
+   Evidence.Add(evidence.EnumerateArray().Select(f=>f.Clone()).ToArray());
+   var output=ProviderCalls==1?JsonSerializer.Serialize(new {text=SkillsOnly?"My skills include C#.":"I implemented APIs using C#."}):JsonSerializer.Serialize(new {decisions=new[]{new{id="0",supported=Supported}}});
    return Ok(new {candidates=new[]{new {finishReason="STOP",content=new {parts=new[]{new {text=output}}}}}});
   }
   if(uri.Host!="example.supabase.co")throw new Exception("Unexpected host");
@@ -73,7 +86,7 @@ sealed class Fixture:HttpMessageHandler,IHttpClientFactory {
   var query=Uri.UnescapeDataString(uri.Query);
   if(uri.AbsolutePath.EndsWith("profiles")){
    ProfileReads++;if(!query.Contains("id=eq.11111111-1111-4111-8111-111111111111"))throw new Exception("Profile owner");
-   return Ok(new[]{new{full_name="Synthetic",title="Developer",bio=ProfileChanged&&ProfileReads>1?"Changed facts":"I implemented APIs using C#.",tech_stack=new[]{"C#"},contact_email="never-disclose@example.test"}});
+   return Ok(new[]{new{full_name="Synthetic",title=SkillsOnly?"":"Developer",bio=SkillsOnly?"":ProfileChanged&&ProfileReads>1?"Changed facts":"I implemented APIs using C#.",tech_stack=new[]{"C#"},contact_email="never-disclose@example.test"}});
   }
   if(uri.AbsolutePath.EndsWith("profile_career_entries"))return Ok(Array.Empty<object>());
   if(!query.Contains("user_id=eq.11111111-1111-4111-8111-111111111111")||!query.Contains("job_id=eq.job")||!query.Contains("expires_at=gt."))throw new Exception("Document owner or expiry");

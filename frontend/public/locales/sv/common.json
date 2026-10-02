@@ -591,6 +591,8 @@
     "profileUnavailable": "Det gick inte att kontrollera din profil. Försök igen."
   },
   "workspace": {
+    "adUnavailable": "Annonsen kan inte hämtas. Du kan fortfarande hantera dina sparade anteckningar, dokument och ansökningar. Ny AI-generering kräver en tillgänglig annons.",
+    "retry": "F\u00f6rs\u00f6k igen",
     "title": "Din arbetsyta",
     "tabs": {
       "overview": "Översikt",

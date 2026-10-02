@@ -7,6 +7,7 @@ import {
   localDay,
   needsFollowUp,
 } from "../../lib/jobProgress";
+import { Button } from "../../components/ui/button";
 import JobListCard from "../../components/JobListCard";
 import type { JobApplication, PreparedJob } from "../../types/api";
 export type QueueApplication = Pick<
@@ -22,6 +23,8 @@ export type QueueApplication = Pick<
 export function useWorkQueue(initial: QueueApplication[], failed: boolean) {
   const [applications, setApplications] = useState(initial);
   const [error, setError] = useState(failed);
+  const [retryVersion, setRetryVersion] = useState(0);
+  const retry = () => setRetryVersion(value => value + 1);
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
     const controller = new AbortController();
@@ -39,9 +42,10 @@ export function useWorkQueue(initial: QueueApplication[], failed: boolean) {
           setNow(new Date());
         }
       } catch {
-        if (!controller.signal.aborted) setError(true);
+        if (!controller.signal.aborted && v === version) setError(true);
       }
     }
+    if (retryVersion > 0) void refresh();
     const handler = () => void refresh();
     window.addEventListener("focus", handler);
     window.addEventListener("aplifyr-workspace", handler);
@@ -52,15 +56,17 @@ export function useWorkQueue(initial: QueueApplication[], failed: boolean) {
       window.removeEventListener("focus", handler);
       window.removeEventListener("aplifyr-workspace", handler);
     };
-  }, []);
-  return { applications, error, today: now ? localDay(now) : null };
+  }, [retryVersion]);
+  return { retry, applications, error, today: now ? localDay(now) : null };
 }
 export function NextActions({
   preparedJobs,
+  preparedError = false,
   queue,
   matchCount,
 }: {
   preparedJobs: PreparedJob[];
+  preparedError?: boolean;
   queue: ReturnType<typeof useWorkQueue>;
   matchCount: number;
 }) {
@@ -85,7 +91,7 @@ export function NextActions({
           className="rounded-xl bg-sky-50 p-4 text-sm text-sky-900 dark:bg-sky-500/10 dark:text-sky-200"
           href="/#work-queue"
         >
-          {queue.error
+          {(queue.error || preparedError)
             ? t("applications.loadError")
             : t("workspace.readyCount", { count: ready })}
         </Link>
@@ -144,8 +150,11 @@ export function WorkQueue({
           {t("workspace.queueHelp")}
         </p>
       </header>
-      {queue.error ? (
-        <p role="alert">{t("applications.loadError")}</p>
+      {queue.error || model.preparedError ? (
+        <div role="alert" className="space-y-2">
+          <p>{t("applications.loadError")}</p>
+          <Button variant="secondary" onClick={() => { queue.retry(); model.retry(); }}>{t("workspace.retry")}</Button>
+        </div>
       ) : (
         <>
           <section className="space-y-3">

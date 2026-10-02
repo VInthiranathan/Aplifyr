@@ -1,3 +1,4 @@
+const identityTranslation=key=>key;
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -78,7 +79,7 @@ test('editing only a bio preserves preference fields',async()=>{
 function editor(fetch, initial=profile) {
   const Component=load('components/JobPreferences.tsx',{
     '../lib/jobPreferences':validation,
-    'next-i18next':{useTranslation:()=>({t:key=>key})},
+    'next-i18next':{useTranslation:()=>({t:identityTranslation})},
     './ui/button':{Button:({variant,...props})=>React.createElement('button',props)},
   },{fetch,window:{addEventListener(){},removeEventListener(){}}}).default;
   const updates=[];
@@ -139,7 +140,7 @@ function home(fetch, applicationStatuses={}) {
     '../lib/matchSessionContext':{useMatchSession:()=>({getSession:()=>session,updateSession:patch=>session={...session,...patch}})},
     '../components/JobListCard':({title,badges,jobId})=>React.createElement('article',null,title,badges,applicationStatuses[jobId]?`applications.status.${applicationStatuses[jobId]}`:null),
     'next/link':({children,href})=>React.createElement('a',{href},children),
-    'next-i18next':{useTranslation:()=>({t:key=>key})},
+    'next-i18next':{useTranslation:()=>({t:identityTranslation})},
     'next-i18next/serverSideTranslations':{serverSideTranslations:async()=>({})},
     '@supabase/ssr':{},
   },{fetch,AbortController,window:{addEventListener(){},removeEventListener(){}},process:{env:{}},setInterval:fn=>{poll=fn;return 1;},clearInterval(){},document:{visibilityState:'visible',addEventListener(){},removeEventListener(){}}}).default;

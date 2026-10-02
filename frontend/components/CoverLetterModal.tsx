@@ -8,6 +8,7 @@ import { Button } from "./ui/button";
 
 interface CoverLetterModalProps {
   inline?: boolean;
+  canGenerate?: boolean;
   jobId?: string;
   revision?: string;
   onSave?: (content:string)=>Promise<void>;
@@ -26,7 +27,7 @@ interface CoverLetterModalProps {
 }
 
 export default function CoverLetterModal({
-  isOpen, inline=false, jobId, revision, onSave, isSaving=false,
+  isOpen, canGenerate=true, inline=false, jobId, revision, onSave, isSaving=false,
   onClose,
   letter,
   jobTitle,
@@ -133,7 +134,7 @@ export default function CoverLetterModal({
               </pre>
             </div>
           )}
-          {isEditing&&jobId&&revision&&<div className="mt-4 space-y-4">{editedLetter.replace(/\r\n/g,'\n').split('\n\n').map((paragraph,index)=><section key={index} className="space-y-2 rounded-xl border border-slate-200 p-3 dark:border-white/10"><p className="whitespace-pre-wrap text-sm">{paragraph}</p><RewriteSuggestion onConsentChange={setRewriteDialog} jobId={jobId} revision={revision} text={paragraph} target={{kind:'letter',section:'paragraph',entry:0,index}} disabled={isSaving||editedLetter!==letter} onAccept={text=>{const rows=editedLetter.replace(/\r\n/g,'\n').split('\n\n');rows[index]=text;setEditedLetter(rows.join('\n\n'));}}/></section>)}</div>}
+          {isEditing&&jobId&&revision&&<div className="mt-4 space-y-4">{editedLetter.replace(/\r\n/g,'\n').split('\n\n').map((paragraph,index)=><section key={index} className="space-y-2 rounded-xl border border-slate-200 p-3 dark:border-white/10"><p className="whitespace-pre-wrap text-sm">{paragraph}</p><RewriteSuggestion onConsentChange={setRewriteDialog} jobId={jobId} revision={revision} text={paragraph} target={{kind:'letter',section:'paragraph',entry:0,index}} disabled={!canGenerate||isSaving||editedLetter!==letter} onAccept={text=>{const rows=editedLetter.replace(/\r\n/g,'\n').split('\n\n');rows[index]=text;setEditedLetter(rows.join('\n\n'));}}/></section>)}</div>}
         </div>
         {saveError&&<p role="alert" className="px-4 py-2">{saveError}</p>}
         {downloadError && <p role="alert" className="px-4 py-2">{t('coverLetter.downloadError')}</p>}
@@ -167,7 +168,7 @@ export default function CoverLetterModal({
             </Button>
             <Button
               onClick={onRegenerate}
-              disabled={isSaving||isRegenerating}
+              disabled={!canGenerate||isSaving||isRegenerating}
               variant="secondary"
               className="h-auto min-w-0 px-3 py-2 sm:px-4"
             >

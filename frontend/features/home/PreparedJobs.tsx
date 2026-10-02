@@ -7,18 +7,21 @@ import JobListCard from '../../components/JobListCard';
 import { getPublicBackendUrl } from '../../lib/backendUrl';
 import { getSupabaseBrowserClient } from '../../lib/supabaseClient';
 import type { PreparedJob } from '../../types/api';
-export function usePreparedJobs(initialPreparedJobs: PreparedJob[]) {
+export function usePreparedJobs(initialPreparedJobs: PreparedJob[], initiallyFailed = false) {
   const {t} = useTranslation('common');
   const [preparedJobs, setPreparedJobs] = useState(initialPreparedJobs);
   const refreshed=useRef(0);
+  const [retryVersion, setRetryVersion] = useState(0);
+  const retry = () => setRetryVersion(value => value + 1);
   useEffect(()=>{const controller=new AbortController();
-    async function refresh(){const version=++refreshed.current;try{const r=await fetch('/api/prepared-jobs',{signal:controller.signal});if(!r.ok)throw Error();const body=await r.json();if(!controller.signal.aborted&&version===refreshed.current){setPreparedJobs(body.jobs);setPreparedError('');}}catch{if(!controller.signal.aborted)setPreparedError(t('applications.loadError'));}}
+    async function refresh(){const version=++refreshed.current;try{const r=await fetch('/api/prepared-jobs',{signal:controller.signal});if(!r.ok)throw Error();const body=await r.json();if(!controller.signal.aborted&&version===refreshed.current){setPreparedJobs(body.jobs);setPreparedError('');}}catch{if(!controller.signal.aborted&&version===refreshed.current)setPreparedError(t('applications.loadError'));}}
+    if (retryVersion > 0) void refresh();
     const handler=()=>void refresh();window.addEventListener('focus',handler);window.addEventListener('aplifyr-workspace',handler);const timer=setInterval(handler,60000);
     return()=>{controller.abort();clearInterval(timer);window.removeEventListener('focus',handler);window.removeEventListener('aplifyr-workspace',handler);};
-  },[]);
+  },[retryVersion, t]);
   const [deletingCv, setDeletingCv] = useState<string | null>(null);
   const [deletingLetter, setDeletingLetter] = useState<string | null>(null);
-  const [preparedError, setPreparedError] = useState("");
+  const [preparedError, setPreparedError] = useState(initiallyFailed ? t("applications.loadError") : "");
   const deleteCv = async (jobId: string) => {
     if (!window.confirm(t("home.deleteCvConfirm"))) return;
     setDeletingCv(jobId);
@@ -69,15 +72,15 @@ export function usePreparedJobs(initialPreparedJobs: PreparedJob[]) {
     }
   };
 
-  return {preparedJobs, preparedError, deletingCv, deletingLetter, deleteCv, deleteCoverLetter};
+  return {retry, preparedJobs, preparedError, deletingCv, deletingLetter, deleteCv, deleteCoverLetter};
 }
 export function PreparedJobs({model, jobs}: {model: ReturnType<typeof usePreparedJobs>; jobs?:PreparedJob[]}) {
   const {t, i18n} = useTranslation('common');
   const {preparedError, deletingCv, deletingLetter, deleteCv, deleteCoverLetter} = model;
   const preparedJobs = jobs ?? model.preparedJobs;
   return <>
-          {preparedError && <p role="alert" className="app-card-base p-4">{preparedError}</p>}
-          {preparedJobs.length === 0 ? (
+          {preparedError && <div role="alert" className="app-card-base p-4">{preparedError} <button type="button" className="min-h-10 underline" onClick={model.retry}>{t("workspace.retry")}</button></div>}
+          {preparedError ? null : preparedJobs.length === 0 ? (
             <div className="app-card-base rounded-2xl p-6 text-center sm:p-12">
               <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{t("home.noPreparedJobsTitle")}</p>
               <p className="text-gray-500 dark:text-white/50">{t("home.noPreparedJobsDescription")}</p>
