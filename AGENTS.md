@@ -35,6 +35,7 @@ Project documents define implementation-specific behavior.
 - Never make changes directly to `main` unless explicitly requested.
 - Do not amend, rewrite, rebase, reset, or force-push existing commits unless explicitly requested.
 - Keep changes focused on the requested task.
+- Commit, push, open/review a PR, or merge only within the owner's requested scope. Approval to update a feature branch is not approval to merge it or enable auto-merge.
 - Review the final diff before finishing.
 - Do not modify unrelated files.
 
@@ -273,6 +274,36 @@ Do not:
 
 Do not claim end-to-end deletion or GDPR conformity unless verified across all relevant systems.
 
+### Required privacy assessment for changed processing
+
+For each change that collects, reads, stores, displays, logs, exports or transmits personal data, update the relevant canonical feature/privacy document with:
+
+- the purpose, necessary data fields, source, recipients/processors and affected users
+- the documented legal basis, or an explicit unresolved operator decision; optional AI consent must not be treated as the legal basis for every account feature
+- access controls, retention/expiry, correction, export and deletion behavior, including downstream copies, logs and backups where relevant
+- any change to provider terms, subprocessors, regions or international transfers; verify applicable current primary sources before changing these assumptions
+
+Collect and transmit the minimum necessary fields. Prefer explicit field allowlists over serializing complete profiles, request bodies or database rows. Optional fields stay optional. Do not introduce special-category data processing, tracking or a new processing purpose without an explicit requirements/privacy review. Never use real user data in fixtures or external debugging services.
+
+Consent must be specific, informed, freely given and withdrawable. Preserve versioned evidence of the user's choice and the reviewed text. Do not bundle optional processing into registration, grant consent administratively or weaken server enforcement to make a test pass. Recheck the required authorization for each external attempt, including reviews, retries and fallbacks.
+
+Keep user access, correction and deletion usable even when an external advertisement expires, a provider is unavailable or AI consent is withdrawn. Distinguish document expiry, database cleanup and deletion from processors/backups; do not promise the same deadline without evidence. Changes must cover account export and account deletion, including partial failures and pagination.
+
+Before enabling changed processing, unresolved legal bases, processor agreements, transfer safeguards, notice/contact details, retention decisions or a required impact assessment are rollout blockers for that processing. Identify the decision and owner instead of inventing approval. Assess whether a DPIA is required when the processing changes its risk; do not assume every feature needs one.
+
+Use the [official GDPR text](https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng) and relevant current IMY/EDPB guidance when a legal interpretation is needed. Relevant areas include Articles 5–7, 9, 12–22, 25, 28, 32–35 and 44–49. These engineering rules support compliance; they are not a legal certification.
+
+### Security boundaries for every affected flow
+
+- Trace input through authentication, authorization, validation, storage and output. Treat advertisements, model output, URLs and client-supplied IDs as untrusted data.
+- Enforce ownership on reads, writes, deletes and exports. Test anonymous access, owner success and another owner's denial. Privileged/service-role success is not an RLS isolation test.
+- Review grants together with RLS, including direct Data API writes. Review views, RPCs and SECURITY DEFINER functions for bypasses, restricted execution and a safe search path. Do not trust user-editable metadata for authorization.
+- Preserve CSRF protection for cookie mutations, safe redirects, output escaping/sanitization, server-only secrets, no-store private responses, request limits, timeouts and quotas. Bound external URLs/redirects and resource use when adding integrations.
+- Preserve owner-scoped client state and reject stale asynchronous results after account, job or document revision changes. Invalidate shared summaries after every successful mutation, including alternate screens.
+- Do not log personal prose, documents, auth headers, cookies, tokens or raw provider/database payloads. Use sanitized error codes and minimal diagnostic metadata; do not send exception details to clients.
+- AI output must remain grounded in saved owner facts. Preserve the evidence needed for the permitted input profiles, source context, language and independent factual validation. Never treat the job ad or the model's assertion as evidence of an applicant qualification.
+- When dependencies or integrations change, review relevant advisories and lockfile changes. Do not disable validation, tests, security scanning or authorization to obtain a green build.
+
 ---
 
 ## 12. Secrets and Environment
@@ -357,10 +388,18 @@ docker build -f backend/Dockerfile .
 Rules:
 
 - run targeted tests/checks when available
+- test the affected behavior, not just the presence of source-code strings; include failures, unauthorized requests, stale revisions and partial data where relevant
+- for private workspace changes, cover account switching, shared-status refresh, missing/expired external jobs, unsaved edits during navigation, and failed reads distinct from empty results
+- verify changed interactive flows on narrow/mobile and desktop layouts, with keyboard access and both locales; report any browser verification that cannot be performed
 - run the relevant production build before declaring substantial changes complete when practical
 - fix validation failures caused by the change
 - if validation cannot run, report that clearly
 - never claim success based only on diff review
+- tie validation to the reviewed commit/final tree. Report local tests, hosted CI, staging and production checks separately; none proves that the others ran
+
+Before an approved merge or live migration, review the final code/schema diff, compatibility, secrets, RLS/grants, migration order and recovery plan. Run the relevant build/regression gates. Document separately authorized notice activation and hosting changes. Live migrations require explicit execution approval, a relevant current-state check and post-execution verification; never infer execution from a migration file or historical approval for another task.
+
+For a code review, report reproducible findings with severity, file/line, user impact and a concrete correction. Separate confirmed defects from operational prerequisites and unverified risks. Passing CI does not justify approving a known defect. Do not describe a review as proof that all future changes are safe or GDPR-compliant.
 
 ---
 
