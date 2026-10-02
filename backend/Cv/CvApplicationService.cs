@@ -90,7 +90,13 @@ public sealed class CvApplicationService(IConfiguration configuration, AiPrivacy
         // Reject stale results when the profile changed during generation.
         var latest = await store.Profile();
         if (CvContent.Hash(new { profile = latest.Profile, career = latest.Career }) != sourceHash) throw new CvFailure(409, "profileChanged");
-        var metadata = new { schemaVersion = CvContent.Version, promptVersion = 4, groundingVersion = 1, provider = "gemini", model = Environment.GetEnvironmentVariable("GEMINI_MODEL"),
+        var output = JsonSerializer.SerializeToElement(content);
+        var statements = output.GetProperty("professionalSummary").EnumerateArray().ToList();
+        foreach (var section in new[] {"experience","education"})
+            foreach (var entry in output.GetProperty(section).EnumerateArray()) statements.AddRange(entry.GetProperty("bullets").EnumerateArray());
+        var adaptations = new { matchedSkills = matchedSkills.Where(s=>output.GetProperty("skills").EnumerateArray().Any(v=>v.GetString()==s)).ToArray(),
+            rewrittenStatements = statements.Count(s=>!selectedFacts.Any(f=>f.Text==CvContent.Text(s,"text"))) };
+        var metadata = new { adaptations, schemaVersion = CvContent.Version, promptVersion = 4, groundingVersion = 1, provider = "gemini", model = Environment.GetEnvironmentVariable("GEMINI_MODEL"),
             sourceHash, jobHash, noticeVersion, sourceLimited = ranked.Length < career.Length || selectedFacts.Count < facts.Count || skills.Length > 100 || CvContent.Text(profile, "bio").Length > 800 || career.Any(e => new[] { "description", "achievements", "learned", "strengths" }.Any(field => CvContent.Text(e, field).Length > 800)) };
         var jobContext = Context(job);
         var saved = await store.SaveCv(jobId, content, jobContext, metadata);

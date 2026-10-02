@@ -38,6 +38,10 @@ public sealed class CvStore(HttpContext context, IConfiguration configuration, H
         DocumentPath("generated_cvs", jobId) + "&expires_at=gt." + Uri.EscapeDataString(DateTimeOffset.UtcNow.ToString("O")) +
         "&updated_at=eq." + Uri.EscapeDataString(revision) + "&select=job_id,content,job_context,metadata,created_at,updated_at,expires_at",
         HttpMethod.Patch, new { content, updated_at = DateTimeOffset.UtcNow }, service: true);
+    public Task<JsonElement> UpdateLetter(string jobId, string revision, string content) => Send(
+        DocumentPath("generated_cover_letters", jobId) + "&expires_at=gt." + Uri.EscapeDataString(DateTimeOffset.UtcNow.ToString("O")) +
+        "&updated_at=eq." + Uri.EscapeDataString(revision) + "&select=job_id,content,job_context,metadata,created_at,updated_at,expires_at",
+        HttpMethod.Patch, new { content, updated_at = DateTimeOffset.UtcNow }, service: true);
     public Task<JsonElement> SaveCv(string jobId, object content, object jobContext, object metadata) => Send(
         "rpc/save_generated_cv_v3", HttpMethod.Post,
         new { p_user = UserId, p_job = jobId, p_content = content, p_context = jobContext, p_metadata = metadata }, service: true);

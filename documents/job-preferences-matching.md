@@ -83,3 +83,7 @@ Auth changes also clear the in-memory match session. Backend request limits are 
 `JobMatchingService` owns bounded cache entries and serialized initial/continuation requests; it accepts a cancellation token independently of MVC. `JobMatchingRules` owns scoring, synonyms and response construction using `JobSearchCatalog`; `MatchProfileRequest` lives beside these services. Controllers map controlled failures to the existing status/body contract. All 16 matching regressions run through the thin controller with an injected synthetic matching transport, including failed-page retry and concurrent cursor changes.
 
 On the frontend, `features/home/useHomeMatches.ts` handles session restoration, fetch/poll/retry, shuffling and visible count. `MatchedJobs`, `PreparedJobs` and `MatchGradeSummary` render the home sections. `features/jobs/useJobSearch.ts` handles filters, debounce, result ordering and pagination; `JobSearchFilters` owns its location overlay. Routes still load translations through Pages Router SSR.
+
+## Explainable matching
+
+Matched cards now render the existing matched terms/role/location signal as localized explanations without numeric points. Job detail independently fetches canonical ad and owner-scoped career/profile facts to show skill overlap, relevant entries and known technology mentions absent from explicit skills. Absence is never presented as a proven qualification gap or mandatory requirement. This reuses `JobMatchingRules`; no AI calls or ranking changes are introduced. See [Application workspace](application-workspace.md).

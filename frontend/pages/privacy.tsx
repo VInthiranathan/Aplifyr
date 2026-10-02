@@ -37,6 +37,7 @@ export default function PrivacyPage({ notice, contact }: Props) {
   return <main className="app-page-shell max-w-3xl mx-auto">
     <h1 className="app-page-title">{t('privacy.title')}</h1>
     <p className="whitespace-pre-wrap">{notice || t('privacy.pending')}</p>
+    <section className="app-card-base space-y-2 rounded-xl p-4"><h2 className="font-semibold">{t('workspace.tabs.notes')}</h2><p>{t('workspace.notesHelp')}</p></section>
     <p>{t('privacy.exportScope')}</p>
     <Button onClick={download} disabled={busy}>{t('privacy.export')}</Button>
     {error && <p role="alert">{error}</p>}

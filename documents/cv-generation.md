@@ -372,3 +372,9 @@ Every external call now reserves via `reserve_ai_call_v2` with the pinned docume
 ## Guest entry and profile readiness
 
 Job advertisements are public; `/jobs/[id]/cv` and every document API remain authenticated. Sign-in preserves the chosen job. Before consent, an incomplete saved profile routes to `/user` with a return link. Both UI and backend require name plus background, skills or career history; contact fields and employment history are not mandatory. Backend rejects an incomplete profile with `422 profileEmpty` before any AI call. See `project-overview.md` for guest navigation and validation.
+
+## Workspace and statement proposals — 2026-10-02
+
+The CV route shares workspace navigation with job detail. The editor supports reviewed proposals for one saved summary/experience/education statement; the statement text and document revision must match server state. Each proposal is generated and separately reviewed against selected saved facts, with independent quota/consent reservations and the CV key. Acceptance changes the local draft only; the existing owner-bound PATCH persists it without extending expiry. The result is marked user-edited. New generation stores deterministic adaptation metadata for retained matched skills and rewritten-statement counts, rendered alongside selected career entries/fact references. Metadata is hidden after user editing rather than attributed to the edited prose. See [Application workspace](application-workspace.md).
+
+The current pinned notice is now `2026-10-documents-v3`; prior v2 descriptions above describe historical processing. The new migration leaves v3 disabled pending operator review and approved activation/fresh user consent.

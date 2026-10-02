@@ -21,11 +21,66 @@ function load(file, mocks, fetch) {
  return module.exports;
 }
 const auth={getSupabaseBrowserClient:()=>({auth:{getSession:async()=>({data:{session:{access_token:'synthetic',user:{id:'owner'}}}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})}})};
-const shared={'../../../lib/generationAccess':{generationDestination:async()=>null},'../../lib/generationAccess':{generationDestination:async()=>null},'../../lib/AuthSessionContext':{useAuthSession:()=>({userId:'owner',loading:false})},'next-i18next':{useTranslation:()=>({t:k=>k,i18n:{language:'sv'}})},'next-i18next/serverSideTranslations':{},'next/link':({children,href})=>React.createElement('a',{href},children)};
+const shared={
+ '../lib/backendUrl':{getPublicBackendUrl:()=>''},'../lib/supabaseClient':auth,
+ '../../../lib/JobProgressContext':{notifyWorkspace(){}},'../../lib/JobProgressContext':{useJobProgressReady:()=>true,useJobProgress:()=>({}),notifyWorkspace(){}},'../lib/JobProgressContext':{useJobProgress:()=>({}),useJobProgressReady:()=>true,notifyWorkspace(){}},
+ '../../features/jobs/MatchExplanation':{MatchExplanation:()=>null},
+ '../../../lib/generationAccess':{generationDestination:async()=>null},'../../lib/generationAccess':{generationDestination:async()=>null},'../../lib/AuthSessionContext':{useAuthSession:()=>({userId:'owner',loading:false})},'next-i18next':{useTranslation:()=>({t:k=>k,i18n:{language:'sv'}})},'next-i18next/serverSideTranslations':{},'next/link':({children,href})=>React.createElement('a',{href},children)};
 const button=props=>React.createElement('button',props);
 const findButton=(view,text)=>view.root.findAllByType('button').find(b=>b.children.includes(text));
 const job={id:'123',title:'Developer',company:'Company'};
 const saved={job_id:'123',updated_at:'2026-09-20T00:00:00Z',expires_at:'2026-09-27T00:00:00Z',metadata:{},content:{name:'Applicant',title:'Developer',location:'Lund',skills:['C#'],professionalSummary:[{text:'Original summary',sourceFactId:'p'}],experience:[{sourceId:'w',title:'Intern',organization:'Company',startMonth:'2024-01',endMonth:'2024-05',bullets:[{text:'Original work',sourceFactId:'w'}]}],education:[]}};
+test('letter save retains a conflicting draft and persists accepted edits across reload', async () => {
+ const Component=load('components/CoverLetterModal.tsx', {...shared,'./ui/button':{Button:button},'../lib/useDialogFocus':{useDialogFocus:()=>null}}).default;
+ let current='Saved original', conflict=true, view;
+ const props=()=>({isOpen:true,onClose(){},letter:current,jobTitle:'Developer',company:'Company',expiresAt:null,onDelete(){},onRegenerate(){},onSave:async content=>{if(conflict)throw Error('editConflict');current=content;}});
+ await act(async()=>{view=create(React.createElement(Component,props()));});
+ await act(async()=>findButton(view,'coverLetter.edit').props.onClick());
+ await act(async()=>view.root.findByType('textarea').props.onChange({target:{value:'Keep this edited paragraph'}}));
+ await act(async()=>findButton(view,'coverLetter.save').props.onClick());
+ assert.equal(current,'Saved original');
+ assert.equal(view.root.findByType('textarea').props.value,'Keep this edited paragraph');
+ assert.equal(view.root.findByProps({role:'alert'}).children[0],'cv.errors.editConflict');
+ conflict=false;
+ await act(async()=>findButton(view,'coverLetter.save').props.onClick());
+ assert.equal(current,'Keep this edited paragraph');
+ assert.equal(view.root.findAllByType('textarea').length,0);
+ await act(async()=>view.unmount());
+ await act(async()=>{view=create(React.createElement(Component,props()));});
+ assert.ok(JSON.stringify(view.toJSON()).includes(current));
+ await act(async()=>view.unmount());
+});
+
+test('letter hook sends the saved revision and preserves expiry after a manual edit', async () => {
+ const expiry='2026-10-08T12:00:00Z';
+ let current={content:'Saved original',updated_at:'2026-10-01T12:00:00Z',expires_at:expiry}, model;
+ const calls=[];
+ const fetch=async(url, options)=>{
+  calls.push([url,options]);
+  if(options.method==='PATCH'){
+   const body=JSON.parse(options.body);
+   assert.equal(body.updatedAt,current.updated_at);
+   assert.deepEqual(Object.keys(body).sort(),['content','updatedAt']);
+   current={...current,content:body.content,updated_at:'2026-10-02T12:00:00Z'};
+  }
+  return {ok:true,json:async()=>({letter:current})};
+ };
+ const {useCoverLetter}=load('features/jobs/useCoverLetter.ts',{...shared,'../../lib/backendUrl':{getPublicBackendUrl:()=>''},'../../lib/supabaseClient':auth,'next/router':{useRouter:()=>({query:{id:'123'},isReady:true})}},fetch);
+ function Harness(){model=useCoverLetter(job,()=>{});return null;}
+ let view;
+ await act(async()=>{view=create(React.createElement(Harness));});
+ assert.equal(model.letterRevision,current.updated_at);
+ await act(async()=>model.saveLetter('Persisted manual edit'));
+ assert.equal(model.letter,'Persisted manual edit');
+ assert.equal(model.letterRevision,current.updated_at);
+ assert.equal(model.letterExpiresAt,expiry);
+ assert.equal(calls.length,2);
+ await act(async()=>view.unmount());
+ await act(async()=>{view=create(React.createElement(Harness));});
+ assert.equal(model.letter,'Persisted manual edit');
+ assert.equal(model.letterExpiresAt,expiry);
+ await act(async()=>view.unmount());
+});
 test('CV edits save without AI, survive reload, and conflicts retain the draft',async()=>{
  let current=structuredClone(saved), conflict=false;const calls=[];
  const fetch=async(url,options)=>{

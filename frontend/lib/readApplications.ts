@@ -29,6 +29,9 @@ async function readRows<T extends StatusRow>(client: SupabaseClient, owner: stri
   throw new Error('Applications exceed safe export pages');
 }
 
+export const readApplicationQueue = (client: SupabaseClient, owner: string) =>
+  readRows<Pick<JobApplication,'job_id'|'job_context'|'status'|'applied_at'|'next_step'|'next_step_at'|'updated_at'>>(client,owner,'job_id,job_context,status,applied_at,next_step,next_step_at,updated_at');
+
 export const readApplicationStatuses = (client: SupabaseClient, owner: string) =>
   readRows<StatusRow>(client, owner, 'job_id,status');
 

@@ -1,3 +1,8 @@
+import {readPreparedJobs} from '../lib/readPreparedJobs';
+import {useAuthSession} from '../lib/AuthSessionContext';
+import {NextActions,WorkQueue,useWorkQueue,type QueueApplication} from '../features/home/WorkQueue';
+import {readApplicationQueue} from '../lib/readApplications';
+import {useJobProgress} from '../lib/JobProgressContext';
 import { RefreshCw } from "lucide-react";
 import type { GetServerSideProps } from "next";
 import { useTranslation } from "next-i18next";
@@ -20,6 +25,8 @@ const HOME_INITIAL_COUNT = 30;
 const HOME_VIEW_MORE_STEP = 15;
 
 interface Props {
+  applications: QueueApplication[];
+  queueError: boolean;
   matchReq: MatchProfileRequest;
   preparedJobs: PreparedJob[];
   showDebug: boolean;
@@ -36,6 +43,8 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
   if (!isSupabaseConfigured) return { redirect: { destination: "/jobs", permanent: false } };
   const showDebug = isDebugUiEnabled() && query.debug === "1";
 
+  let applications: QueueApplication[] = [];
+  let queueError = false;
   let matchReq: MatchProfileRequest = {};
   let profileId = "";
   let preparedJobs: PreparedJob[] = [];
@@ -63,28 +72,19 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
       .maybeSingle();
 
     profileId = user.id;
+    try {applications=await readApplicationQueue(supabase,user.id);} catch {queueError=true;}
     const { data: careerEntries, error: careerError } = await supabase
       .from("profile_career_entries").select("skills").eq("user_id", user.id)
       .order("id");
     if (careerError) console.warn("[home] Could not load career skills for matching");
-    const { data: prepared, error: preparedError } = await supabase
-      .from("prepared_jobs")
-      .select("job_id,job_context,has_cv,cv_expires_at,has_cover_letter,cover_letter_expires_at,updated_at")
-      .eq("user_id", user.id)
-      .order("updated_at", { ascending: false })
-      .limit(100);
-    if (preparedError) console.warn("[home] Could not load prepared jobs");
-    else preparedJobs = ((prepared ?? []) as PreparedJob[]).map(job => {
-      const activeCv = job.has_cv && !!job.cv_expires_at && new Date(job.cv_expires_at).getTime() > Date.now();
-      const activeLetter = job.has_cover_letter && !!job.cover_letter_expires_at && new Date(job.cover_letter_expires_at).getTime() > Date.now();
-      return {
-        ...job,
-        has_cv: activeCv,
-        cv_expires_at: activeCv ? job.cv_expires_at : null,
-        has_cover_letter: activeLetter,
-        cover_letter_expires_at: activeLetter ? job.cover_letter_expires_at : null,
-      };
-    });
+    try {
+      const prepared=await readPreparedJobs(supabase,user.id);
+      preparedJobs=prepared.map(job=>{
+        const activeCv=job.has_cv&&!!job.cv_expires_at&&Date.parse(job.cv_expires_at)>Date.now();
+        const activeLetter=job.has_cover_letter&&!!job.cover_letter_expires_at&&Date.parse(job.cover_letter_expires_at)>Date.now();
+        return {...job,has_cv:activeCv,cv_expires_at:activeCv?job.cv_expires_at:null,has_cover_letter:activeLetter,cover_letter_expires_at:activeLetter?job.cover_letter_expires_at:null};
+      }).filter(job=>job.has_cv||job.has_cover_letter);
+    }catch{queueError=true;}
     matchReq = {
       roles: profile?.roles ?? [],
       title: profile?.title ?? "",
@@ -96,6 +96,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
 
   return {
     props: {
+      applications, queueError,
       matchReq,
       profileId,
       preparedJobs,
@@ -106,16 +107,20 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
 };
 
 export default function Home(props: Props) {
+  const {userId}=useAuthSession();const {t}=useTranslation('common');
+  if(userId!==props.profileId)return <div className="app-page-shell"><p>{t('jobDetail.loading')}</p></div>;
   return <HomeContent key={props.profileId + matchProfileKey(props.matchReq)} {...props} />;
 }
 
-function HomeContent({ matchReq, preparedJobs: initialPreparedJobs, showDebug, profileId }: Props) {
+function HomeContent({ applications, queueError, matchReq, preparedJobs: initialPreparedJobs, showDebug, profileId }: Props) {
   const {t} = useTranslation('common');
   const [activeJobsTab, setActiveJobsTab] = useState<'matched' | 'prepared'>('matched');
   const matches = useHomeMatches(matchReq, profileId);
   const prepared = usePreparedJobs(initialPreparedJobs);
   const {matched, matchLoading, poolLimited, desiredRolesSource, fetchComplete, handleLoadDifferent} = matches;
   const {preparedJobs} = prepared;
+  const queue=useWorkQueue(applications,queueError);
+  const progress=useJobProgress();
 
   return (
     <div className="app-page-shell">
@@ -125,10 +130,11 @@ function HomeContent({ matchReq, preparedJobs: initialPreparedJobs, showDebug, p
         <p className="app-page-subtitle">{t("home.subtitle")}</p>
       </div>
 
-      <MatchGradeSummary {...matches} />
+      <NextActions preparedJobs={preparedJobs} queue={queue} matchCount={matched.filter(j=>!progress[j.id]?.status&&!progress[j.id]?.hasCv&&!progress[j.id]?.hasLetter).length}/>
+      <WorkQueue model={prepared} queue={queue}/>
 
       {/* Job List Section */}
-      <div className="space-y-4">
+      <div id="matched-jobs" className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div role="tablist" aria-label={t("home.jobTabsLabel")} className="grid w-full grid-cols-2 rounded-xl bg-gray-100 p-1 dark:bg-white/5 sm:inline-flex sm:w-fit">
             {(["matched", "prepared"] as const).map(tab => (

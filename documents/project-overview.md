@@ -156,3 +156,7 @@ Pages retain routing/SSR and compose these units. Hooks preserve cancellation/se
 ### Approved security dependency patches — 2026-10-01
 
 Next.js is pinned to 16.3.6 and the lockfile resolves DOMPurify to 3.4.16 after owner approval. These address the dependency audit failures found during the guest-access PR. No hosting settings or database schema changes are required.
+
+## Application workspace — 2026-10-02 (prepared branch)
+
+Job-specific tabs now connect overview, CV, saved cover-letter editing, application status and private notes. Home offers an actionable prepared/submitted work queue and follow-ups. Shared job-card progress and deterministic matching explanations make the current state visible; profile readiness gives concrete recommendations. Single-statement/paragraph AI proposals require review and explicit save. See [Application workspace](application-workspace.md) for contracts, migration, privacy, limitations and rollout. This section supersedes the old two-tab-only dashboard and local-only letter-edit descriptions. AI notice v3 is prepared disabled; rollout/activation remain separate approved operations.

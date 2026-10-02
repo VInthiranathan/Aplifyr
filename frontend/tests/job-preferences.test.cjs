@@ -132,15 +132,17 @@ function home(fetch, applicationStatuses={}) {
     '../lib/backendUrl':{getPublicBackendUrl:()=>''},
     '../lib/supabaseClient':{isSupabaseConfigured:false},
     '../lib/useFavorites':{useFavorites:()=>({toggleFavorite(){},isFavorite:()=>false})},
-    '../lib/useApplicationStatuses':{useApplicationStatuses:()=>applicationStatuses},
+    '../lib/AuthSessionContext':{useAuthSession:()=>({userId:'owner'})},
+    '../lib/JobProgressContext':{useJobProgress:()=>Object.fromEntries(Object.entries(applicationStatuses).map(([id,status])=>[id,{status,hasCv:false,hasLetter:false}])),notifyWorkspace(){}},
+    '../features/home/WorkQueue':{NextActions:()=>null,WorkQueue:()=>null,useWorkQueue:()=>({applications:[],error:false,today:'2026-10-02'})},
     '../lib/utils':{formatLocation:()=>''},
     '../lib/matchSessionContext':{useMatchSession:()=>({getSession:()=>session,updateSession:patch=>session={...session,...patch}})},
-    '../components/JobListCard':({title,badges})=>React.createElement('article',null,title,badges),
+    '../components/JobListCard':({title,badges,jobId})=>React.createElement('article',null,title,badges,applicationStatuses[jobId]?`applications.status.${applicationStatuses[jobId]}`:null),
     'next/link':({children,href})=>React.createElement('a',{href},children),
     'next-i18next':{useTranslation:()=>({t:key=>key})},
     'next-i18next/serverSideTranslations':{serverSideTranslations:async()=>({})},
     '@supabase/ssr':{},
-  },{fetch,AbortController,process:{env:{}},setInterval:fn=>{poll=fn;return 1;},clearInterval(){},document:{visibilityState:'visible',addEventListener(){},removeEventListener(){}}}).default;
+  },{fetch,AbortController,window:{addEventListener(){},removeEventListener(){}},process:{env:{}},setInterval:fn=>{poll=fn;return 1;},clearInterval(){},document:{visibilityState:'visible',addEventListener(){},removeEventListener(){}}}).default;
   return {Component,tick:()=>poll(),session:()=>session};
 }
 const homeProps=roles=>({profileId:'owner',matchReq:{roles},preparedJobs:[],showDebug:false,progression:{applied:0,readyToApply:0,readyToGenerate:0}});
@@ -174,6 +176,6 @@ test('home exposes a retry after failed matching and recovers',async()=>{
 test('home marks an applied job in the matched jobs list',async()=>{
   const app=home(async()=>matchResponse('Matched',true),{'0':'applied'});let view;
   await act(async()=>{view=create(React.createElement(app.Component,homeProps(['Developer'])));});
-  assert.ok(JSON.stringify(view.toJSON()).includes('jobs.applied'));
+  assert.ok(JSON.stringify(view.toJSON()).includes('applications.status.applied'));
   await act(async()=>view.unmount());
 });

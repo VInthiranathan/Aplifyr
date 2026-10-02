@@ -93,3 +93,7 @@ Migration `20260923122723_job_application_tracker.sql` adds `public.job_applicat
 - Inserts Gemini notice `2026-09-documents-v2` disabled; no consent grants or older notice edits.
 
 This describes the checked-in migration, not an applied production change. The hosted application-tracker migration was recorded as `20260923152826` whereas the file is `20260923122723`; compare SQL/schema before any ledger repair. See the runbook.
+
+## Application workspace (prepared migration)
+
+`20261002075427_application_workspace.sql` adds `public.job_notes(user_id,job_id,notes,updated_at)` with `(user_id,job_id)` primary key, Auth cascade, bounded nonblank text, owner CRUD RLS, immutable identity and database revisions. Private `aplifyr_note_counts` and its trigger enforce 1,000 notes per owner including direct writes. No changes to existing application/document tables or their expiry. A new disabled v3 Gemini privacy notice is inserted without replacing historical receipts/texts. See [Application workspace](application-workspace.md).

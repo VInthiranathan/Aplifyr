@@ -3,6 +3,7 @@ import NextApp, {AppContext} from 'next/app'
 import '../styles/globals.css'
 import { AuthSessionProvider } from '../lib/AuthSessionContext'
 import Layout from '../components/Layout'
+import {JobProgressProvider} from '../lib/JobProgressContext'
 import { appWithTranslation } from 'next-i18next'
 import { ThemeProvider } from 'next-themes'
 import { useRouter } from 'next/router'
@@ -26,7 +27,7 @@ function App({ Component, pageProps, nonce }: AppProps & {nonce?:string}) {
 
   return (
     <ThemeProvider nonce={nonce} attribute="class" defaultTheme="dark" enableSystem={false}>
-      <AuthSessionProvider><MatchSessionProvider>
+      <AuthSessionProvider><JobProgressProvider><MatchSessionProvider>
         {isPublicFullScreenRoute ? (
           <Component {...pageProps} />
         ) : (
@@ -34,7 +35,7 @@ function App({ Component, pageProps, nonce }: AppProps & {nonce?:string}) {
             <Component {...pageProps} />
           </Layout>
         )}
-      </MatchSessionProvider></AuthSessionProvider>
+      </MatchSessionProvider></JobProgressProvider></AuthSessionProvider>
     </ThemeProvider>
   )
 }

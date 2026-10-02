@@ -1,3 +1,7 @@
+import {LetterFacts} from '../../features/jobs/LetterFacts';
+import {JobWorkspace} from '../../features/jobs/JobWorkspace';
+import type {WorkspaceTab} from '../../features/jobs/WorkspaceNav';
+import {MatchExplanation} from '../../features/jobs/MatchExplanation';
 import { useAuthSession } from "../../lib/AuthSessionContext";
 import { signInHref } from "../../lib/guestAccess";
 import { Bookmark,Briefcase,ClipboardCheck,Loader2,MapPin,Wifi } from "lucide-react";
@@ -18,18 +22,25 @@ import { useFavorites } from "../../lib/useFavorites";
 import { formatLocation } from "../../lib/utils";
 
 export default function JobDetailPage() {
+ const {userId}=useAuthSession();const router=useRouter();
+ return <JobDetailContent key={`${userId??'guest'}:${String(router.query.id)}`}/>;
+}
+function JobDetailContent() {
   const router = useRouter();
   const { userId } = useAuthSession();
   const { t } = useTranslation("common");
   const { id, data } = router.query;
+  const active: WorkspaceTab = ['letter','application','notes'].includes(String(router.query.tab))?router.query.tab as WorkspaceTab:'overview';
   const { toggleFavorite, isFavorite } = useFavorites();
   const localeTag = router.locale === "sv" ? "sv-SE" : "en-US";
 
   const {job, fetching, fetchError, setFetchError, jobHtml} = useJobDetails();
-  const {application, applicationLoading, applicationSaving, markAsApplied} = useJobApplication(job, setFetchError, !!userId);
-  const {generating, loadingLetter, letter, letterExpiresAt, deletingLetter, consentOpen, setConsentOpen,
+  const applicationModel=useJobApplication(job,setFetchError,!!userId);
+  const {application, applicationLoading, applicationSaving, markAsApplied}=applicationModel;
+  const letterModel=useCoverLetter(job,setFetchError,!!userId);
+  const {saveLetter, letterRevision, savingLetter, generating, loadingLetter, letter, letterExpiresAt, deletingLetter, consentOpen, setConsentOpen,
     showModal, setShowModal, career, selectedCareer, setSelectedCareer, careerError, careerLoaded,
-    loadCareer, requestGeneration, generate, deleteCoverLetter} = useCoverLetter(job, setFetchError, !!userId);
+    loadCareer, requestGeneration, generate, deleteCoverLetter}=letterModel;
 
   const getApplicationUrl = () => {
     if (!job) return undefined;
@@ -162,6 +173,9 @@ export default function JobDetailPage() {
               </div>
             </div>
 
+            {typeof id==='string'&&<JobWorkspace jobId={id} active={active} userId={userId} job={job} letterModel={letterModel} applicationModel={applicationModel}/>}
+            <div hidden={active!=='overview'}>
+            {userId&&typeof id==='string'&&<div className="mt-4"><MatchExplanation key={userId+id} jobId={id}/></div>}
             {typeof id === 'string' && <Button asChild className="mt-6 w-full sm:w-auto"><Link href={`/jobs/${encodeURIComponent(id)}/cv`}>{t('cv.generate')}</Link></Button>}
             <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="min-w-0 space-y-6 lg:col-span-2">
@@ -261,17 +275,7 @@ export default function JobDetailPage() {
 
                 <div className="mt-4">
 
-                  {userId && <div className="my-3 space-y-2">
-                    <p>{t('consent.careerScope')}</p>
-                    {!careerLoaded && <Button variant="secondary" onClick={loadCareer}>{t('consent.chooseFacts')}</Button>}
-                    {careerError && <p role="alert">{t('consent.error')}</p>}
-                    {careerLoaded && career.map(entry=><label key={entry.id} className="flex gap-2">
-                      <input type="checkbox" checked={selectedCareer.includes(entry.id)} disabled={generating || (!selectedCareer.includes(entry.id)&&selectedCareer.length>=3)}
-                        onChange={e=>setSelectedCareer(ids=>e.target.checked?[...ids,entry.id]:ids.filter(id=>id!==entry.id))}/>
-                      {entry.title} — {entry.organization}
-                    </label>)}
-                  </div>
-                  }
+                  {userId&&<LetterFacts loaded={careerLoaded} entries={career} selected={selectedCareer} setSelected={setSelectedCareer} error={careerError} busy={generating} onLoad={()=>void loadCareer()}/>}
                   {!userId && <p className="mb-3 text-sm">{t("guest.description")}</p>}
                   {fetchError && <p role="alert" className="mb-3 text-sm text-red-600 dark:text-red-400">{fetchError}</p>}
                   <Button
@@ -294,14 +298,17 @@ export default function JobDetailPage() {
                 </div>
               </aside>
             </div>
+            </div>
           </div>
         </>
       )}
 
       {consentOpen && <AiGenerationConsent key={String(id)} onClose={()=>setConsentOpen(false)} onConfirm={()=>{setConsentOpen(false);void generate();}} />}
+      {fetchError&&active!=='overview'&&<p role="alert">{fetchError}</p>}
       {/* Cover Letter Modal */}
-      {letter && (
+      {letter && active!=='letter' && (
         <CoverLetterModal
+          key={String(id)} jobId={typeof id==='string'?id:undefined} revision={letterRevision} onSave={saveLetter} isSaving={savingLetter}
           isOpen={showModal}
           onClose={() => setShowModal(false)}
           letter={letter}

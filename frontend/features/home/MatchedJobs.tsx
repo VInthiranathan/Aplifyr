@@ -1,15 +1,14 @@
+import {MatchCardReasons} from './MatchCardReasons';
 import { Bookmark,Briefcase,ClipboardCheck,Eye,MapPin,Wifi } from 'lucide-react';
 import { useTranslation } from 'next-i18next';
 import Link from 'next/link';
 import JobListCard from '../../components/JobListCard';
-import { useApplicationStatuses } from '../../lib/useApplicationStatuses';
 import { useFavorites } from '../../lib/useFavorites';
 import { formatLocation } from '../../lib/utils';
 import type { useHomeMatches } from './useHomeMatches';
 export function MatchedJobs({model, showDebug}: {model: ReturnType<typeof useHomeMatches>; showDebug: boolean}) {
   const {t} = useTranslation('common');
   const {toggleFavorite, isFavorite} = useFavorites();
-  const applicationStatuses = useApplicationStatuses();
   const {matched, matchLoading, matchError, poolLimited, desiredRolesSource, visibleCount, fetchComplete, retry, loadMore} = model;
   return <>
         {/* Loading skeleton — first paint before matches arrive */}
@@ -74,9 +73,9 @@ export function MatchedJobs({model, showDebug}: {model: ReturnType<typeof useHom
         {matched.slice(0, visibleCount).length > 0 && (
           <div className="grid gap-4">
             {matched.slice(0, visibleCount).map((job) => {
-              const applicationStatus = applicationStatuses[job.id];
               return <JobListCard
                 key={job.id}
+              jobId={String(job.id)}
                 leading={
                   <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-300 dark:text-white/20 overflow-hidden">
                     <Briefcase size={20} />
@@ -92,14 +91,7 @@ export function MatchedJobs({model, showDebug}: {model: ReturnType<typeof useHom
                 }
                 badges={
                   <div className="flex flex-wrap items-center gap-2">
-                    {applicationStatus && (
-                      <span className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300">
-                        <ClipboardCheck size={13} aria-hidden="true" />
-                        {applicationStatus === "applied"
-                          ? t("jobs.applied")
-                          : t("jobs.appliedWithStatus", { status: t(`applications.status.${applicationStatus}`) })}
-                      </span>
-                    )}
+
                     <span
                       className={`text-xs font-bold px-3 py-1 rounded-full ${
                         job.matchGrade === "A"
@@ -185,13 +177,13 @@ export function MatchedJobs({model, showDebug}: {model: ReturnType<typeof useHom
                   </div>
                 }
                 footer={
-                  showDebug && job.matchDebug ? (
+                  <><MatchCardReasons job={job}/>{showDebug && job.matchDebug ? (
                     <div className="text-xs text-gray-400 dark:text-white/30 font-mono space-y-0.5">
                       {job.matchDebug.reasons.map((r, i) => (
                         <div key={i}>{r}</div>
                       ))}
                     </div>
-                  ) : undefined
+                  ) : null}</>
                 }
               />;
             })}

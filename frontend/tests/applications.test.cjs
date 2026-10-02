@@ -24,12 +24,11 @@ test('application tracking is authenticated, conflict-aware and exported', () =>
   assert.doesNotMatch(api, /\.limit\(500\)/);
   assert.match(statusHook, /fetch\("\/api\/applications"/);
   assert.match(statusHook, /addEventListener\("pageshow", refresh\)/);
-  assert.match(jobs, /useApplicationStatuses\(!!userId\)/);
-  assert.match(jobs, /applicationStatuses\[job\.id\]/);
-  assert.match(jobs, /jobs\.appliedWithStatus/);
-  assert.match(home, /useApplicationStatuses\(\)/);
-  assert.match(home, /applicationStatuses\[job\.id\]/);
-  assert.match(home, /jobs\.appliedWithStatus/);
+  assert.match(jobs, /jobId=\{String\(job.id\)\}/);
+  assert.match(home, /jobId=\{String\(job.id\)\}/);
+  assert.match(read('components/JobListCard.tsx'),/useJobProgress/);
+  assert.match(read('components/JobProgressBadge.tsx'),/applications.status/);
+  assert.match(read('lib/JobProgressContext.tsx'),/addEventListener\(["\']pageshow["\'],\s*refresh\)/);
   assert.match(accountExport, /jobApplications/);
 });
 

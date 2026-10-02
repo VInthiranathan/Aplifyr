@@ -7,8 +7,8 @@ import { Home, ClipboardList, Briefcase, User } from "lucide-react";
 
 const tabs = [
   { key: "nav.home", href: "/", icon: Home },
-  { key: "nav.applications", href: "/applications", icon: ClipboardList },
   { key: "nav.allJobs", href: "/jobs", icon: Briefcase },
+  { key: "nav.applications", href: "/applications", icon: ClipboardList },
   { key: "nav.userDetails", href: "/user", icon: User },
 ];
 

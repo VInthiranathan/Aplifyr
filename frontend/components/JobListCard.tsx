@@ -1,8 +1,11 @@
 import type { ReactNode } from "react";
 
+import {useJobProgress,useJobProgressReady} from "../lib/JobProgressContext";
+import JobProgressBadge from "./JobProgressBadge";
 import { cn } from "../lib/utils";
 
 interface JobListCardProps {
+  jobId?: string;
   title: ReactNode;
   badges?: ReactNode;
   subtitle?: ReactNode;
@@ -16,6 +19,7 @@ interface JobListCardProps {
 
 export default function JobListCard({
   title,
+  jobId,
   badges,
   subtitle,
   meta,
@@ -25,6 +29,7 @@ export default function JobListCard({
   leading,
   className,
 }: JobListCardProps) {
+  const progress = useJobProgress();const progressReady=useJobProgressReady();
   return (
     <article className={cn("app-job-list-card group", className)}>
       <div className="flex min-w-0 items-start gap-3 sm:gap-4">
@@ -35,6 +40,7 @@ export default function JobListCard({
             <div className="flex-1 min-w-0">
               <div className="mb-3 flex min-w-0 flex-wrap items-center gap-2 break-words [overflow-wrap:anywhere] sm:gap-3">
                 {title}
+                {jobId && progressReady && <JobProgressBadge progress={progress[jobId]} />}
                 {badges}
               </div>
 

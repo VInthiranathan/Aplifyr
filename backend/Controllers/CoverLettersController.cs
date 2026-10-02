@@ -30,6 +30,17 @@ public sealed class CoverLettersController(LetterApplicationService service, ICo
         }
     }
 
+    [HttpPatch("{jobId}")]
+    [RequestSizeLimit(65536)]
+    public async Task<IActionResult> EditSaved(string jobId,[FromBody]JsonElement body)
+    {
+        Response.Headers.CacheControl="private, no-store";
+        if(User.Identity?.IsAuthenticated!=true)return Unauthorized(new {error="authentication"});
+        try{return Ok(await service.Edit(HttpContext,jobId,body));}
+        catch(CvFailure failure){return StatusCode(failure.Status,new {error=failure.Code});}
+        catch(OperationCanceledException){return StatusCode(504,new {error="timeout"});}
+    }
+
     [HttpDelete("{jobId}")]
     public async Task<IActionResult> DeleteSaved(string jobId)
     {

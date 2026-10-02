@@ -400,3 +400,11 @@ A feature is not complete if required documentation is stale or relevant validat
 - Authentication, owner isolation, profile readiness and AI consent remain independently enforced on the server. Client session state is for navigation only.
 - Reuse the allowlisted return-destination helper across login/profile flows; never redirect to an unvalidated query value.
 - See `documents/project-overview.md` for guest flow and required profile facts; run guest/proxy and backend authentication regressions when changing these boundaries.
+
+## 19. Job application workspace
+
+- See `documents/application-workspace.md` for workspace tabs, progress, next actions, notes and document revisions. Keep job navigation/context and owner-bound shared progress; preparation must never infer submission.
+- Match explanations describe explicit overlap/mentions, never invented qualifications or proven mandatory gaps. Reuse `JobMatchingRules`; do not introduce AI matching calls.
+- Rewrite proposals are transient until explicit acceptance/save. Preserve canonical ads, saved owner facts, statement/revision identity, independent provider reservations and separate factual review. Notes/tracking/contact fields must not enter rewrite prompts.
+- Saved letter/CV edits preserve original expiry. Job notes require database quotas, owner RLS, optimistic revisions and complete account export/cascade.
+- Current processing notice is `2026-10-documents-v3`, inserted disabled. Do not enable notices, grant consent, apply live migrations or alter hosting settings merely to make a prepared feature testable.
