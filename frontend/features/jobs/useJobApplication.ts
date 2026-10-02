@@ -1,6 +1,7 @@
+import {notifyWorkspace} from '../../lib/JobProgressContext';
 import { useTranslation } from 'next-i18next';
 import { useRouter } from 'next/router';
-import { useEffect,useState } from 'react';
+import { useEffect,useRef,useState } from 'react';
 import { getPublicBackendUrl } from '../../lib/backendUrl';
 import { formatLocation } from '../../lib/utils';
 import type { JobApplication } from '../../types/api';
@@ -9,6 +10,8 @@ export function useJobApplication(job: any, setFetchError: (message: string | nu
   const router = useRouter();
   const {id} = router.query;
   const {t} = useTranslation('common');
+  const mutation=useRef<AbortController|null>(null);
+  useEffect(()=>()=>mutation.current?.abort(),[id,enabled]);
   const [application, setApplication] = useState<JobApplication | null>(null);
   const [applicationLoading, setApplicationLoading] = useState(true);
   const [applicationSaving, setApplicationSaving] = useState(false);
@@ -27,12 +30,13 @@ export function useJobApplication(job: any, setFetchError: (message: string | nu
 
   const markAsApplied = async () => {
     if (!enabled || !job || typeof id !== "string" || applicationSaving) return;
+    const controller=new AbortController();mutation.current=controller;
     setApplicationSaving(true); setFetchError(null);
     const today = new Date();
     const appliedAt = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
     try {
       const response = await fetch("/api/applications", {
-        method: "POST",
+        method: "POST", signal:controller.signal,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           jobId: id,
@@ -49,11 +53,12 @@ export function useJobApplication(job: any, setFetchError: (message: string | nu
         const failure = await response.json().catch(() => ({}));
         throw new Error(failure.code === 'capacity' ? 'capacity' : 'save');
       }
-      setApplication((await response.json()).application as JobApplication);
+      const saved=(await response.json()).application as JobApplication;
+      if(!controller.signal.aborted){setApplication(saved);notifyWorkspace();}
     } catch (cause) {
-      setFetchError(t(cause instanceof Error && cause.message === 'capacity' ? 'applications.capacity' : 'applications.markError'));
-    } finally { setApplicationSaving(false); }
+      if(!controller.signal.aborted)setFetchError(t(cause instanceof Error && cause.message === 'capacity' ? 'applications.capacity' : 'applications.markError'));
+    } finally {if(!controller.signal.aborted)setApplicationSaving(false);}
   };
 
-  return {application, applicationLoading, applicationSaving, markAsApplied};
+  return {application, setApplication, applicationLoading, applicationSaving, markAsApplied};
 }

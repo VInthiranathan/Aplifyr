@@ -126,6 +126,7 @@ export default function FavoritesPage() {
               return (
                 <JobListCard
                   key={job.id}
+              jobId={String(job.id)}
                   title={
                     <Link
                       href={`/jobs/${job.id}`}

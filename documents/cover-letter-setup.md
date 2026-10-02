@@ -98,3 +98,9 @@ The September 26 migration creates the replacement notice disabled; review/activ
 ## Application-service boundary
 
 The controller delegates generation to `LetterApplicationService`. `LetterJobFacts` parses allowlisted ad fields, `LetterPrompt` contains the language/injection/grounding instructions, and `LetterProvider` performs provider calls with a separate reservation per attempt. HTTP status mapping and private-cache headers remain at the controller. Existing result arrays, expiry and optional-provider behavior are preserved; no fallback is enabled by this extraction. The frontend `useCoverLetter` hook owns retrieval, consent-dialog state, generation, cancellation and deletion; the job page composes its UI.
+
+## Saved editing and paragraph proposals — 2026-10-02
+
+The letter can be opened inline in its job workspace or through the existing modal. Manual edits now persist through authenticated `PATCH /api/coverletters/{jobId}` with `{content,updatedAt}`; owner, unexpired document and revision are independently required. A stale version returns `409 editConflict`, preserving the draft. Content/revision change, while original expiry, prepared flags and context remain unchanged. PDF still exports locally.
+
+Each saved paragraph can request improve/shorter/technical/tailor AI wording. The canonical ad and bounded saved profile facts provide context; generated wording must pass an independent source-only review. No automatic overwrite: review, accept/discard, then save. Uses the letter Gemini key and two independently reserved attempts. Requires the new disabled-until-reviewed `2026-10-documents-v3` notice. See [Application workspace](application-workspace.md) for limits and rollout. This supersedes earlier local-only letter-edit descriptions.

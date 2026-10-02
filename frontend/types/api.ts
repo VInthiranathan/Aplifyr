@@ -187,7 +187,7 @@ export interface CvJobContext { id: string; title: string; company: string; loca
 /** Owner-saved document with an independent seven-day expiry. */
 export interface GeneratedCv {
   job_id: string; content: CvContent; job_context: CvJobContext;
-  metadata: { sourceLimited: boolean; sourceHash: string; jobHash: string };
+  metadata: { sourceLimited: boolean; sourceHash: string; jobHash: string; adaptations?: {matchedSkills:string[];rewrittenStatements:number} };
   created_at: string; updated_at: string; expires_at: string;
 }
 

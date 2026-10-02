@@ -42,10 +42,10 @@
     "close": "Stäng"
   },
   "nav": {
-    "userDetails": "Användarinfo",
+    "userDetails": "Profil",
     "home": "Hem",
     "applications": "Ansökningar",
-    "allJobs": "Alla jobb",
+    "allJobs": "Jobb",
     "favorites": "Favoriter",
     "support": "Support",
     "guest": "Användare",
@@ -120,8 +120,15 @@
     "subtitle": "Följ varje ansökan och håll koll på nästa steg i processen",
     "count": "{{count}} ansökningar",
     "filterLabel": "Filtrera ansökningar",
-    "summary": { "active": "Aktiva processer", "interview": "I intervju", "offer": "Erbjudanden" },
-    "filters": { "active": "Aktiva ansökningar", "all": "Alla ansökningar" },
+    "summary": {
+      "active": "Aktiva processer",
+      "interview": "I intervju",
+      "offer": "Erbjudanden"
+    },
+    "filters": {
+      "active": "Aktiva ansökningar",
+      "all": "Alla ansökningar"
+    },
     "status": {
       "applied": "Ansökt",
       "screening": "Urval",
@@ -582,5 +589,95 @@
     "completeProfile": "Fyll i ditt namn och lägg till en beskrivning av din bakgrund, kompetenser, arbetslivserfarenhet eller utbildning. Spara uppgifterna och återgå sedan till jobbet.",
     "returnToJob": "Tillbaka till valt jobb",
     "profileUnavailable": "Det gick inte att kontrollera din profil. Försök igen."
+  },
+  "workspace": {
+    "adUnavailable": "Annonsen kan inte hämtas. Du kan fortfarande hantera dina sparade anteckningar, dokument och ansökningar. Ny AI-generering kräver en tillgänglig annons.",
+    "retry": "F\u00f6rs\u00f6k igen",
+    "title": "Din arbetsyta",
+    "tabs": {
+      "overview": "Översikt",
+      "cv": "CV",
+      "letter": "Personligt brev",
+      "application": "Ansökan",
+      "notes": "Anteckningar"
+    },
+    "stage": {
+      "new": "Nytt",
+      "preparing": "Förbereder",
+      "ready": "Dokument klara"
+    },
+    "preparations": "{{count}} av 3 steg klara",
+    "notApplied": "Ansökan inte markerad som skickad",
+    "nextCv": "Förbered CV",
+    "nextLetter": "Förbered personligt brev",
+    "nextApply": "Gå vidare till ansökan",
+    "applicationHelp": "Ansök hos arbetsgivaren och markera sedan själv jobbet som ansökt. Här kan du följa processen och planera nästa steg.",
+    "letterHelp": "Skapa ett brev till den här annonsen, granska innehållet och spara dina ändringar.",
+    "notesHelp": "Privata anteckningar för just det här jobbet. De kan sparas även innan du ansöker och skickas aldrig till AI. Anteckningar finns kvar tills du tar bort dem eller kontot.",
+    "deleteNotesConfirm": "Ta bort anteckningarna för det här jobbet?",
+    "saved": "Ändringarna har sparats.",
+    "nextTitle": "Vad är nästa steg?",
+    "readyCount": "{{count}} jobb med dokument klara",
+    "followUpCount": "{{count}} ansökningar att följa upp",
+    "matchesCount": "{{count}} matchningar att utforska",
+    "readyHelp": "Dokument klara betyder att både CV och brev finns sparade. Kontrollera alltid vilka dokument arbetsgivaren faktiskt kräver.",
+    "queueTitle": "Din arbetskö",
+    "queueHelp": "Fortsätt förbereda, ansök och följ processen från samma jobb.",
+    "needsAction": "Behöver kompletteras",
+    "ready": "CV och brev klara",
+    "applied": "Ansökta jobb",
+    "queueEmpty": "Inga jobb i den här gruppen just nu.",
+    "followUpFilter": "Visar aktiva ansökningar vars uppföljningsdatum är idag eller har passerat.",
+    "match": {
+      "title": "Varför jobbet kan passa",
+      "help": "Jämförelsen utgår från kompetenser du har lagt in i profilen och uttryckliga ord i annonsen.",
+      "skills": "Kompetenser som nämns i annonsen",
+      "noSkills": "Ingen uttrycklig kompetensmatchning hittades.",
+      "experience": "Relevant arbete och utbildning",
+      "missing": "Tekniker i annonsen som inte finns bland profilens kompetenser",
+      "missingHelp": "Detta är omnämnanden, inte en bedömning av obligatoriska krav eller vad du faktiskt kan. Lägg bara till kompetenser du har.",
+      "highlight": "Bra att lyfta med konkreta exempel: {{skills}}.",
+      "unavailable": "Matchningsförklaringen kunde inte hämtas. Du kan fortfarande läsa och förbereda jobbet.",
+      "role": "Önskad roll: {{role}}",
+      "location": "Passar din platsinställning",
+      "cardSkills": "Kompetenser: {{skills}}",
+      "view": "Se matchningsförklaringen"
+    },
+    "profile": {
+      "ready": "Din profil kan användas för CV och brev",
+      "incomplete": "Komplettera profilen innan du genererar",
+      "help": "Mer konkreta uppgifter ger bättre underlag. Kontaktlänkar är frivilliga och du behöver inte ha tidigare anställningar.",
+      "name": "Lägg till ditt namn",
+      "bio": "Beskriv din bakgrund och vad du bidrar med",
+      "skills": "Lägg till tekniker och kompetenser du har använt",
+      "responsibilities": "Beskriv ansvar och uppgifter i dina arbetslivserfarenheter",
+      "learning": "Beskriv vad du lärde dig under utbildningen",
+      "links": "Lägg gärna till LinkedIn eller portfolio"
+    },
+    "rewrite": {
+      "mode": "Typ av formulering",
+      "improve": "Förbättra formuleringen",
+      "shorter": "Gör kortare",
+      "technical": "Gör mer teknisk",
+      "tailor": "Anpassa mer mot jobbet",
+      "busy": "Tar fram och granskar förslag…",
+      "suggest": "Be om AI-förslag",
+      "saveFirst": "Spara ändringarna innan du ber om ett nytt förslag.",
+      "review": "Granska förslaget mot dina egna uppgifter innan du accepterar.",
+      "accept": "Använd förslaget",
+      "discard": "Behåll min formulering"
+    },
+    "adaptations": {
+      "title": "Anpassningar för den här tjänsten",
+      "help": "Här visas det faktiska innehållet och underlaget i det sparade CV:t. Det är inte en garanti för att alla krav uppfylls.",
+      "skills": "Kompetenser i CV:t: {{skills}}",
+      "matched": "Kompetenser prioriterade mot annonsen: {{skills}}",
+      "rewritten": "{{count}} formuleringar skiljer sig från den ursprungliga profiltexten.",
+      "evidence": "{{count}} profiluppgifter refereras av de granskade formuleringarna.",
+      "experience": "Arbetslivserfarenheter i CV:t: {{titles}}",
+      "education": "Utbildningar i CV:t: {{titles}}",
+      "edited": "Du har redigerat dokumentet. Dina ändringar är inte automatiskt faktagranskade av AI."
+    },
+    "submitted": "Ansökan markerad som skickad"
   }
 }

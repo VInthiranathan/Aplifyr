@@ -22,11 +22,11 @@ import {
 import { Button } from "./ui/button";
 
 const navItemDefs = [
-  { key: "nav.userDetails", href: "/user", icon: User },
   { key: "nav.home", href: "/", icon: Home },
-  { key: "nav.applications", href: "/applications", icon: ClipboardList },
-  { key: "nav.favorites", href: "/favorites", icon: Bookmark },
   { key: "nav.allJobs", href: "/jobs", icon: Briefcase },
+  { key: "nav.applications", href: "/applications", icon: ClipboardList },
+  { key: "nav.userDetails", href: "/user", icon: User },
+  { key: "nav.favorites", href: "/favorites", icon: Bookmark },
   { key: "nav.support", href: "/support", icon: HelpCircle },
   { key: "privacy.menu", href: "/privacy#ai-consent", icon: ShieldCheck },
 ];

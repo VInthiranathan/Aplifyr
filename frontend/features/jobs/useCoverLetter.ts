@@ -1,3 +1,4 @@
+import {notifyWorkspace} from '../../lib/JobProgressContext';
 import { generationDestination } from '../../lib/generationAccess';
 import { useTranslation } from 'next-i18next';
 import { useRouter } from 'next/router';
@@ -14,6 +15,8 @@ export function useCoverLetter(job: any, setFetchError: (message: string | null)
   const generationRequest = useRef<AbortController | null>(null);
   const [loadingLetter, setLoadingLetter] = useState(true);
   const [letter, setLetter] = useState<string | null>(null);
+  const [letterRevision, setLetterRevision] = useState('');
+  const [savingLetter, setSavingLetter] = useState(false);
   const [letterExpiresAt, setLetterExpiresAt] = useState<string | null>(null);
   const [deletingLetter, setDeletingLetter] = useState(false);
   // debug toggle removed
@@ -43,7 +46,7 @@ export function useCoverLetter(job: any, setFetchError: (message: string | null)
     if (!router.isReady || typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(id)) return;
     const controller = new AbortController();
     generationRequest.current?.abort(); setGenerating(false);
-    setLetter(null); setLetterExpiresAt(null); setShowModal(false); setLoadingLetter(true);
+    setLetter(null); setLetterRevision(''); setLetterExpiresAt(null); setShowModal(false); setLoadingLetter(true);
     void (async () => {
       try {
         const { data: { session } } = await getSupabaseBrowserClient().auth.getSession();
@@ -54,7 +57,7 @@ export function useCoverLetter(job: any, setFetchError: (message: string | null)
         if (!response.ok) return;
         const saved = (await response.json()).letter;
         if (!controller.signal.aborted && saved && typeof saved.content === 'string' && typeof saved.expires_at === 'string') {
-          setLetter(saved.content);
+          setLetter(saved.content); setLetterRevision(saved.updated_at??'');
           setLetterExpiresAt(saved.expires_at);
           if (router.query.letter === '1') setShowModal(true);
         }
@@ -65,7 +68,7 @@ export function useCoverLetter(job: any, setFetchError: (message: string | null)
     const { data: { subscription } } = getSupabaseBrowserClient().auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT') {
         controller.abort(); generationRequest.current?.abort();
-        setShowModal(false); setLetter(null); setLetterExpiresAt(null); setConsentOpen(false);
+        setShowModal(false); setLetter(null); setLetterRevision(''); setLetterExpiresAt(null); notifyWorkspace(); setConsentOpen(false);
       }
     });
     return () => { controller.abort(); generationRequest.current?.abort(); subscription.unsubscribe(); };
@@ -131,8 +134,20 @@ export function useCoverLetter(job: any, setFetchError: (message: string | null)
       }
 
       if (Array.isArray(data) && data[0]?.coverLetter) {
-        setLetter(data[0].coverLetter);
-        setLetterExpiresAt(typeof data[0].expiresAt === 'string' ? data[0].expiresAt : null);
+        setLetter(data[0].coverLetter); setLetterRevision(''); notifyWorkspace();
+        // Generation's response retains its contract; load the actual persisted revision.
+        const persisted = await fetch(`${BACKEND}/api/coverletters/${encodeURIComponent(String(id))}`, {signal:controller.signal,headers:{Authorization:`Bearer ${session.access_token}`}});
+        let savedExpiresAt = typeof data[0].expiresAt === 'string' ? data[0].expiresAt : null;
+        if (persisted.ok) {
+          const saved = (await persisted.json()).letter;
+          if (controller.signal.aborted) return;
+          if (saved && typeof saved.content === 'string' && typeof saved.updated_at === 'string') {
+            setLetter(saved.content); setLetterRevision(saved.updated_at);
+            savedExpiresAt = saved.expires_at;
+          }
+        }
+        if (controller.signal.aborted) return;
+        setLetterExpiresAt(savedExpiresAt);
         setShowModal(true);
       } else if (Array.isArray(data) && data[0]?.error) {
         setFetchError(t(`consent.errors.${aiFailureCode(data, res.status)}`));
@@ -156,7 +171,7 @@ export function useCoverLetter(job: any, setFetchError: (message: string | null)
         method: 'DELETE', headers: { Authorization: `Bearer ${session.access_token}` },
       });
       if (!response.ok) throw new Error('storage');
-      setShowModal(false); setLetter(null); setLetterExpiresAt(null);
+      setShowModal(false); setLetter(null); setLetterRevision(''); setLetterExpiresAt(null); notifyWorkspace();
     } catch {
       setFetchError(t('coverLetter.deleteError'));
     } finally {
@@ -164,7 +179,21 @@ export function useCoverLetter(job: any, setFetchError: (message: string | null)
     }
   };
 
-  return {generating, loadingLetter, letter, letterExpiresAt, deletingLetter, consentOpen, setConsentOpen,
+  const saveLetter = async (content: string): Promise<void> => {
+    if (!enabled || typeof id !== 'string' || !letterRevision || savingLetter) throw new Error('storage');
+    setSavingLetter(true);
+    const controller = new AbortController(); generationRequest.current = controller;
+    try {
+      const {data:{session}}=await getSupabaseBrowserClient().auth.getSession();
+      if (!session) throw new Error('authentication');
+      const response=await fetch(`${BACKEND}/api/coverletters/${encodeURIComponent(id)}`,{method:'PATCH',signal:controller.signal,headers:{Authorization:`Bearer ${session.access_token}`,'Content-Type':'application/json'},body:JSON.stringify({content,updatedAt:letterRevision})});
+      const body=await response.json();
+      if (!response.ok) throw new Error(body.error??'storage');
+      if (!controller.signal.aborted) {setLetter(body.letter.content);setLetterRevision(body.letter.updated_at);setLetterExpiresAt(body.letter.expires_at);notifyWorkspace();}
+    } finally {if(!controller.signal.aborted)setSavingLetter(false);}
+  };
+
+  return {saveLetter, letterRevision, savingLetter, generating, loadingLetter, letter, letterExpiresAt, deletingLetter, consentOpen, setConsentOpen,
     showModal, setShowModal, career, selectedCareer, setSelectedCareer, careerError, careerLoaded,
     loadCareer, requestGeneration, generate, deleteCoverLetter};
 }

@@ -42,10 +42,10 @@
     "close": "Close"
   },
   "nav": {
-    "userDetails": "User Details",
+    "userDetails": "Profile",
     "home": "Home",
     "applications": "Applications",
-    "allJobs": "All Jobs",
+    "allJobs": "Jobs",
     "favorites": "Favorites",
     "support": "Support",
     "guest": "User",
@@ -120,8 +120,15 @@
     "subtitle": "Track every application and keep the next step in view",
     "count": "{{count}} applications",
     "filterLabel": "Filter applications",
-    "summary": { "active": "Active processes", "interview": "In interview", "offer": "Offers" },
-    "filters": { "active": "Active applications", "all": "All applications" },
+    "summary": {
+      "active": "Active processes",
+      "interview": "In interview",
+      "offer": "Offers"
+    },
+    "filters": {
+      "active": "Active applications",
+      "all": "All applications"
+    },
     "status": {
       "applied": "Applied",
       "screening": "Screening",
@@ -582,5 +589,95 @@
     "completeProfile": "Enter your name and add your background, skills, work experience or education. Save your details, then return to the job.",
     "returnToJob": "Return to selected job",
     "profileUnavailable": "Could not check your profile. Please try again."
+  },
+  "workspace": {
+    "adUnavailable": "The advertisement is unavailable. You can still manage your saved notes, documents and applications. New AI generation requires an available advertisement.",
+    "retry": "Try again",
+    "title": "Your application workspace",
+    "tabs": {
+      "overview": "Overview",
+      "cv": "CV",
+      "letter": "Cover letter",
+      "application": "Application",
+      "notes": "Notes"
+    },
+    "stage": {
+      "new": "New",
+      "preparing": "Preparing",
+      "ready": "Documents ready"
+    },
+    "preparations": "{{count}} of 3 steps complete",
+    "notApplied": "Application not marked as sent",
+    "nextCv": "Prepare CV",
+    "nextLetter": "Prepare cover letter",
+    "nextApply": "Continue to application",
+    "applicationHelp": "Apply with the employer, then explicitly mark the job as applied. Track the process and plan your next step here.",
+    "letterHelp": "Create a letter for this advertisement, review it and save your edits.",
+    "notesHelp": "Private notes for this job, available before applying. They are never sent to AI. Notes remain until you delete them or your account.",
+    "deleteNotesConfirm": "Delete the notes for this job?",
+    "saved": "Your changes have been saved.",
+    "nextTitle": "What should I do next?",
+    "readyCount": "{{count}} jobs with documents ready",
+    "followUpCount": "{{count}} applications to follow up",
+    "matchesCount": "{{count}} matches to explore",
+    "readyHelp": "Documents ready means both a CV and a letter are saved. Always check which documents the employer actually requires.",
+    "queueTitle": "Your work queue",
+    "queueHelp": "Continue preparing, apply and follow the process from the same job.",
+    "needsAction": "Needs preparation",
+    "ready": "CV and letter ready",
+    "applied": "Applied jobs",
+    "queueEmpty": "No jobs in this group right now.",
+    "followUpFilter": "Showing active applications with a follow-up date today or earlier.",
+    "match": {
+      "title": "Why this job may fit",
+      "help": "This comparison uses skills you entered in your profile and explicit terms in the advertisement.",
+      "skills": "Your skills mentioned in the advertisement",
+      "noSkills": "No explicit skill overlap was found.",
+      "experience": "Relevant work and education",
+      "missing": "Technologies mentioned in the advertisement but absent from your profile skills",
+      "missingHelp": "These are mentions, not a judgment of mandatory requirements or your actual abilities. Only add skills you have.",
+      "highlight": "Consider highlighting concrete examples of: {{skills}}.",
+      "unavailable": "The match explanation could not be loaded. You can still read and prepare this job.",
+      "role": "Preferred role: {{role}}",
+      "location": "Fits your location preference",
+      "cardSkills": "Skills: {{skills}}",
+      "view": "See match explanation"
+    },
+    "profile": {
+      "ready": "Your profile can be used for a CV and letter",
+      "incomplete": "Complete your profile before generating",
+      "help": "Concrete details provide better evidence. Contact links are optional and previous employment is not required.",
+      "name": "Add your name",
+      "bio": "Describe your background and contribution",
+      "skills": "Add technologies and skills you have used",
+      "responsibilities": "Describe responsibilities and tasks in your work experience",
+      "learning": "Describe what you learned during your education",
+      "links": "Consider adding LinkedIn or a portfolio"
+    },
+    "rewrite": {
+      "mode": "Wording style",
+      "improve": "Improve wording",
+      "shorter": "Make shorter",
+      "technical": "Make more technical",
+      "tailor": "Tailor to the job",
+      "busy": "Drafting and reviewing suggestion…",
+      "suggest": "Ask AI for a suggestion",
+      "saveFirst": "Save your edits before requesting another suggestion.",
+      "review": "Check this suggestion against your own experience before accepting.",
+      "accept": "Use suggestion",
+      "discard": "Keep my wording"
+    },
+    "adaptations": {
+      "title": "Adaptations for this role",
+      "help": "This shows the actual content and evidence in the saved CV. It does not guarantee that all requirements are met.",
+      "skills": "Skills in the CV: {{skills}}",
+      "matched": "Skills prioritized against the advertisement: {{skills}}",
+      "rewritten": "{{count}} statements differ from the original profile wording.",
+      "evidence": "{{count}} profile facts are referenced by the reviewed statements.",
+      "experience": "Work experience in the CV: {{titles}}",
+      "education": "Education in the CV: {{titles}}",
+      "edited": "You have edited this document. Your changes are not automatically fact-checked by AI."
+    },
+    "submitted": "Application marked as sent"
   }
 }

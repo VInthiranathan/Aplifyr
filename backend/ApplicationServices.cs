@@ -24,6 +24,10 @@ public static class ApplicationServices
             client.Timeout = TimeSpan.FromSeconds(10);
             client.MaxResponseContentBufferSize = 5 * 1024 * 1024;
         }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+        services.AddHttpClient("document-db",client=>{client.Timeout=TimeSpan.FromSeconds(10);client.MaxResponseContentBufferSize=5*1024*1024;}).ConfigurePrimaryHttpMessageHandler(()=>new HttpClientHandler {AllowAutoRedirect=false});
+        services.AddHttpClient("document-gemini",client=>{client.Timeout=TimeSpan.FromSeconds(30);client.MaxResponseContentBufferSize=128*1024;}).ConfigurePrimaryHttpMessageHandler(()=>new HttpClientHandler {AllowAutoRedirect=false});
+        services.AddScoped<DocumentRewriteService>();
+        services.AddScoped<JobInsightsService>();
         services.AddScoped<CvApplicationService>();
         services.AddScoped<LetterApplicationService>();
         return services;

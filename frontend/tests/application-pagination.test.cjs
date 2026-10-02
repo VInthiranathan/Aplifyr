@@ -27,6 +27,7 @@ test('account export includes 601 applications using verified owner despite a su
  vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname,'../pages/api/account/export.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{
   module:value,exports:value.exports,Date,Error,require(name){
    if(name.endsWith('/serverSupabase'))return {serverSupabase:()=>c};
+   if(name.endsWith('/readJobNotes'))return {readJobNotes:async()=>[]};
    if(name.endsWith('/readApplications'))return {readApplications};
    if(name.endsWith('/readCareerEntries'))return {readCareerEntries:async()=>[]};
    if(name.endsWith('/readGeneratedCvs'))return {readGeneratedCvs:async()=>[]};

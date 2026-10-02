@@ -17,7 +17,6 @@ import { useRouter } from "next/router";
 import JobListCard from "../../components/JobListCard";
 import { JobSearchFilters } from '../../features/jobs/JobSearchFilters';
 import { useJobSearch } from '../../features/jobs/useJobSearch';
-import { useApplicationStatuses } from "../../lib/useApplicationStatuses";
 import { useFavorites } from "../../lib/useFavorites";
 import { formatLocation } from "../../lib/utils";
 
@@ -33,7 +32,6 @@ export default function AllJobsPage() {
   const localeTag = locale === "sv" ? "sv-SE" : "en-US";
   const search = useJobSearch();
   const {filteredJobs, total, loading, error, offset, setOffset, LIMIT, totalPages, currentPage} = search;
-  const applicationStatuses = useApplicationStatuses(!!userId);
 
   return (
     <div className="app-page-shell">
@@ -94,9 +92,9 @@ export default function AllJobsPage() {
       {!loading && filteredJobs.length > 0 && (
         <div className="space-y-3">
           {filteredJobs.map((job) => {
-            const applicationStatus = applicationStatuses[job.id];
             return <JobListCard
               key={job.id}
+              jobId={String(job.id)}
               title={
                 <Link
                   href={`/jobs/${job.id}`}
@@ -105,16 +103,9 @@ export default function AllJobsPage() {
                   {job.headline}
                 </Link>
               }
-              badges={(applicationStatus || job.matchGrade) ? (
+              badges={job.matchGrade ? (
                 <div className="flex flex-wrap items-center gap-2">
-                  {applicationStatus && (
-                    <span className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300">
-                      <ClipboardCheck size={13} aria-hidden="true" />
-                      {applicationStatus === "applied"
-                        ? t("jobs.applied")
-                        : t("jobs.appliedWithStatus", { status: t(`applications.status.${applicationStatus}`) })}
-                    </span>
-                  )}
+
                   {job.matchGrade && <span
                     className={`flex-shrink-0 text-xs font-bold px-3 py-1 rounded-full ${
                       job.matchGrade === "A"

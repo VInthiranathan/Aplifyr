@@ -85,6 +85,11 @@ public static class JobMatchingRules
         return skills.Where(skill => matched.Contains(NormalizeTech(skill))).ToArray();
     }
 
+    public static string[] MentionedTechnologies(JsonElement job)
+    {
+        return _techNormMap.Values.Distinct(StringComparer.OrdinalIgnoreCase)
+            .Where(term => CvMatchedSkills(job, new[] {term}).Length > 0).ToArray();
+    }
     internal static (int boost, string[] matchedTerms) ScoreTechBoost(JsonElement job, IReadOnlyList<string> normalizedUserTags)
     {
         var headline = job.TryGetProperty("headline", out var hl) && hl.ValueKind == JsonValueKind.String ? hl.GetString() : "";

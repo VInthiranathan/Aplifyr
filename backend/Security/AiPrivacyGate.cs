@@ -7,7 +7,7 @@ namespace Aplifyr.Api.Security;
 public sealed class AiPrivacyGate(IHttpClientFactory clients, IConfiguration configuration)
 {
     // New generation requires an informed choice covering stored CVs AND letters.
-    public const string DocumentNoticeVersion = "2026-09-documents-v2";
+    public const string DocumentNoticeVersion = "2026-10-documents-v3";
     private async Task<JsonElement?> Rpc(string name, object body, CancellationToken cancellation)
     {
         var key = configuration["SUPABASE_SERVICE_ROLE_KEY"];

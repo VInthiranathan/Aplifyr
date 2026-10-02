@@ -159,6 +159,19 @@ public sealed class LetterApplicationService(IConfiguration configuration, Lette
         return results;
     }
 
+    public async Task<object> Edit(HttpContext context,string jobId,JsonElement body)
+    {
+        if(!ValidJobId(jobId)) throw new CvFailure(400,"invalidJob");
+        if(body.ValueKind!=JsonValueKind.Object || body.EnumerateObject().Count()!=2 ||
+            !body.TryGetProperty("content",out var value) || value.ValueKind!=JsonValueKind.String ||
+            !body.TryGetProperty("updatedAt",out var version) || version.ValueKind!=JsonValueKind.String || !DateTimeOffset.TryParse(version.GetString(),out _)) throw new CvFailure(400,"invalidEdit");
+        var content=value.GetString()!.Trim();
+        if(content.Length is 0 or >16000 || content.Any(c=>char.IsControl(c)&&c is not ('\n' or '\r' or '\t'))) throw new CvFailure(400,"invalidEdit");
+        var rows=await new CvStore(context,configuration).UpdateLetter(jobId,version.GetString()!,content);
+        if(rows.GetArrayLength()!=1) throw new CvFailure(409,"editConflict");
+        return new {letter=rows[0]};
+    }
+
     public static bool ValidJobId(string jobId) => Regex.IsMatch(jobId, "^[A-Za-z0-9_-]{1,100}$", RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100));
 
     private async Task<DateTimeOffset?> SaveCoverLetter(HttpContext context, string jobId, string title, string employer, string location, string content, string provider)

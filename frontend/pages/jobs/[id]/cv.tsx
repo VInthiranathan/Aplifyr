@@ -1,3 +1,6 @@
+import {WorkspaceNav} from '../../../features/jobs/WorkspaceNav';
+import {CvAdaptations} from '../../../features/jobs/CvAdaptations';
+import {notifyWorkspace} from '../../../lib/JobProgressContext';
 import { generationDestination } from '../../../lib/generationAccess';
 import { useEffect, useRef, useState } from 'react';
 import type { GetServerSideProps } from 'next';
@@ -49,7 +52,7 @@ export default function CvPage() {
     }
     const data = await response.json();
     if (data.job?.id !== id || (data.cv && data.cv.job_id !== id)) throw new Error('invalidJob');
-    if (!controller.signal.aborted) { setJob(data.job); setCv(data.cv); setDraft(null); }
+    if (!controller.signal.aborted) { setJob(data.job); setCv(data.cv); setDraft(null); notifyWorkspace(); }
   }
   function displayError(e: unknown) {
     const key = e instanceof Error ? e.message : 'unavailable';
@@ -100,7 +103,7 @@ export default function CvPage() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? 'storage');
       if (data.job?.id !== id || data.cv?.job_id !== id) throw new Error('invalidJob');
-      if (!controller.signal.aborted) { setCv(data.cv); setDraft(null); }
+      if (!controller.signal.aborted) { setCv(data.cv); setDraft(null); notifyWorkspace(); }
     } catch (e) { if (!controller.signal.aborted) displayError(e); }
     finally { if (!controller.signal.aborted) { setSaving(false); savingRef.current = false; } }
   }
@@ -124,7 +127,7 @@ export default function CvPage() {
         method: 'DELETE', headers: { Authorization: `Bearer ${session.access_token}` },
       });
       if (!response.ok) throw new Error('storage');
-      setCv(null);
+      setCv(null); notifyWorkspace();
     } catch (e) { displayError(e); }
     finally { setDeleting(false); }
   }
@@ -143,6 +146,8 @@ export default function CvPage() {
       {job?.company && <p>{job.company}</p>}{job?.location && <p>{job.location}</p>}
       {grade && <p>{t('cv.match', { grade })}</p>}
     </section>
+    {id&&<WorkspaceNav jobId={id} active="cv"/>}
+    {cv&&<CvAdaptations content={cv.content} metadata={cv.metadata}/>}
     {loading && <p role="status">{t('cv.loading')}</p>}
     {error && <p role="alert" className="app-card-base p-4">{error}</p>}
     {job && <>
@@ -187,7 +192,7 @@ export default function CvPage() {
           <Button disabled={saving} onClick={saveEdits}>{t(saving ? 'cv.savingEdits' : 'cv.saveEdits')}</Button>
           <Button variant="secondary" disabled={saving} onClick={() => { setDraft(null); setError(''); }}>{t('cv.cancelEdit')}</Button>
         </div> : <Button variant="secondary" disabled={busy || downloading || deleting} onClick={() => { setDraft(cv.content); setError(''); }}>{t('cv.edit')}</Button>}
-        {draft && <CvEditor content={draft} onChange={setDraft} disabled={saving} />}
+        {draft && <CvEditor jobId={id} revision={cv.updated_at} savedContent={cv.content} content={draft} onChange={setDraft} disabled={saving} />}
         {cv.content.userEdited && <p role="status">{t('cv.editedNotice')}</p>}
         <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap"><Button className="min-w-0" disabled={downloading || busy || deleting || !!draft || saving} onClick={download}>{t(downloading ? 'cv.downloading' : 'cv.download')}</Button><Button className="min-w-0" variant="secondary" disabled={deleting || busy || downloading || !!draft || saving} onClick={deleteCv}>{deleting ? <Loader2 className="animate-spin mr-2" size={16} /> : <Trash2 className="mr-2" size={16} />}{t(deleting ? 'cv.deleting' : 'cv.delete')}</Button></div><p>{t('cv.review')}</p>{cv.metadata.sourceLimited && <p>{t('cv.limited')}</p>}{cv.content.omittedUnsupportedContent && <p role="status" data-testid="cv-omissions" className="app-card-base p-4">{t('cv.omissions')}</p>}<CvPreview content={draft ?? cv.content} template={template} /></>}
     </>}

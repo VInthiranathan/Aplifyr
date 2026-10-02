@@ -1,3 +1,4 @@
+import ProfileReadiness from '../../components/ProfileReadiness';
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { safeReturnTo } from "../../lib/guestAccess";
@@ -323,6 +324,7 @@ export default function UserPage({ user }: Props) {
           </div>
         </div>
 
+        <ProfileReadiness profile={clientProfile} onManage={section=>{setActiveTab(section);document.getElementById(`profile-tab-${section}`)?.focus();}} />
         <div role="tablist" aria-label={t('career.tabs.label')} className="mb-5 grid grid-cols-2 gap-1 rounded-2xl border border-gray-200 bg-white p-1.5 dark:border-white/5 dark:bg-[#1a1a1a] sm:mb-6 sm:flex sm:gap-2 sm:p-2">
           {profileTabs.map((tab, index) => (
             <button key={tab} id={`profile-tab-${tab}`} type="button" role="tab"

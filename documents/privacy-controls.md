@@ -170,3 +170,7 @@ The two previously NOT VALID constraints had zero violations during the read-onl
 ## Guest browsing
 
 Job search and advertisements can be read without registration or AI consent. Guest navigation does not request private profile, application or document records. Generation continues to require a verified account, a saved profile with name and source material, and the existing separate AI consent. Optional contact fields stay optional. No new storage, provider, consent purpose, retention period or database policy is introduced. See the guest flow in `project-overview.md`.
+
+## Workspace privacy — current branch
+
+Owner-only `job_notes` are included as `jobNotes` in account export, retained until user/account deletion, and never sent to AI. Saved letter edits now persist without changing the original document expiry. Single-statement/paragraph AI proposals introduce changed processing covered by new immutable notice `2026-10-documents-v3`, initially disabled. Both code constants are aligned; old notices and receipts are preserved. Fresh user consent and approved operator activation are required before optional AI is used. Manual edits and notes require authentication and owner checks, independently of AI consent. See [Application workspace](application-workspace.md) for disclosure bounds, verification and remaining operational responsibilities.

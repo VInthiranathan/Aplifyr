@@ -1,8 +1,11 @@
+import { notifyWorkspace } from "../lib/JobProgressContext";
+import {useAuthSession} from '../lib/AuthSessionContext';
+import {localDay,needsFollowUp} from '../lib/jobProgress';
 import type { GetServerSideProps } from "next";
 import { serverSupabase } from "../lib/serverSupabase";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { BriefcaseBusiness, CalendarDays, Check, ChevronDown, Pencil, Trash2 } from "lucide-react";
@@ -12,7 +15,7 @@ import { APPLICATION_STATUSES } from "../lib/applicationValidation";
 import { isSupabaseConfigured } from "../lib/supabaseClient";
 import type { ApplicationStatus, JobApplication } from "../types/api";
 
-interface Props { applications: JobApplication[]; loadError: boolean }
+interface Props { applications: JobApplication[]; loadError: boolean; ownerId: string }
 
 interface Draft {
   status: ApplicationStatus;
@@ -27,22 +30,29 @@ const ACTIVE_STATUSES: ApplicationStatus[] = ["applied", "screening", "interview
 export const getServerSideProps: GetServerSideProps<Props> = async ({ locale, req, res }) => {
   res.setHeader("Cache-Control", "private, no-store");
   let applications: JobApplication[] = [];
-  let loadError = false;
+  let loadError = false;let ownerId='';
   if (isSupabaseConfigured) {
     const supabase = serverSupabase(req, res);
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { redirect: { destination: "/auth", permanent: false } };
+    ownerId=user.id;
     try { applications = await readApplications(supabase, user.id); }
     catch { loadError = true; }
   }
-  return { props: { applications, loadError, ...(await serverSideTranslations(locale ?? "en", ["common"])) } };
+  return { props: { applications, loadError, ownerId, ...(await serverSideTranslations(locale ?? "en", ["common"])) } };
 };
 
 function dateValue(value: string): Date { return new Date(`${value}T00:00:00`); }
 
-export default function ApplicationsPage({ applications: initialApplications, loadError }: Props) {
+export default function ApplicationsPage(props:Props){
+ const {userId}=useAuthSession();const {t}=useTranslation('common');
+ if(!userId||userId!==props.ownerId)return <div className="app-page-shell"><Link href="/auth">{t('auth.signIn')}</Link></div>;
+ return <ApplicationsContent key={props.ownerId} {...props}/>;
+}
+function ApplicationsContent({applications:initialApplications,loadError}:Props){
   const { t } = useTranslation("common");
+  const {userId}=useAuthSession();
   const router = useRouter();
   const [applications, setApplications] = useState(initialApplications);
   const [filter, setFilter] = useState<"active" | "all" | ApplicationStatus>("active");
@@ -50,6 +60,8 @@ export default function ApplicationsPage({ applications: initialApplications, lo
   const [draft, setDraft] = useState<Draft | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [today,setToday]=useState<string|null>(null);
+  useEffect(()=>{setToday(localDay());},[]);
   const locale = router.locale === "sv" ? "sv-SE" : "en-US";
 
   const counts = useMemo(() => ({
@@ -58,9 +70,9 @@ export default function ApplicationsPage({ applications: initialApplications, lo
     offer: applications.filter(item => item.status === "offer" || item.status === "accepted").length,
   }), [applications]);
 
-  const visible = useMemo(() => applications.filter(item =>
+  const visible = useMemo(() => applications.filter(item => (!router.query.followUp || (!!today && needsFollowUp(item.status,item.next_step_at,today))) && (
     filter === "all" || (filter === "active" ? ACTIVE_STATUSES.includes(item.status) : item.status === filter)
-  ), [applications, filter]);
+  )), [applications, filter, router.query.followUp,today]);
 
   const startEditing = (application: JobApplication) => {
     setEditingId(application.job_id);
@@ -96,6 +108,7 @@ export default function ApplicationsPage({ applications: initialApplications, lo
       const updated = (await response.json()).application as JobApplication;
       setApplications(current => current.map(item => item.job_id === updated.job_id ? updated : item));
       setEditingId(null); setDraft(null);
+      notifyWorkspace();
     } catch (cause) {
       setError(t(cause instanceof Error && cause.message === "conflict" ? "applications.conflict" : "applications.saveError"));
     } finally { setSavingId(null); }
@@ -117,11 +130,13 @@ export default function ApplicationsPage({ applications: initialApplications, lo
       if (!response.ok) throw new Error("delete");
       setApplications(current => current.filter(item => item.job_id !== application.job_id));
       if (editingId === application.job_id) { setEditingId(null); setDraft(null); }
+      notifyWorkspace();
     } catch (cause) {
       setError(t(cause instanceof Error && cause.message === "conflict" ? "applications.conflict" : "applications.deleteError"));
     } finally { setSavingId(null); }
   };
 
+  if(!userId)return <div className="app-page-shell"><Link href="/auth">{t('auth.signIn')}</Link></div>;
   return (
     <div className="app-page-shell">
       <div className="app-page-header">
@@ -129,6 +144,7 @@ export default function ApplicationsPage({ applications: initialApplications, lo
         <p className="app-page-subtitle">{t("applications.subtitle")}</p>
       </div>
 
+      {router.query.followUp&&<p className="text-sm">{t('workspace.followUpFilter')} <Link href="/applications" className="underline">{t('applications.filters.all')}</Link></p>}
       <div className="grid grid-cols-3 gap-2 sm:gap-4">
         {(["active", "interview", "offer"] as const).map(key => (
           <div key={key} className="app-card-base rounded-2xl p-3 sm:p-5">

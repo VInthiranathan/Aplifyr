@@ -37,6 +37,7 @@ test('export verifies identity, ignores supplied owner, omits auth secrets and f
   query.then=resolve=>Promise.resolve({data:[],error:fail?{}:null}).then(resolve);
   const handler=load('pages/api/account/export.ts',{
     '../../../lib/serverSupabase':{serverSupabase:()=>({auth:{getUser:async()=>({data:{user}})},from:()=>query,rpc:async()=>({data:{current:[],receipts:[]}})})},
+    '../../../lib/readJobNotes':{readJobNotes:async(_client,owner)=>{assert.equal(owner,'owner');return [];}},
     '../../../lib/readApplications':{readApplications:async()=>[]},
     '../../../lib/readGeneratedCvs':{readGeneratedCvs:async(_client,owner)=>{assert.equal(owner,'owner');return [];}},
     '../../../lib/readGeneratedCoverLetters':{readGeneratedCoverLetters:async(_client,owner)=>{assert.equal(owner,'owner');return [];}},

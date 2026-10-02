@@ -1,17 +1,27 @@
+import {notifyWorkspace} from '../../lib/JobProgressContext';
 import { Eye,FileText,MapPin } from 'lucide-react';
 import { useTranslation } from 'next-i18next';
 import Link from 'next/link';
-import { useState } from 'react';
+import {useEffect,useRef,useState} from 'react';
 import JobListCard from '../../components/JobListCard';
 import { getPublicBackendUrl } from '../../lib/backendUrl';
 import { getSupabaseBrowserClient } from '../../lib/supabaseClient';
 import type { PreparedJob } from '../../types/api';
-export function usePreparedJobs(initialPreparedJobs: PreparedJob[]) {
+export function usePreparedJobs(initialPreparedJobs: PreparedJob[], initiallyFailed = false) {
   const {t} = useTranslation('common');
   const [preparedJobs, setPreparedJobs] = useState(initialPreparedJobs);
+  const refreshed=useRef(0);
+  const [retryVersion, setRetryVersion] = useState(0);
+  const retry = () => setRetryVersion(value => value + 1);
+  useEffect(()=>{const controller=new AbortController();
+    async function refresh(){const version=++refreshed.current;try{const r=await fetch('/api/prepared-jobs',{signal:controller.signal});if(!r.ok)throw Error();const body=await r.json();if(!controller.signal.aborted&&version===refreshed.current){setPreparedJobs(body.jobs);setPreparedError('');}}catch{if(!controller.signal.aborted&&version===refreshed.current)setPreparedError(t('applications.loadError'));}}
+    if (retryVersion > 0) void refresh();
+    const handler=()=>void refresh();window.addEventListener('focus',handler);window.addEventListener('aplifyr-workspace',handler);const timer=setInterval(handler,60000);
+    return()=>{controller.abort();clearInterval(timer);window.removeEventListener('focus',handler);window.removeEventListener('aplifyr-workspace',handler);};
+  },[retryVersion, t]);
   const [deletingCv, setDeletingCv] = useState<string | null>(null);
   const [deletingLetter, setDeletingLetter] = useState<string | null>(null);
-  const [preparedError, setPreparedError] = useState("");
+  const [preparedError, setPreparedError] = useState(initiallyFailed ? t("applications.loadError") : "");
   const deleteCv = async (jobId: string) => {
     if (!window.confirm(t("home.deleteCvConfirm"))) return;
     setDeletingCv(jobId);
@@ -24,6 +34,7 @@ export function usePreparedJobs(initialPreparedJobs: PreparedJob[]) {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       if (!response.ok) throw new Error("delete");
+      notifyWorkspace();
       setPreparedJobs(current => current.flatMap(job => {
         if (job.job_id !== jobId) return [job];
         if (!job.has_cover_letter) return [];
@@ -48,6 +59,7 @@ export function usePreparedJobs(initialPreparedJobs: PreparedJob[]) {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       if (!response.ok) throw new Error("delete");
+      notifyWorkspace();
       setPreparedJobs(current => current.flatMap(job => {
         if (job.job_id !== jobId) return [job];
         if (!job.has_cv) return [];
@@ -60,14 +72,15 @@ export function usePreparedJobs(initialPreparedJobs: PreparedJob[]) {
     }
   };
 
-  return {preparedJobs, preparedError, deletingCv, deletingLetter, deleteCv, deleteCoverLetter};
+  return {retry, preparedJobs, preparedError, deletingCv, deletingLetter, deleteCv, deleteCoverLetter};
 }
-export function PreparedJobs({model}: {model: ReturnType<typeof usePreparedJobs>}) {
+export function PreparedJobs({model, jobs}: {model: ReturnType<typeof usePreparedJobs>; jobs?:PreparedJob[]}) {
   const {t, i18n} = useTranslation('common');
-  const {preparedJobs, preparedError, deletingCv, deletingLetter, deleteCv, deleteCoverLetter} = model;
+  const {preparedError, deletingCv, deletingLetter, deleteCv, deleteCoverLetter} = model;
+  const preparedJobs = jobs ?? model.preparedJobs;
   return <>
-          {preparedError && <p role="alert" className="app-card-base p-4">{preparedError}</p>}
-          {preparedJobs.length === 0 ? (
+          {preparedError && <div role="alert" className="app-card-base p-4">{preparedError} <button type="button" className="min-h-10 underline" onClick={model.retry}>{t("workspace.retry")}</button></div>}
+          {preparedError ? null : preparedJobs.length === 0 ? (
             <div className="app-card-base rounded-2xl p-6 text-center sm:p-12">
               <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{t("home.noPreparedJobsTitle")}</p>
               <p className="text-gray-500 dark:text-white/50">{t("home.noPreparedJobsDescription")}</p>
@@ -77,6 +90,7 @@ export function PreparedJobs({model}: {model: ReturnType<typeof usePreparedJobs>
               {preparedJobs.map(job => (
                 <JobListCard
                   key={job.job_id}
+                  jobId={job.job_id}
                   leading={<div className="w-12 h-12 rounded-2xl bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center text-purple-600 dark:text-purple-400"><FileText size={20} /></div>}
                   title={<Link href={`/jobs/${job.job_id}`} className="text-lg font-semibold text-gray-900 dark:text-white hover:underline leading-snug">{job.job_context.title || t("jobDetail.defaultJobTitle")}</Link>}
                   badges={<div className="flex flex-wrap gap-2">
@@ -90,6 +104,8 @@ export function PreparedJobs({model}: {model: ReturnType<typeof usePreparedJobs>
                     {job.has_cover_letter && job.cover_letter_expires_at && <span>{t("home.coverLetterExpires", { date: new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium" }).format(new Date(job.cover_letter_expires_at)) })}</span>}
                   </>}
                   aside={<div className="flex flex-wrap items-center gap-2">
+                    {!job.has_cv&&<Link href={`/jobs/${job.job_id}/cv`} className="app-secondary-button px-3 py-2 text-sm">{t('workspace.nextCv')}</Link>}
+                    {!job.has_cover_letter&&<Link href={`/jobs/${job.job_id}?tab=letter`} className="app-secondary-button px-3 py-2 text-sm">{t('workspace.nextLetter')}</Link>}
                     {job.has_cv && <Link href={`/jobs/${job.job_id}/cv`} className="app-secondary-button px-3 py-2 text-sm">{t("home.openCv")}</Link>}
                     {job.has_cv && <button type="button" disabled={deletingCv === job.job_id} onClick={() => void deleteCv(job.job_id)} className="app-secondary-button px-3 py-2 text-sm disabled:opacity-50">{t(deletingCv === job.job_id ? "home.deletingCv" : "home.deleteCv")}</button>}
                     {job.has_cover_letter && <Link href={`/jobs/${job.job_id}?letter=1`} className="app-secondary-button px-3 py-2 text-sm">{t("home.openCoverLetter")}</Link>}

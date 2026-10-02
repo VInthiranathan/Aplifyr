@@ -3,6 +3,7 @@ import { serverSupabase } from '../../../lib/serverSupabase';
 import { readGeneratedCvs } from '../../../lib/readGeneratedCvs';
 import { readGeneratedCoverLetters } from '../../../lib/readGeneratedCoverLetters';
 import { readCareerEntries } from '../../../lib/readCareerEntries';
+import {readJobNotes} from '../../../lib/readJobNotes';
 import { readApplications } from '../../../lib/readApplications';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -19,15 +20,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       'id,kind,title,organization,location,qualification,start_month,end_month,is_current,description,achievements,learned,skills,strengths,created_at,updated_at');
     const {data:aiConsent,error:consentError}=await supabase.rpc('export_ai_consents');
     if(consentError || !aiConsent || JSON.stringify(aiConsent).length>8*1024*1024) throw new Error('Consent export unavailable');
-    const [generatedCvs, generatedCoverLetters, jobApplications] = await Promise.all([
+    const [generatedCvs, generatedCoverLetters, jobApplications, jobNotes] = await Promise.all([
       readGeneratedCvs(supabase, user.id),
       readGeneratedCoverLetters(supabase, user.id),
       readApplications(supabase, user.id),
+      readJobNotes(supabase,user.id),
     ]);
     res.status(200).json({
       generatedCvs,
       generatedCoverLetters,
       jobApplications,
+      jobNotes,
       exportedAt: new Date().toISOString(),
       account: { id: user.id, email: user.email, createdAt: user.created_at },
       profile,

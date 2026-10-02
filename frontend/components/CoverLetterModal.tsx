@@ -1,3 +1,4 @@
+import RewriteSuggestion from './RewriteSuggestion';
 import { safeExternalUrl } from "../lib/safeHtml";
 import {useDialogFocus} from '../lib/useDialogFocus';
 import { X, Copy, RefreshCw, Edit2, Send, Check, Trash2, Loader2, Download } from "lucide-react";
@@ -6,6 +7,12 @@ import { useTranslation } from "next-i18next";
 import { Button } from "./ui/button";
 
 interface CoverLetterModalProps {
+  inline?: boolean;
+  canGenerate?: boolean;
+  jobId?: string;
+  revision?: string;
+  onSave?: (content:string)=>Promise<void>;
+  isSaving?: boolean;
   isOpen: boolean;
   onClose: () => void;
   letter: string;
@@ -20,7 +27,7 @@ interface CoverLetterModalProps {
 }
 
 export default function CoverLetterModal({
-  isOpen,
+  isOpen, canGenerate=true, inline=false, jobId, revision, onSave, isSaving=false,
   onClose,
   letter,
   jobTitle,
@@ -33,9 +40,11 @@ export default function CoverLetterModal({
   isDeleting = false,
 }: CoverLetterModalProps) {
   const { t, i18n } = useTranslation("common");
-  const dialog=useDialogFocus(isOpen,onClose);
+  const [rewriteDialog,setRewriteDialog]=useState(false);
+  const dialog=useDialogFocus(isOpen&&!inline&&!rewriteDialog,onClose);
   const [isEditing, setIsEditing] = useState(false);
   const [editedLetter, setEditedLetter] = useState(letter);
+  const [saveError, setSaveError] = useState('');
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState(false);
   const downloadRequest = useRef<AbortController | null>(null);
@@ -83,8 +92,8 @@ export default function CoverLetterModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4">
-      <div ref={dialog} tabIndex={-1} role="dialog" aria-modal="true" aria-label={t('coverLetter.title')} className="relative w-full sm:max-w-3xl bg-gray-50 dark:bg-[#0d0d0d] border border-gray-200 dark:border-white/10 rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[92dvh] flex flex-col">
+    <div className={inline ? "min-w-0" : "fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4"}>
+      <div ref={inline?undefined:dialog} tabIndex={-1} role={inline?'region':'dialog'} aria-modal={inline?undefined:true} aria-label={t('coverLetter.title')} className={inline?'app-card-base min-w-0 rounded-2xl overflow-hidden':'relative w-full sm:max-w-3xl bg-gray-50 dark:bg-[#0d0d0d] border border-gray-200 dark:border-white/10 rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[92dvh] flex flex-col'}>
         {/* Header */}
         <div className="flex min-w-0 items-start justify-between gap-3 border-b border-gray-200 p-4 dark:border-white/10 sm:p-6">
           <div className="min-w-0">
@@ -111,6 +120,8 @@ export default function CoverLetterModal({
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
           {isEditing ? (
             <textarea
+              maxLength={16000}
+              disabled={isSaving}
               value={editedLetter}
               onChange={(e) => setEditedLetter(e.target.value)}
               className="min-h-[45dvh] w-full resize-none rounded-xl border border-gray-300 bg-white p-4 text-gray-900 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:border-white/10 dark:bg-[#1a1a1a] dark:text-white sm:min-h-[400px]"
@@ -123,8 +134,9 @@ export default function CoverLetterModal({
               </pre>
             </div>
           )}
+          {isEditing&&jobId&&revision&&<div className="mt-4 space-y-4">{editedLetter.replace(/\r\n/g,'\n').split('\n\n').map((paragraph,index)=><section key={index} className="space-y-2 rounded-xl border border-slate-200 p-3 dark:border-white/10"><p className="whitespace-pre-wrap text-sm">{paragraph}</p><RewriteSuggestion onConsentChange={setRewriteDialog} jobId={jobId} revision={revision} text={paragraph} target={{kind:'letter',section:'paragraph',entry:0,index}} disabled={!canGenerate||isSaving||editedLetter!==letter} onAccept={text=>{const rows=editedLetter.replace(/\r\n/g,'\n').split('\n\n');rows[index]=text;setEditedLetter(rows.join('\n\n'));}}/></section>)}</div>}
         </div>
-
+        {saveError&&<p role="alert" className="px-4 py-2">{saveError}</p>}
         {downloadError && <p role="alert" className="px-4 py-2">{t('coverLetter.downloadError')}</p>}
         {/* Footer Actions */}
         <div className="grid gap-3 border-t border-gray-200 bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] dark:border-white/10 dark:bg-[#0a0a0a] sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:p-6">
@@ -134,12 +146,17 @@ export default function CoverLetterModal({
               {t(downloading ? 'coverLetter.downloading' : 'coverLetter.download')}
             </Button>
             <Button
-              onClick={() => setIsEditing(!isEditing)}
+              disabled={isSaving||isRegenerating||isDeleting}
+              onClick={async () => {
+                if(!isEditing){setSaveError('');setIsEditing(true);return;}
+                try {if(onSave&&editedLetter!==letter)await onSave(editedLetter);setSaveError('');setIsEditing(false);}
+                catch(e){setSaveError(t(e instanceof Error&&e.message==='editConflict'?'cv.errors.editConflict':'cv.errors.storage'));}
+              }}
               variant="secondary"
               className="h-auto min-w-0 px-3 py-2 sm:px-4"
             >
               <Edit2 size={16} />
-              {isEditing ? t("coverLetter.save") : t("coverLetter.edit")}
+              {isEditing ? t(isSaving?"applications.saving":"coverLetter.save") : t("coverLetter.edit")}
             </Button>
             <Button
               onClick={handleCopy}
@@ -151,7 +168,7 @@ export default function CoverLetterModal({
             </Button>
             <Button
               onClick={onRegenerate}
-              disabled={isRegenerating}
+              disabled={!canGenerate||isSaving||isRegenerating}
               variant="secondary"
               className="h-auto min-w-0 px-3 py-2 sm:px-4"
             >
@@ -163,7 +180,7 @@ export default function CoverLetterModal({
             </Button>
             <Button
               onClick={onDelete}
-              disabled={isDeleting || isRegenerating}
+              disabled={isSaving||isDeleting || isRegenerating}
               variant="secondary"
               className="h-auto min-w-0 px-3 py-2 sm:px-4"
             >
