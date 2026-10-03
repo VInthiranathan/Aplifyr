@@ -11,7 +11,7 @@ The rules apply to authenticated pages, job search and details, profile and care
 - `frontend/components/Layout.tsx` uses the dynamic viewport height (`100dvh`) so browser chrome does not hide content.
 - The top bar and bottom navigation include iOS safe-area insets.
 - Only the main content region scrolls on authenticated pages. Horizontal viewport overflow is blocked globally.
-- Mobile bottom navigation contains Home, Favorites, Jobs, and Profile. Support and privacy settings remain available from the top-right settings drawer.
+- Authenticated mobile bottom navigation contains Home, Jobs, Applications, and Profile. Guests see Jobs and Sign in. Favorites, support and privacy settings remain available from the top-right settings drawer.
 - Nested job routes keep the Jobs destination active.
 
 ## Responsive interaction patterns

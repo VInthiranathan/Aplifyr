@@ -44,7 +44,7 @@ Migration `20260926051754_security_hardening_and_document_revisions.sql` enforce
 
 `lib/readApplications.ts` is shared by SSR, export and status lookup. It requests 100 rows ordered by immutable job ID and continues until an empty page, including when the host returns fewer than requested. Bounds are 1,001 requests, 10,000 rows and 16 MiB UTF-8, with explicit failure on incomplete reads. The UI sorts full records by last update after reading. Results are not a transactional snapshot across concurrent changes. Regression tests exercise more than 500 rows with short hosted pages, direct-write quotas, legacy rows and deletion cascades.
 
-Job-detail loading and marking now live in `features/jobs/useJobApplication.ts`; the route keeps the action UI. Matched-list application badges live in `features/home/MatchedJobs.tsx` and continue using the same `useApplicationStatuses` hook. This extraction changes neither database ownership nor retention.
+Job-detail loading and marking now live in `features/jobs/useJobApplication.ts`; the route keeps the action UI. Matched-list badges compose `JobProgress` backed by `JobProgressProvider`; successful mutations from both the workspace and Applications page invalidate shared progress. This extraction changes neither database ownership nor retention.
 
 ## Job workspace, pre-submission notes and follow-ups
 

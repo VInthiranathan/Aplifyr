@@ -1,5 +1,9 @@
 # Project Overview
 
+## Current stage
+
+Development/testing; public-launch prerequisites remain open. PR #34 is merged into main. See [the runbook](gdpr-supabase-runbook.md) for dated CI, migration, notice activation and deployment evidence. Code availability does not prove that the entire hosted flow is verified.
+
 ## Purpose
 
 Aplifyr helps a user move from job discovery to a prepared application by combining job search, profile management, work experience and education, and AI-assisted cover letter generation.
@@ -33,7 +37,7 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 ### Home Dashboard
 
 - loads personalized JobTech matches through `JobMatchingService`, exposed by `ExternalJobsController.Matching.cs`, using desired roles, geographic preferences, and explicit profile/career skills
-- shows match grades and two job-list tabs: matched jobs and prepared jobs
+- shows matched jobs, a preparation/submission work queue and follow-up actions
 - adds a job to prepared jobs only after a CV or cover letter is generated successfully; the latest CV and latest cover letter are stored for seven days and can be deleted independently
 - requires a signed-in session when Supabase is configured
 - see [Job preferences and matching](job-preferences-matching.md) for scoring, caching, pagination, and verification
@@ -110,7 +114,7 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 - `frontend/next.config.js` rewrites `/api/:path*` to the backend base URL
 - some frontend pages still read `BACKEND_URL`, while client-side job pages use `NEXT_PUBLIC_BACKEND_URL`
 - backend startup works without a `.env`, but Supabase-backed features then become unavailable
-- cover letter generation fails closed without configured Auth or approved AI providers; see [Security and EU privacy audit](security-gdpr-audit-2026-09-08.md) for configuration and deployment checks
+- cover letter generation fails closed without configured Auth or approved AI providers; see [deployment runbook](gdpr-supabase-runbook.md) for configuration and deployment checks
 
 ## Current Known Limitations
 
@@ -121,7 +125,7 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 - support uses a configured mailto contact; sending occurs in the user's mail application and requires a real monitored mailbox
 - favorites are browser-local and account-scoped; legacy unowned favorites are cleared rather than assigned to another login
 - backend demo `/api/user` is Development-only; general limits are process-local, while AI reservations and quotas are shared through Supabase migration 008
-- GDPR operational tasks and remaining code limitations are listed in the [security and EU privacy audit](security-gdpr-audit-2026-09-08.md)
+- GDPR operational tasks and remaining code limitations are listed in the [deployment runbook](gdpr-supabase-runbook.md)
 
 ## Folder Map
 
@@ -132,11 +136,11 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 
 The job page reuses its cover-letter button to open an existing letter. The letter modal exports its current text as a local PDF; see [cover-letter setup](cover-letter-setup.md).
 
-## Security hardening — 2026-09-26 (prepared, not deployed)
+## Security hardening
 
 Backend endpoints now require verified authentication by default; public controllers explicitly opt out. Authentication, generation and document/public traffic have separate admission limits. `CvStore` exposes named, owner-bound write operations. Generated CV responses use the database revision so an immediate edit does not conflict with a fabricated timestamp. Frontend SSR auth and application pagination share implementations; job-ad rendering is extracted to `components/JobAdContent.tsx`.
 
-The accompanying migration tightens grants, validates legacy constraints, enforces the application quota and adds version-bound AI reservations. CI adds secret and dependency checks. The current code requires document notice `2026-09-documents-v2`; the migration deliberately leaves it disabled. See the [rollout section in the runbook](gdpr-supabase-runbook.md#9-härdning-2026-09-26--förberedd-utrullning) for ordering and outstanding production work. The follow-up decomposition below is implemented. Client-supplied cover-letter facts remain a documented trust limitation; restructuring does not make those facts authoritative.
+The hardening migration tightens grants, validates legacy constraints, enforces application quotas and adds version-bound AI reservations. Hosted execution is recorded in the runbook. Current code pins `2026-10-documents-v3`. Client-supplied ordinary letter facts remain a trust limitation; restructuring does not make those facts authoritative.
 
 ## Application boundaries after decomposition
 
@@ -157,6 +161,14 @@ Pages retain routing/SSR and compose these units. Hooks preserve cancellation/se
 
 Next.js is pinned to 16.3.6 and the lockfile resolves DOMPurify to 3.4.16 after owner approval. These address the dependency audit failures found during the guest-access PR. No hosting settings or database schema changes are required.
 
-## Application workspace — 2026-10-02 (prepared branch)
+## Application workspace
 
-Job-specific tabs now connect overview, CV, saved cover-letter editing, application status and private notes. Home offers an actionable prepared/submitted work queue and follow-ups. Shared job-card progress and deterministic matching explanations make the current state visible; profile readiness gives concrete recommendations. Single-statement/paragraph AI proposals require review and explicit save. See [Application workspace](application-workspace.md) for contracts, migration, privacy, limitations and rollout. This section supersedes the old two-tab-only dashboard and local-only letter-edit descriptions. AI notice v3 is prepared disabled; rollout/activation remain separate approved operations.
+Job-specific tabs now connect overview, CV, saved cover-letter editing, application status and private notes. Home offers an actionable prepared/submitted work queue and follow-ups. Shared job-card progress and deterministic matching explanations make the current state visible; profile readiness gives concrete recommendations. Single-statement/paragraph AI proposals require review and explicit save. See [Application workspace](application-workspace.md) for contracts, migration, privacy, limitations and rollout. PR #34 is merged; the workspace migration and v3 notice activation have been completed as separate approved operations. Render and end-to-end hosted behavior still need verification.
+
+## Documentation map
+
+- [Quick start](quick-start.md) and [troubleshooting](troubleshooting.md): setup and failure diagnosis.
+- [Database schema](database-schema.md): tables, ownership and retention.
+- [Privacy controls](privacy-controls.md): implemented data and consent contracts.
+- [Operations runbook](gdpr-supabase-runbook.md): verified status, migration mappings, launch prerequisites and legacy-storage cleanup.
+- Feature contracts: [workspace](application-workspace.md), [CV](cv-generation.md), [letters](cover-letter-setup.md), [applications](job-application-tracking.md), [matching](job-preferences-matching.md), [career](profile-career-history.md), [mobile](mobile-app-experience.md).

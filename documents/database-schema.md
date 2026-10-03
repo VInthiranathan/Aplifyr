@@ -37,7 +37,7 @@ Current columns:
 
 Migration 006 enables RLS on profiles, revokes anon/public grants, and grants authenticated CRUD subject to ownership. A restrictive owner guard also constrains older permissive policies. It locks the signup/update trigger functions' search paths and restricts direct execution of the signup function. No profile data is deleted by migration 006.
 
-`documents/profiles-schema-reference.sql` is only a historical schema reference, not a migration. Apply the numbered migration files; do not replay the reference over existing tables.
+The checked-in migrations define the schema. The obsolete profiles-only snapshot has been removed; do not replay creation SQL over existing tables.
 
 ### New User Profile Creation
 
@@ -61,7 +61,7 @@ Migration 008 introduces versioned `ai_privacy_notices`, owner-readable/RPC-writ
 
 Migration 004 adds `public.profile_career_entries`, with owner-only row-level security.
 See `profile-career-history.md` for fields and API behavior. Migration 005 leaves these
-entries intact and retires legacy document storage; see `retire-file-storage.md`.
+entries intact and retires legacy document storage; see the legacy-storage section in [the runbook](gdpr-supabase-runbook.md).
 
 ## Notes for Future Work
 
@@ -92,8 +92,8 @@ Migration `20260923122723_job_application_tracker.sql` adds `public.job_applicat
 - Adds service-only `reserve_ai_call_v2`, requiring the requested current notice version before delegating to the existing quota/lease reservation under the same locks.
 - Inserts Gemini notice `2026-09-documents-v2` disabled; no consent grants or older notice edits.
 
-This describes the checked-in migration, not an applied production change. The hosted application-tracker migration was recorded as `20260923152826` whereas the file is `20260923122723`; compare SQL/schema before any ledger repair. See the runbook.
+The hosted ledger records this migration as `20260929072629`; its presence was rechecked on 2026-10-03. The schema description is not a claim that every hosted behavior was retested. The hosted application-tracker migration was recorded as `20260923152826` whereas the file is `20260923122723`; compare SQL/schema before any ledger repair. See the runbook.
 
-## Application workspace (prepared migration)
+## Application workspace
 
-`20261002075427_application_workspace.sql` adds `public.job_notes(user_id,job_id,notes,updated_at)` with `(user_id,job_id)` primary key, Auth cascade, bounded nonblank text, owner CRUD RLS, immutable identity and database revisions. Private `aplifyr_note_counts` and its trigger enforce 1,000 notes per owner including direct writes. No changes to existing application/document tables or their expiry. A new disabled v3 Gemini privacy notice is inserted without replacing historical receipts/texts. See [Application workspace](application-workspace.md).
+`20261002075427_application_workspace.sql` adds `public.job_notes(user_id,job_id,notes,updated_at)` with `(user_id,job_id)` primary key, Auth cascade, bounded nonblank text, owner CRUD RLS, immutable identity and database revisions. Private `aplifyr_note_counts` and its trigger enforce 1,000 notes per owner including direct writes. No changes to existing application/document tables or their expiry. The migration initially inserts v3 disabled without replacing historical receipts/texts. In the hosted project it was explicitly activated on 2026-10-03. Workspace migration ledger version is `20261002183713`; do not replay repository version `20261002075427`. See [Application workspace](application-workspace.md).

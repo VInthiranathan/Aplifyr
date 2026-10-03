@@ -1,10 +1,29 @@
 # Supabase och EU-GDPR – åtgärdsguide för Aplifyr
 
-Uppdaterad 2026-09-08. Branch: `fix/security-gdpr-audit`.
+## Verifierad status — 2026-10-03
 
-Senaste samlade migrationsfil: `supabase/migrations/008_privacy_consent_and_limits.sql`. Den är avsedd för ditt befintliga schema och innehåller samtycke, reservationskvoter, ägarskydd och saknade fältgränser. Appens samtyckesflöde, nonce-CSP och övriga kodfixar kräver separat driftsättning av branchen. Följ operatörskommentarerna i SQL-filen innan AI aktiveras.
+Appen är i utvecklings-/teststadium. PR #34 är mergad till `main` på `5d1da64276b215cc7cb74b6364198b3f72524ba8`. Arbetsyta, privata anteckningar, sparad brevredigering och AI-förslag finns i koden. Detta är inte ett godkännande för offentlig lansering.
 
-Du har uppgett att RLS redan är aktiverat för profilen. Det respekteras: avsaknaden i migration 001 bevisar inte en lucka i din drift. Inga produktionsinställningar eller användaruppgifter har ändrats under granskningen. Den här guiden är en teknisk åtgärdsplan, inte ett juridiskt intyg. Hela fyndlistan finns i [granskningsrapporten](security-gdpr-audit-2026-09-08.md).
+- Fixcommit `433bd7babd643e7a1a3536afce26a8408d9d1034`: 112 frontendtester och produktionsbygge passerade. GitHub CI `36993410194` passerade frontend, backend, regressioner och Docker; säkerhetskörning `36993410172` passerade. Detta är tidigare kodvalidering, inte nya tester av dokumentändringen.
+- Workspace-migrationen kördes 2026-10-02 i Aplifyr1 (`trgloqvcyzfizeycbhjx`). RLS/grants, privat kvoträknare, ägar-CRUD, nekad åtkomst mellan två syntetiska ägare och gamla revisionskonflikter verifierades. Testdata rullades tillbaka. Det var databasrolltester, inte riktiga webbläsarsessioner.
+- Efter uttryckligt ägargodkännande aktiverades `2026-10-documents-v3` 2026-10-03 och v2 avaktiverades atomiskt. Efterkontroll visar endast Gemini v3 aktiv. Granskad text bevarades; inga användarsamtycken tilldelades. Varje användare måste själv godkänna v3 innan nya AI-anrop.
+- Vercel rapporterade lyckad deployment för mergecommitten. Render-version, riktiga auth-/AI-flöden, mobil/keyboard och komplett driftkedja är ännu inte verifierade i denna uppföljning. Inga hostinginställningar ändrades.
+- Kontaktadress saknas i den aktiverade utvecklingstexten. Betald Gemini-konfiguration, aktuella leverantörsvillkor/avtal, rättsliga grunder, överföringar, organisatorisk retention, backup/radering och DPIA-screening måste verifieras/beslutas av operatören före publik lansering. Aktivering innebär inte att dessa punkter är lösta. Ingen ny juridisk bedömning har utförts i dokumentgenomgången.
+
+### Migrationshistorik i hosted-projektet
+
+Läsande kontroll 2026-10-03 bekräftade följande ledger. Äldre schema finns också; saknad separat ledger-post bevisar inte saknad migration. Jämför SQL/schema före separat godkänd historikreparation. Kör inte blind `supabase db push` och kör inte om gamla migrationer.
+
+| Repositoryfil/version | Hosted version | Namn |
+|---|---|---|
+| `008` (samlad manuell uppgradering) | `20260909045349` | privacy_consent_and_limits |
+| `20260918164504` | `20260918164504` | prepared_jobs_and_generated_document_retention |
+| `20260921184722` | `20260921184722` | add_profile_contact_details |
+| `20260923122723` | `20260923152826` | job_application_tracker |
+| `20260926051754` | `20260929072629` | security_hardening_and_document_revisions |
+| `20261002075427` | `20261002183713` | application_workspace |
+
+Historiska engångsrapporter, beroendeaudit-snapshots och profiles-schema-snapshot har tagits bort ur den aktuella dokumentationen. Originalen finns i git-historiken. Aktuella kontrakt finns i feature-dokumenten; kvarstående drift- och integritetskrav finns här.
 
 ## 1. Kontrollera befintligt Supabase-projekt – läsning först
 
@@ -95,14 +114,14 @@ Fyll i: personuppgiftsansvarigs identitet och kontakt, dataskyddsombud om tillä
 
 ## 5. Tillgång, export, rättelse och radering
 
-Självserviceexporten hämtar kontoidentitet, profil, sidindelad karriär och favoriter i aktuell webbläsare. Den är **inte ett komplett registerutdrag**: administrativt måste du komplettera med relevanta behandlingsuppgifter/loggar/mottagare och rättighetsinformation. Skicka aldrig lösenordshashar, tokens, privata nycklar eller andra användares uppgifter.
+Självserviceexporten hämtar kontoidentitet, profil, sidindelad karriär, AI-samtycken/kvitton, aktiva CV:n/brev, ansökningar, jobbanteckningar och favoriter i aktuell webbläsare. Den är **inte ett komplett registerutdrag**: administrativt måste du komplettera med relevanta behandlingsuppgifter/loggar/mottagare och rättighetsinformation. Skicka aldrig lösenordshashar, tokens, privata nycklar eller andra användares uppgifter.
 
 1. Registrera begärans datum, typ och ansvarig. Verifiera identitet proportionerligt, helst via befintlig inloggning; begär inte rutinmässigt ID-kopia.
 2. Bekräfta begäran och följ upp normalt inom en månad. Förlängning kan vara möjlig i vissa fall, men måste motiveras och meddelas inom första månaden. [IMY om rättigheter](https://www.imy.se/verksamhet/dataskydd/det-har-galler-enligt-gdpr/de-registrerades-rattigheter/).
 3. Rättelse: profil/karriär kan redigeras; komplettera eventuell felaktig data hos mottagare. Restriktion/invändning kräver beslutad ärendehantering, inte bara borttagning i UI.
 4. Radering: kontrollera rättsliga undantag och exakt verifierat användar-UUID/projekt. Börja med ett testkonto i staging. Bekräfta konsekvenser och behörighet före verklig radering.
-5. Inventera användarens eventuella legacy-CV/avatarobjekt enligt [retire-file-storage.md](retire-file-storage.md). Ta bort verifierade objekt via Storage API, inte genom att bara radera metadata i SQL. Radera inte en hel bucket om den innehåller andra användares data.
-6. Radera kontot via Supabase Auths administratörsflöde efter målbekräftelse. Kontrollera cascade för profiles/career. Auth-radering återkallar inte omedelbart redan utfärdade JWT:er; hantera giltighetstiden och använd sessionskontroll för känsliga operationer. Testa både gamla token och refresh samt att åtkomst faktiskt upphör. [Supabase användarhantering](https://supabase.com/docs/guides/auth/managing-user-data).
+5. Inventera användarens eventuella legacy-CV/avatarobjekt enligt avsnitt 10. Ta bort verifierade objekt via Storage API, inte genom att bara radera metadata i SQL. Radera inte en hel bucket om den innehåller andra användares data.
+6. Radera kontot via Supabase Auths administratörsflöde efter målbekräftelse. Kontrollera cascade för profil, karriär, samtycken/kvitton, genererade dokument, förberedda jobb, ansökningar, anteckningar och privata kvoträknare. Auth-radering återkallar inte omedelbart redan utfärdade JWT:er; hantera giltighetstiden och använd sessionskontroll för känsliga operationer. Testa både gamla token och refresh samt att åtkomst faktiskt upphör. [Supabase användarhantering](https://supabase.com/docs/guides/auth/managing-user-data).
 7. Rensa berörda lokala favoriter på tillgängliga enheter och informera om andra webbläsare/nedladdade brev. Begär radering hos relevanta leverantörer och följ upp bekräftelse.
 8. Dokumentera backupers utfasning och en rutin som återapplicerar raderingar vid återläsning. Bevara bara nödvändigt ärendebevis med beslutad retention. Meddela vad som raderats och eventuella lagliga undantag; påstå inte omedelbar radering från alla backups.
 
@@ -112,7 +131,7 @@ Ingen automatisk konto-raderingsendpoint har införts: berörda produktionssyste
 
 Lämna `AI_ALLOWED_PROVIDERS` tom tills varje aktiverad leverantör är bedömd. Dokumentera Supabase, hosting, e-post och AI: roll, avtal/biträdesavtal där tillämpligt, underbiträden, data, supportåtkomst, länder, retention, träning och radering. EU-region utesluter inte tredjelandsåtkomst. Bedöm aktuell överföringsmekanism, exempelvis tillämpligt adekvansbeslut eller SCC med kompletterande bedömning/skydd; ett regionval är inte hela lösningen. [IMY om överföringar](https://www.imy.se/verksamhet/dataskydd/det-har-galler-enligt-gdpr/overforing-till-tredje-land/).
 
-Jobbdetaljen har nu ett explicit val av högst tre karriärposter: endast typ, titel, organisation, datum och färdigheter skickas. Övrig karriärfritext skickas inte. Samtycke krävs per leverantör. Undvik känsliga fritextuppgifter; bedöm särskilda krav om sådana faktiskt behandlas.
+För vanlig brevgenerering har jobbdetaljen ett explicit val av högst tre karriärposter: endast typ, titel, organisation, datum och färdigheter skickas. Övrig karriärfritext skickas inte i det flödet. CV och formuleringsförslag använder däremot utvald sparad karriärfritext enligt respektive feature-dokument. Samtycke krävs per leverantör. Undvik känsliga fritextuppgifter; bedöm särskilda krav om sådana faktiskt behandlas.
 
 ## 7. Retention, incidenter och konsekvensbedömning
 
@@ -124,67 +143,22 @@ Dokumentera DPIA-screening för profilering/AI. Genomför konsekvensbedömning o
 
 ## 8. Kvarstående kod- och driftarbete – inte dolt som klart
 
-Kod för cache-/poolgränser, tydliga upstream-fel, nonce-CSP, fokusfällor, AI-instruktionsseparation, valda karriärfakta och konfigurerbar e-postkontakt är nu införd. Migration 008 inför samtycke och distribuerad AI-begränsning. Kvar före produktion: normal CI/Docker-gate, belastnings-/webbläsartest i staging, hosted Supabase/Auth, avtal, rättsliga grunder, fullständiga notice-texter, retention och fungerande organisatoriska rutiner. Detta kan inte lösas genom SQL eller användarsamtycke ensamt.
+Kod för cache-/poolgränser, tydliga upstream-fel, nonce-CSP, fokusfällor, AI-instruktionsseparation, valda karriärfakta och konfigurerbar e-postkontakt är nu införd. Migration 008 inför samtycke och distribuerad AI-begränsning. CI/Docker-resultat och begränsad databasverifiering finns i statusavsnittet. Kvar före publik lansering: belastnings-/webbläsartest i staging, hosted Auth, avtal, rättsliga grunder, fullständiga notice-texter, retention och fungerande organisatoriska rutiner. Detta kan inte lösas genom SQL eller användarsamtycke ensamt.
 
-Godkänn inte lansering förrän ansvariga signerat relevanta punkter och staging visar godkända tester. Använd granskningens ID:n i ärenden för att följa upp kvarstående arbete.
+Godkänn inte lansering förrän ansvariga signerat relevanta punkter och staging visar godkända tester. Registrera kvarstående beslut och verifieringsresultat med ansvarig och datum. Verifiera även hosted lösenordsskydd/plan, budgetlarm och historiska loggars åtkomst/retention. Bedöm eventuell tidigare exponering utifrån bevis; gamla kodfynd visar inte i sig att en incident inträffat.
 
-## 9. Härdning 2026-09-26 – förberedd utrullning
+## 9. Kontroll och återgång vid kommande utrullning
 
-Kod och migration är förberedda i en separat arbetskopia. Produktionsdatabas, samtyckesaktivering, lösenordsskydd och Render/Vercel har inte ändrats i detta arbete. Tidigare datum/status ovan är historiska. Nuvarande migrationsfil är `20260926051754_security_hardening_and_document_revisions.sql`.
+Kör frontendtester/produktionsbygge, backend Release och säkerhets-, CV-, matchnings- och workspacetester på slutlig kod. CI omfattar Docker, beroendeaudit och secret scan. Testa migrationskedjan på tom lokal databas och med syntetiska äldre data i staging; PGlite utelämnar pg_cron och ersätter inte Supabase-staging.
 
-### Ordning och beslut
+Före separat godkänd SQL: stäm av schema/ledger, backup/återläsningsväg, avvikelser och ändringsfönster. Bevara RLS/grants, historiska notice-texter och kvitton. Ny behandling kräver ny granskad text och separat aktiveringsbeslut; aktivera aldrig Groq som felsökningsåtgärd. Användarna lämnar själva samtycke.
 
-1. Granska och versionshantera kodändringen enligt repositoryts regler. Ingen branch, commit, push eller merge ingår utan uttryckligt uppdrag. Kör befintlig CI samt nya `security.yml` före merge. Bekräfta staging, backup/återläsningsväg och ändringsfönster innan produktions-SQL.
-2. Stäm av migrationshistoriken läsande. Produktion registrerar ansökningstrackern som `20260923152826`; repositoryt använder `20260923122723`. Den tidigare manuella 008-uppgraderingen registreras som `20260909045349`. Jämför registrerad SQL, schema, policies och funktioner med filerna. Dokumentera motsvarigheten innan en separat godkänd ledger-reparation. Kör inte om 001–009 eller byt migrationsidentitet på antagande. Använd inte blind `supabase db push` mot denna historik.
-3. Testa hela migrationskedjan på tom lokal databas och uppgradering med syntetiska äldre data i staging. Kontrollera att de två constraintavvikelserna fortfarande är noll med frågorna i avsnitt 2. Den läsande förkontrollen 2026-09-26 gav noll för båda. Ny migration validerar dem och avbryter atomiskt vid fel; den raderar eller kapar inte data. Räkna även befintliga ansökningar per konto utan att exportera innehållet.
-4. Efter uttryckligt godkännande: kör enbart den nya granskade migrationen i rätt Supabase-projekt och registrera dess exakta version. Den återkallar överflödiga grants, lägger till index, validerar constraints, inför ansökningskvot samt nya CV-/samtyckes-RPC:er. Låsgränsen är 5 sekunder och frågegränsen 60 sekunder; vid timeout utred belastningen, stäng inte av skydd blint. Äldre RPC:er finns kvar för kompatibilitet under utrullningen.
-5. Granska svensk/engelsk notice `2026-09-documents-v2` i migrationen. Den beskriver den faktiska sjudagarslagringen men är uttryckligen en utvecklingstext med saknad kontaktadress. Slutför operatörens uppgifter och leverantörsbedömning före publik lansering. Vid separat godkänd aktivering: inaktivera äldre Gemini-notice och aktivera den nya i samma transaktion. Ändra aldrig redan accepterad text. Ge inte någon användare samtycke; användarna måste själva godkänna den nya versionen. Aktivera inte Groq.
-6. Driftsätt godkänd frontend/backend tillsammans efter migrationen. Koden kräver den nya notice-versionen; före aktivering blockeras generering avsiktligt. Det tidigare miljövärdet `GEMINI_CV_NOTICE_VERSION` används inte längre. Om den nya texten aktiveras före koden måste den korta övergången kontrolleras; om koden kommer först är AI tillfälligt otillgänglig. Planera ett underhållsfönster för ett konsekvent byte. Gamla klienters samtycken görs inte automatiskt giltiga.
-7. Verifiera den verkliga proxykedjan innan separat godkänd konfiguration av `TRUSTED_PROXY_ADDRESSES`. Endast verifierade direkta proxy-IP:n får anges; koden litar inte på godtyckligt `X-Forwarded-For`. Utan detta kan många användare dela en proxy-IP:s publika/pre-auth-gräns. Dokumentgränser efter verifierad identitet är användarspecifika. Testa legitim samtidighet och missbruk i staging; allmänna limiter är fortfarande processlokala.
-8. Slå på Supabase Auths skydd mot läckta lösenord efter godkänd hosted Auth-ändring. Kontrollera först projektets plan/tillgänglighet; eventuell betald uppgradering kräver eget beslut. Verifiera därefter Security Advisor och syntetisk registrering/lösenordsåterställning. Lokal kod eller `config.toml` bevisar inte att hosted-skyddet är aktivt.
+Efter utrullning: testa två användare och anonym direkt Data API-åtkomst, signup/refresh/logout, anteckningar och export, dokumentens oförändrade expiry efter redigering, gamla revisioner, återkallat samtycke och senaste timrensningen. Kontrollera svenska/engelska, mobil/tangentbord, nonce-CSP och att loggar inte innehåller tokens eller personlig text. Verifiera verklig proxykedja före godkänd ändring av `TRUSTED_PROXY_ADDRESSES`; allmänna limiter är processlokala.
 
-### Kontroll efter utrullning
+Återgång får inte återaktivera missvisande äldre notice eller ta bort ägarskydd. Pausa vid behov nya AI-anrop genom godkänd operatörsåtgärd och rätta framåt. Bedöm äldre kods samtyckeskrav före rollback. Dokumentera faktiskt observerade resultat separat från kodens avsedda beteende.
 
-- Verifiera grants: authenticated saknar TRUNCATE/TRIGGER/REFERENCES för profiles/career och saknar åtkomst till kvoträknaren. Befintlig owner-CRUD och signup-trigger fungerar.
-- Med två syntetiska användare och anon-klient: kontrollera direkt Data API-isolation, nya privata HTTP-rutter, dokumentläsning/radering och export. Service-role är inte ett isolationstest.
-- Generera ett syntetiskt CV, redigera direkt med returnerad revision, få 409 för en gammal revision och kontrollera oförändrad expiry efter redigering. Testa brev separat.
-- Kontrollera att gammalt/återkallat samtycke blockerar nästa provideranrop, att den nya texten visas före nytt godkännande och att profil/jobbsökning fungerar utan AI.
-- Verifiera ansökningslista, status och export över 500 poster i staging. Testa direkt insert vid 1 000-gränsen, idempotent dublett, radering och konto-cascade. Inga verkliga konton fylls med testposter.
-- Testa tokenrefresh, utloggning, svensk/engelsk integritetssida och nonce-CSP i riktig webbläsare. Kontrollera att frontend/backend loggar inte innehåller tokens, profiltext eller dokument.
-- Kontrollera senaste lyckade timrensningen, giltighetspolicies och att genereringsfel inte förlänger dokument. Den läsande granskningen såg tre lyckade senaste cron-körningar; det ersätter inte kontroll efter ändringen.
+## 10. Äldre filstorage — endast berörda installationer
 
-Återgång: återkalla inte datagränser eller återaktivera missvisande transient-text för att få generering att fungera. Vid problem, pausa ny AI-generering genom godkänd operatörsåtgärd, behåll sparade dokument/ägarskydd och rätta framåt. En rollback av appen måste särskilt granskas eftersom äldre kod kan acceptera äldre samtyckesversioner.
+CV-filuppladdning och profilbilder är avvecklade; dagens CV/PDF-generering använder ingen filuppladdning. Migration 005 tar bort gamla profilkolumner och spärrar det äldre `cvs`-bucketet. Kontrollera först vilka objekt som faktiskt finns och vilka användare de tillhör. Schemaändring bevisar inte att binära objekt har raderats.
 
-### Fyndens status
-
-| Fynd | Förberedd åtgärd | Kvar i drift |
-|---|---|---|
-| F1 samtycke | Ny korrekt lagringsbeskrivning och strikt versionskontroll i varje reservation | Granskning/aktivering och nytt användarsamtycke |
-| F2 anropsgränser | Verifierad användare, separata trafikklasser och begränsad Auth-kapacitet | Proxykontroll och belastningsprov |
-| F3 grants | Riktad återkallelse i migration | Körning och efterkontroll |
-| F4 auth-paket | `@supabase/ssr`, gemensam serverklient och refresh-regression | Hosted login/refresh-prov |
-| F5 CV-revision | RPC returnerar faktisk sparad revision | Migration och verkligt generera–redigera-prov |
-| F6/F7 ansökningar | Full sidindelning och atomisk databaskvot | Migration och Data API-prov |
-| F8 nya rutter | Auth som standard, explicit publik metadata | Normal deploy/HTTP-prov |
-| F9 lösenord | Operatörssteg specificerat ovan | Hosted-inställning och eventuell planfråga |
-| F10 tester | Databas-, HTTP-, limiter-, pagination- och cookie-regression; security-CI | Hosted CI och full stagingkedja |
-| F11 ansvar | Gemensam auth/pagination/validering; separata CV-, brev- och matchningstjänster; uppdelade hem-/sök-/jobbflöden | Hosted kontroll av oförändrade flöden efter godkänd deploy |
-| F12 driftavvikelser | Index/constraint/policy-migration samt dokumenterad ledger-avvikelse | Verifierad historikavstämning och migration |
-
-### Lokal verifiering av härdningen
-
-Frontend: 88 tester passerade, inklusive uppgradering i PGlite, direktkvoter, 601-posters export, ägarfilter och sessionsförnyelse; produktionsbygget passerade. Backend: Release-build utan varningar/fel, 27 autentiseringsgränsfall samt separata tester av verklig lokal HTTP-routing, limiter, samtyckesreservation och ägarbunden dokumenttransport passerade. Dessutom passerade 93 CV-kontroller och 16 matchningsregressioner. npm:s produktionsaudit och NuGets transitiva audit rapporterade inga kända sårbarheter vid körningen.
-
-PGlite-kedjan kör alla föregående schemamigrationer med syntetiska legacy-data; pg_cron-delen kan inte köras i PGlite och utelämnas. Detta är inte en full Supabase-stagingmiljö. GitHub Actions/secret-skanningen, Docker, verkliga provideranrop och autentiserade produktionsflöden har inte körts som del av denna härdning. De måste verifieras vid godkänd utrullning.
-
-### Publicerad granskningsbranch och fortsatt uppdelning
-
-Ändringarna publiceras på `fix/architecture-security-hardening` i utkast-PR #31. Det innebär inte merge till main. Första PR-körningen hade godkända backend-/Docker-/säkerhetskontroller och 88 frontendtester men frontendbygget stoppades av en saknad `safeHtml`-import efter en sen importändring. Importen har återställts; saneringen behålls. Uppdelningen av controllers och sidflöden kräver nya tester/bygge på den uppdaterade committen, inte återanvändning av det tidigare byggresultatet.
-
-Lokal kontroll efter uppdelningen: 89 frontendtester, TypeScript och frontendens produktionsbygge passerade. Backendens Release-build samt säkerhets-, 93 CV- och 16 matchningskontroller passerade. Säkerhetstestet provar också faktisk HTTP-routing och dependency injection för de nya CV-/brev-/matchningstjänsterna med syntetiska ogiltiga indata. Ett nytt hook-test kontrollerar att ett gammalt söksvar inte skriver över ett nyare. Jobb- och CV-rutterna laddas även med require(ESM) avstängt. Ny hosted CI ska verifieras på den publicerade uppföljningscommitten.
-
-## 10. Arbetsyta för ansökningar — förberedd ändring 2026-10-02
-
-Se [Application workspace](application-workspace.md) för fullständig utrullning. Migration `20261002075427_application_workspace.sql` lägger till privata jobbanteckningar med RLS, kvot, versionsskydd och konto-cascade. Den lägger också till en ny avstängd text `2026-10-documents-v3`. Tidigare texter och samtyckeskvitton bevaras. Ny kod accepterar bara den nya versionen för AI-bearbetning.
-
-Kör inte migrationen utan uttryckligt godkännande. Granska/aktivera den nya texten separat efter verifierad schemautrullning och godkänd deploy; inga användarsamtycken får tilldelas administrativt. Verifiera både språkens text, providerförutsättningar och aktuella organisatoriska fakta före aktivering. Testa anteckningsisolering, kvot, export/radering och brevredigering med oförändrat utgångsdatum. Lokala tester ersätter inte staging, verkliga provideranrop eller kontroll av driften. Inga liveändringar utförs genom att endast förbereda branchen.
+Efter separat godkännande, radera verifierade legacy-objekt via Supabase Storage API/administrationsflöde, aldrig genom att enbart radera `storage.objects`-rader i SQL. Ta bara bort hela bucketet om allt innehåll omfattas av godkännandet. Tidigare signerade länkar kan gälla fram till utgång eller objektradering. Kontrollera återstående objekt, spärrade gamla endpoints och backuphantering. Kolumn-/objektradering kan inte ångras genom en app-rollback. Ingen sådan radering utfördes vid dokumentuppdateringen.
