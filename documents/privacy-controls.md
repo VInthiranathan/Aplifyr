@@ -14,21 +14,19 @@ Their database constraints reduce malformed/direct writes but do not establish c
 
 `GET/PUT /api/account/consent` uses verified cookie identity, the anon key, no-store and safe JSON mutations. PUT validates provider/version/boolean and calls `set_ai_consent`; SQL assigns the owner. Direct table mutations are revoked. `ai_consents` records current choices; `ai_consent_receipts` retains the last grant/withdrawal per reviewed provider/version, not every toggle. Accepted notice texts are immutable. New processing requires a new reviewed version and new consent. Receipts/texts are included in export via `export_ai_consents()` and cascade on account deletion. The controller must define their retention while the account exists.
 
-`ai_privacy_notices` starts disabled with empty texts. Populate both languages and enable each provider only after verifying purpose, recipients, contracts, retention and international transfers. Configure the main privacy notice/contact as well. These operational facts are not invented by the migration.
+Migration 008 originally seeds disabled empty notices; later migrations add reviewed versioned development text. The hosted project has only Gemini v3 enabled as of 2026-10-03; see the runbook. For new processing, populate both languages and enable each provider only after verifying purpose, recipients, contracts, retention and international transfers. Configure the main privacy notice/contact as well. These operational facts are not invented by the migration.
 
 Backend `AiPrivacyGate` reserves before EACH external attempt, including fallback, through service-role-only `reserve_ai_call_v2` with the code-pinned document notice version. The verified Auth subject is passed server-side. SQL atomically checks user existence, active notice/current consent, quotas and leases. Defaults: 20 attempts/user/day, 1,000 globally/day, one simultaneous attempt/user and four globally. Reserved failures count; these are call ceilings, not currency budgets. Withdrawal prevents subsequent reservations but cannot recall already authorized/in-flight requests. Leases expire at 60 seconds, provider calls timeout at 30 seconds, and release is scoped by ticket. Missing configuration, denied reservation and DB errors fail closed. `AI_ALLOWED_PROVIDERS`, provider keys and the backend-only `SUPABASE_SERVICE_ROLE_KEY` are independently required.
 
-Users can explicitly choose up to three career entries. Only kind/title/organization/dates/skills are sent; backend strips other career fields. JSON source data is separated from Gemini `systemInstruction` / Groq system instructions prohibiting source-instruction execution and fabricated applicant facts. This reduces injection exposure but cannot guarantee model truthfulness. Human review remains required; no model tools/URL execution are enabled. [Gemini instructions](https://ai.google.dev/api/generate-content).
+For ordinary cover-letter generation, users can explicitly choose up to three career entries. Only kind/title/organization/dates/skills are sent; backend strips other career fields. JSON source data is separated from Gemini `systemInstruction` / Groq system instructions prohibiting source-instruction execution and fabricated applicant facts. This reduces injection exposure but cannot guarantee model truthfulness. Human review remains required; no model tools/URL execution are enabled. [Gemini instructions](https://ai.google.dev/api/generate-content).
 
-Match capacity: 32 cached entries/process, at most 1,000 jobs and 512 Ki serialized characters per pool; eight concurrent backend requests/process. JobTech HTTP response buffers are capped at 4 MiB with 20-second timeout. Capacity violations return 422 before page mutation, stop frontend polling and explicitly label results incomplete. Cache eviction or 15-minute expiry may restart a search. Search/filter upstream failures return errors rather than fabricated empty success. Production load testing/tuning remains an operator gate.
+Match capacity: 32 cached entries/process, at most 1,000 jobs and 512 Ki serialized characters per pool. Admission is partitioned by traffic category; public requests have a separate four-request process concurrency pool. JobTech HTTP response buffers are capped at 4 MiB with 20-second timeout. Capacity violations return 422 before page mutation, stop frontend polling and explicitly label results incomplete. Cache eviction or 15-minute expiry may restart a search. Search/filter upstream failures return errors rather than fabricated empty success. Production load testing/tuning remains an operator gate.
 
 CSP uses a fresh request nonce on Next scripts and next-themes; production script-src excludes unsafe-inline/unsafe-eval. Pages are dynamic/no-store, including previously static favorites/jobs. Connections permit configured Supabase/backend origins. Styles retain unsafe-inline for existing animations/theme. Hosting must enforce HTTPS/HSTS. Profile/letter dialogs and mobile settings trap Tab, support Escape and restore focus; desktop resize closes the drawer. Support uses configured mailto instead of the unconnected form; no mail is claimed sent by the app.
 
 `008_privacy_consent_and_limits.sql` is the single manual upgrade for an existing 001–005 schema. It includes 007 limits when absent, adds restrictive guards while preserving existing profile/career policies, and enforces a transactionally counted 200-entry career quota even for direct writes. Existing over-quota entries remain editable/deletable; new inserts are blocked. NOT VALID preserves oversized legacy rows for reviewed correction. Reconcile CLI history after manual SQL; do not replay old creation migrations.
 
-Verification: 65 frontend/database tests and the production frontend build passed. A standard restore and Release build passed with .NET SDK 10.0.401; 81 CV checks, 18 Auth/privacy checks and 16 matching regressions passed. Docker is not installed in the local environment, but Render's configured Dockerfile uses matching .NET 10 SDK and ASP.NET 10 images. HTML smoke checks verify nonce alignment on `/auth`, `/privacy`, `/sv/privacy`. Local PostgreSQL fixtures cover migration repeatability, policy preservation, direct-write limits, quota, consent/withdrawal, immutable notices, owner isolation, seven-day generated-document retention and deletion cascade. Live provider calls, the new production migration and full browser accessibility/compatibility testing remain unverified.
-
-No production deletion, processor erasure, contract signature, legal-basis/retention decision or hosted Auth configuration was performed. See the runbook for those owner responsibilities.
+Current validation and live activation evidence are recorded in [the runbook](gdpr-supabase-runbook.md). Provider erasure, contracts, legal bases, retention decisions and hosted Auth configuration remain operator responsibilities.
 
 ## Scope and configuration
 
@@ -40,7 +38,7 @@ The page loads plain-text, reviewed notices from server-side `PRIVACY_NOTICE_SV`
 
 `GET /api/account/export` uses cookie-aware `lib/serverSupabase.ts` with the anon key and `auth.getUser()`. Client-supplied owner IDs are ignored. Responses are `private, no-store`; POST and other methods return 405, unauthenticated calls 401, unavailable auth/database or incomplete reads 503 with generic errors.
 
-Response: `{ exportedAt, account: { id, email, createdAt }, profile, career, aiConsent, generatedCvs, generatedCoverLetters, jobApplications }`. Profile, career, active generated-document and application-tracking fields are explicitly selected. No full Auth object, tokens, hashes or admin metadata are exported. The browser adds `localFavorites` from the authenticated owner's storage key; unavailable/malformed storage becomes null, distinguishable from an empty list. The page downloads a JSON Blob, then revokes its object URL. It creates no export record on the server.
+Response: `{ exportedAt, account: { id, email, createdAt }, profile, career, aiConsent, generatedCvs, generatedCoverLetters, jobApplications, jobNotes }`. Profile, career, active generated-document, application-tracking and job-note fields are explicitly selected. No full Auth object, tokens, hashes or admin metadata are exported. The browser adds `localFavorites` from the authenticated owner's storage key; unavailable/malformed storage becomes null, distinguishable from an empty list. The page downloads a JSON Blob, then revokes its object URL. It creates no export record on the server.
 
 Application tracking stores job context, process status, dates, next action and optional notes as owner-scoped personal data. It is not sent to an AI provider. Records remain until the user deletes them or deletes the account; the operator must document the actual purpose, legal basis and organizational retention policy before launch. The implementation adds no bundled consent checkbox and does not claim that consent is the applicable legal basis.
 
@@ -74,13 +72,7 @@ Migration 007 adds database field limits without replacing RLS or truncating exi
 
 Run `npm test` and `npm run build` in `frontend/`. Tests cover owner filtering, unsupported/unauthenticated export, generic failures, secret omission, multiple short pages, repeated cursors, database-direct oversized writes, legacy preservation, translations and profile conflicts. These are local fixtures/PGlite tests, not proof of hosted policy settings.
 
-In staging test signup/tokenrefresh, anonymous access, two-user direct Data API isolation, export download and contents, a two-tab profile conflict, both notices before login, a real privacy-contact email, and no external employer-image requests. Verify keyboard/mobile layout separately. Production access, complete deletion, contracts, legal bases, retention, incident handling and transfer assessments remain operator tasks listed in the runbook and audit.
-
-## Deployment verification — 2026-09-09
-
-The owner explicitly elected to proceed without a backup. Live inspection confirmed the expected 001–005 schema, owner policies and cascade constraints; the hosted migrations ledger was empty. A rollback-only test with two synthetic Auth identities verified the signup profile trigger, own-profile updates, career CRUD and cross-owner denial under the authenticated database role. This is a database-role test, not a browser login or direct HTTP API test. No test fixtures were retained.
-
-CI run 34310446353 passed frontend tests/build, backend Release build, security/matching tests and Docker build. Migration 008 now also revokes direct client execution of the existing optional rls_auto_enable event-trigger function and the immutable-notice trigger, and uses a 5-second lock timeout and 60-second statement timeout. Its PostgreSQL consent/quota regression passed after these changes. Production migration and post-migration verification are tracked in PR #13. Hosted environment variables, browser login/consent flows and processor/notice decisions still require operational verification; optional AI remains disabled until configured and approved.
+In staging test signup/tokenrefresh, anonymous access, two-user direct Data API isolation, export download and contents, a two-tab profile conflict, both notices before login, a real privacy-contact email, and no external employer-image requests. Verify keyboard/mobile layout separately. Production access, complete deletion, contracts, legal bases, retention, incident handling and transfer assessments remain operator tasks listed in the runbook.
 
 ## Generated documents and seven-day retention (migrations 009 and 20260918164504)
 
@@ -89,7 +81,7 @@ returns validated content plus job context for an owner-only preview and local P
 The latest generated CV and cover letter are stored in Supabase for seven days, hidden at their
 independent expiry and physically deleted by an hourly database job. Users can delete either one earlier.
 Both AI calls reserve independently through the existing privacy gate. This broader disclosure and retention requires a reviewed notice
-version `2026-09-documents-v2`, pinned in frontend/backend source; the existing reservation and withdrawal rules
+version `2026-10-documents-v3`, pinned in frontend/backend source; the existing reservation and withdrawal rules
 remain mandatory. Changing from transient output to stored output requires a new notice version and fresh consent; a transient-only notice must not be reused. Export includes active `generatedCvs` and `generatedCoverLetters`. Records cascade on Auth account deletion;
 provider/backups and retention remain operational responsibilities. No new legal basis is asserted.
 
@@ -109,44 +101,6 @@ CV factual review, so client UI is not an authorization boundary. Withdrawal rem
 available from the desktop and mobile menu at `/privacy#ai-consent`. No Groq fallback
 is enabled by this UI.
 
-Live inspection on 2026-09-13 confirmed that `generated_cvs` exists, but all Gemini
-notices are disabled. `2026-09-cv-v1` contains an explicitly incomplete draft.
-Activation requires completing and reviewing the operator/contact/retention/provider
-processing facts and matching backend `GEMINI_CV_NOTICE_VERSION`; this UI change
-does not enable those incomplete notices or grant consent for any user.
-
-## Activation status — 2026-09-13
-
-The operator requests that contact email remain empty temporarily. Do not invent an
-address. AI activation is still pending: the operator reports unpaid Gemini API
-projects. Google's Gemini API terms (effective 2026-03-23, checked 2026-09-13)
-require Paid Services when making API clients available to EEA users. The EEA
-data-use exception for unpaid quota is separate from that availability requirement.
-Paid API access means using a Cloud project with active billing. See
-[Google terms](https://ai.google.dev/gemini-api/terms). No billing configuration,
-notice activation, user consent grant or live provider call was performed here.
-The notice described in this historical status is no longer sufficient after seven-day
-CV storage is introduced. It must be replaced with reviewed text and a new version before deployment.
-
-### Subsequent development activation — 2026-09-13
-
-After the status above, the operator explicitly authorized activation for development
-and testing despite continuing to use unpaid Gemini projects, with contact email
-left empty. This is not a public-launch or compliance approval. The unused disabled
-`2026-09-cv-v1` draft had no consent receipts; its Swedish/English text was replaced
-and enabled transactionally in Supabase. Verification returned Gemini as the only
-enabled provider. No user consent was granted by the operator action. The text
-explains both generation flows, the then-temporary generated output, historical records, Google
-processing, withdrawal and the missing contact email. Existing consent/version/quota
-checks remain mandatory. Activation is provider-wide, not an account allowlist.
-
-CI run 34752948672 passed frontend tests/build, backend Release build, security,
-matching and CV tests, and Docker build. Backend settings still need verification:
-`AI_ALLOWED_PROVIDERS=gemini`, `GEMINI_CV_NOTICE_VERSION=2026-09-cv-v1`, a working
-`GEMINI_MODEL`, both feature keys and Supabase server credentials. The Render tool
-requires explicit workspace selection before service inspection or changes. No
-real Gemini generation has been verified in this session.
-
 ### Manual document edits and PDF export
 
 Users can save edits to CV summary statements and career bullets without sending
@@ -154,23 +108,20 @@ those edits to Gemini. The existing saved CV is updated for its authenticated ow
 its original seven-day deadline is not extended. User edits are marked separately
 from AI-reviewed statements. CV and cover-letter PDFs are generated locally with
 same-origin font assets. Downloaded files are outside the application's deletion
-and expiry controls. Cover-letter edits in the modal remain local and exportable;
-only CV edits are persisted by this change. See the respective feature documents.
+and expiry controls. Both CV and cover-letter edits persist only after explicit Save changes, without extending expiry. See the respective feature documents.
 
-## Current hardening status — 2026-09-26
-
-This section supersedes earlier activation instructions for the new code. Live read-only inspection found the older transient-output notice active, not a reviewed notice for current storage. The prepared migration inserts `2026-09-documents-v2` disabled and preserves previous notices/receipts. Granting any other version through the updated frontend API returns 409; withdrawal remains possible. Every provider reservation independently requires the pinned version, including factual review/fallback. A matching enabled notice and fresh user consent are both required. No contact address, legal basis or provider agreement was invented, and no live notice was activated.
+## Shared security boundaries
 
 `readApplications` is shared by application SSR, status badges and account export. It uses owner-filtered `job_id` keyset pagination, continues after short pages, and fails explicitly on database errors, repeated cursors or safety bounds (1,001 requests, 10,000 rows, 16 MiB UTF-8). It never silently exports only the first 500 records. Concurrent writes can still change the result between pages; this is not a snapshot export. The new database quota is 1,000 applications; legacy excess rows remain editable/deletable.
 
 Backend public access is explicit endpoint metadata, not a path-name allowlist. Verified users have separate generation/document budgets; unverified tokens consume only bounded authentication capacity. Public search, generation and documents have separate concurrency pools. Limits remain process-local; database AI reservations remain shared. Correct trusted-proxy configuration and staging load tests remain necessary.
 
-The two previously NOT VALID constraints had zero violations during the read-only precheck; the migration validates them transactionally and will abort if invalid data appears before execution. Hosted password protection and production rollout remain pending; see the runbook.
+The hardening migration validates the earlier NOT VALID constraints transactionally. The hosted ledger and remaining password-protection/runtime checks are recorded in the runbook.
 
 ## Guest browsing
 
 Job search and advertisements can be read without registration or AI consent. Guest navigation does not request private profile, application or document records. Generation continues to require a verified account, a saved profile with name and source material, and the existing separate AI consent. Optional contact fields stay optional. No new storage, provider, consent purpose, retention period or database policy is introduced. See the guest flow in `project-overview.md`.
 
-## Workspace privacy — current branch
+## Workspace privacy
 
-Owner-only `job_notes` are included as `jobNotes` in account export, retained until user/account deletion, and never sent to AI. Saved letter edits now persist without changing the original document expiry. Single-statement/paragraph AI proposals introduce changed processing covered by new immutable notice `2026-10-documents-v3`, initially disabled. Both code constants are aligned; old notices and receipts are preserved. Fresh user consent and approved operator activation are required before optional AI is used. Manual edits and notes require authentication and owner checks, independently of AI consent. See [Application workspace](application-workspace.md) for disclosure bounds, verification and remaining operational responsibilities.
+Owner-only `job_notes` are included as `jobNotes` in account export, retained until user/account deletion, and never sent to AI. Saved letter edits now persist without changing the original document expiry. Single-statement/paragraph AI proposals introduce changed processing covered by new immutable notice `2026-10-documents-v3`, initially disabled. Both code constants are aligned; old notices and receipts are preserved. The hosted notice was activated after explicit approval on 2026-10-03. Fresh user consent is required before optional AI is used. Manual edits and notes require authentication and owner checks, independently of AI consent. See [Application workspace](application-workspace.md) for disclosure bounds, verification and remaining operational responsibilities.

@@ -8,10 +8,10 @@ This guide covers local development for the runnable app inside `Aplifyr/`.
 
 - Node.js 24.x (also required for the deployed frontend)
 - npm 10 or newer
-- .NET SDK 10.0 preview or newer, because the backend targets `net10.0`
+- .NET SDK 10.0, because the backend targets `net10.0`
 - a Supabase project
 - optional: Supabase CLI if you want to push migrations from the command line
-- optional: Gemini and or Groq API keys if you want AI cover letter generation
+- optional: separate Gemini letter/CV keys for approved AI processing
 
 ## Install Dependencies
 
@@ -49,12 +49,13 @@ Required for cover letter generation:
 - `SUPABASE_URL` (HTTPS) and `SUPABASE_ANON_KEY`, for verifying the browser's bearer token
 - `AI_ALLOWED_PROVIDERS`: enable only reviewed providers (`gemini`, `groq`, or both comma-separated); empty disables AI
 - `GEMINI_MODEL` if Gemini is enabled; choose a model available in your account
-- at least one of `GEMINI_API_KEY` or `GROQ_API_KEY`
+- `GEMINI_API_KEY` for the intended Gemini letter flow; legacy Groq requires its own separately approved configuration
+- `SUPABASE_SERVICE_ROLE_KEY` for owner-bound persistence and consent reservations
 
 Notes:
 
 - the backend starts without Supabase credentials; public JobTech search and matching remain available
-- AI returns 503 without configured Auth/approved providers, 401 for missing/invalid authentication, and 400 if enabled providers lack API keys
+- AI returns 503 without configured Auth/approved providers, 401 for missing/invalid authentication, and 503 for missing provider configuration
 - AI requests are capped at 64 KiB and three jobs; process-local rate limits return 429
 
 ### Frontend Variables
@@ -81,32 +82,26 @@ Notes:
 
 The repository already contains the required SQL migrations in `supabase/migrations/`.
 
-### Option A: Supabase CLI
+For a **new local/staging database**, apply all checked-in files in filename order:
 
-From `Aplifyr/`:
+1. `001_create_profiles_table.sql`
+2. `002_add_location_preferences_to_profiles.sql`
+3. `003_add_private_cv_columns.sql`
+4. `004_create_profile_career_entries.sql`
+5. `005_remove_cv_feature.sql`
+6. `006_secure_profiles.sql`
+7. `007_personal_data_limits.sql`
+8. `008_privacy_consent_and_limits.sql`
+9. `009_generated_cvs.sql`
+10. `20260918164504_prepared_jobs_and_generated_document_retention.sql`
+11. `20260921184722_add_profile_contact_details.sql`
+12. `20260923122723_job_application_tracker.sql`
+13. `20260926051754_security_hardening_and_document_revisions.sql`
+14. `20261002075427_application_workspace.sql`
 
-```powershell
-supabase db push
-```
+For an existing hosted installation, inspect the ledger and schema first. The current project's ledger differs from repository filenames; see [the runbook](gdpr-supabase-runbook.md). Do not blindly run `supabase db push` or replay creation migrations. Live changes need separate approval. Notices are seeded disabled; enabling a notice and each user's consent are separate operations.
 
-### Option B: Supabase SQL Editor
-
-Run the migration files in this order:
-
-1. `supabase/migrations/001_create_profiles_table.sql`
-2. `supabase/migrations/002_add_location_preferences_to_profiles.sql`
-3. `supabase/migrations/003_add_private_cv_columns.sql` (historical migration)
-4. `supabase/migrations/004_create_profile_career_entries.sql`
-5. `supabase/migrations/005_remove_cv_feature.sql`
-6. `supabase/migrations/006_secure_profiles.sql`
-7. `supabase/migrations/007_personal_data_limits.sql`
-8. `supabase/migrations/008_privacy_consent_and_limits.sql`
-
-For the owner's existing 001–005 installation with profile RLS, 008 is also supplied as a single manual upgrade including missing 007 limits and additive owner guards. It preserves existing policies. Reconcile migration history after manual application. AI now requires backend `SUPABASE_SERVICE_ROLE_KEY` for atomic reservations, reviewed/enabled DB notices and explicit user consent. See [privacy controls](privacy-controls.md); SQL alone does not deploy the UI or activate AI.
-
-Existing installations: inspect live RLS/policies and migration history first. The owner reports profile RLS already enabled; do not blindly replay schema or policies. Follow [the Supabase/GDPR runbook](gdpr-supabase-runbook.md), including legacy constraint checks. Configure server-side `PRIVACY_NOTICE_SV`, `PRIVACY_NOTICE_EN` and `PRIVACY_CONTACT_EMAIL` before public launch; see [privacy controls](privacy-controls.md).
-
-For an existing installation, follow `documents/retire-file-storage.md` for the one-time retirement of legacy storage.
+Configure `PRIVACY_NOTICE_SV`, `PRIVACY_NOTICE_EN` and `PRIVACY_CONTACT_EMAIL` before public launch. Legacy file cleanup is described in the runbook; it is not part of routine setup.
 
 ## Start the App
 
@@ -133,7 +128,7 @@ This starts both services:
 
 ## Build Validation
 
-These commands were validated on May 28, 2026:
+Run from the repository root; dated validation evidence is in the runbook:
 
 ```powershell
 Set-Location .\backend
@@ -157,7 +152,7 @@ Apply migration `009_generated_cvs.sql` after 008, then apply
 `20260918164504_prepared_jobs_and_generated_document_retention.sql`. The latter enables Supabase Cron,
 adds independent seven-day retention for generated CVs and cover letters, and adds prepared-job tracking. Verify the cleanup job after deployment.
 Set backend-only `GEMINI_CV_API_KEY`. The reviewed active Gemini notice must match
-`2026-09-documents-v2`, pinned in both frontend and backend source (no notice-version environment variable). Use a new notice version and obtain
+`2026-10-documents-v3`, pinned in both frontend and backend source (no notice-version environment variable). Use a new notice version and obtain
 fresh consent; do not reuse a notice that says generated output is transient. `GEMINI_API_KEY` remains for letters; CV has no key fallback.
 Existing `GEMINI_MODEL`, `AI_ALLOWED_PROVIDERS=gemini` and backend Supabase credentials are required.
 See [CV generation](cv-generation.md) for consent renewal, limits and staging checks.
@@ -173,8 +168,7 @@ next deployment; existing deployments do not change. See
 The locked `sanitize-html` 2.17.7 requires Node >=22.12.0 and loads the ESM
 `htmlparser2` 12 dependency via CommonJS `require()`. An incompatible runtime
 can crash `/jobs/[id]` during module loading with `ERR_REQUIRE_ESM`, before any
-job data is fetched. Keep HTML sanitization enabled and do not disable Node's
-require-ESM support through `NODE_OPTIONS`.
+job data is fetched. Keep HTML sanitization enabled and retain the bundling regression below for hosts that disable require-ESM.
 
 Validation on Node 24: run `npm ci`, `node --test tests/security.test.cjs`, and
 `npm run build` from `frontend/`. After deployment, confirm Node 24 in the build
@@ -204,8 +198,8 @@ job data fetching. Production logs still require authorized Vercel team access.
 
 ## Hardening migration and local verification
 
-After the retention, contact-details and application-tracker migrations, apply `20260926051754_security_hardening_and_document_revisions.sql` in a local/staging database. Existing hosted installations must first reconcile their recorded migration identities; do not run the generic `db push` command above against an unreconciled production ledger. Follow the runbook's September 26 rollout. The new notice is disabled until reviewed and explicitly activated, so generation fails closed after deploying this code alone.
+The ordered list above includes hardening and workspace migrations. For existing installations follow the runbook ledger mapping. The hosted project has v3 active; new installations still require separately approved notice activation and fresh user consent.
 
 `TRUSTED_PROXY_ADDRESSES` is optional and accepts comma-separated verified immediate proxy IP addresses. Empty means forwarding headers are ignored; never populate it with arbitrary client values. Behind a shared proxy, pre-authentication and public IP limits can be shared by users until the actual proxy chain is verified. This setting requires separate hosting approval.
 
-Run frontend `npm test` and `npm run build`, backend Release build and the SecurityTests, CvTests and Matching.Tests executable projects. The new security workflow audits production dependencies and scans git history for secrets; its hosted execution is a separate CI gate.
+Run frontend `npm test` and `npm run build`, backend Release build and the SecurityTests, CvTests, WorkspaceTests and Matching.Tests executable projects. The new security workflow audits production dependencies and scans git history for secrets; its hosted execution is a separate CI gate.

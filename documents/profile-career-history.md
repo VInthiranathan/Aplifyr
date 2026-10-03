@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The profile has Overview, Work experience and Education tabs. The overview displays
+The profile has Overview, Work experience, Education and Job preferences tabs. The overview displays
 all saved entries and details in two timeline cards, with ongoing entries first.
 The cards show accurate loading, error/retry and empty states. Manage buttons lead to
 the editors. One shared data provider keeps saves and deletions synchronized across
@@ -54,7 +54,7 @@ key with the user's session. No service-role key is used. Ownership is assigned 
 - GET: returns `{ entries }` for the signed-in user, including both kinds.
 - GET internally uses owner-scoped keyset pagination (100 rows/request, at most 100 requests and 8 Mi characters). It keeps fetching even below the requested page size. A limit, invalid cursor or database failure returns 503 rather than a silently incomplete history. Reads are not a cross-page transaction snapshot; see [privacy controls](privacy-controls.md).
 - POST: validates a `CareerEntryInput` and returns `{ entry }`.
-- Migration 008 adds an atomic 200-entry/account database quota including direct writes. Existing entries are preserved; writes violating the quota fail without adding a row. AI only receives minimal fields from at most three entries explicitly selected on job detail, after per-provider consent.
+- Migration 008 adds an atomic 200-entry/account database quota including direct writes. Existing entries are preserved; writes violating the quota fail without adding a row. Ordinary cover-letter generation receives minimal fields from at most three explicitly selected entries after consent. CV generation and wording proposals use selected saved source statements as described in their feature documents.
 - PUT: requires the full input plus `id` and the last `updated_at` value.
 - DELETE: requires `id` and the last `updated_at` value.
 
@@ -65,12 +65,14 @@ details are not sent in errors. The page consumes this dedicated API; legacy pro
 response shapes are unchanged. Cover-letter generation now additionally returns its
 seven-day `expiresAt` deadline.
 
-## Rollout
+## Installation and verification
+
+For existing hosted installations, first follow the runbook ledger mapping; do not replay migration 004. For a new local/staging database:
 
 1. Apply `supabase/migrations/004_create_profile_career_entries.sql` to the project's Supabase
    database after the existing migrations. It is transactional and uses the existing
    `profiles_updated_at()` trigger function from migration 001.
-2. Deploy the frontend from this branch with the existing Supabase URL and anon key.
+2. Deploy the matching frontend with the existing Supabase URL and anon key.
 3. Sign in and test create/edit/delete for a job and an education, refresh persistence,
    tab switching, and access from a second account.
 

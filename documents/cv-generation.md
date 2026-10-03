@@ -69,10 +69,10 @@ including under a hosted row limit below 100; oversized legacy profiles fail exp
 
 Jobs are public JobTech resources, not user-owned database jobs. Generation fetches
 `/ad/{id}` from the fixed JobTech host and verifies the exact response ID. It never
-falls back to fuzzy search hits or arbitrary URLs. Deleted/unavailable jobs cannot be generated. The page fetches live job context, never a stored CV.
+falls back to fuzzy search hits or arbitrary URLs. Deleted/unavailable jobs cannot be generated. Reading first returns the owner’s unexpired saved CV and saved job context; only a missing CV requires live job context.
 
 No persisted AI job analysis existed before this feature. Existing deterministic
-`ScoreTechBoost` logic is reused via `ExternalJobsController.CvMatchedSkills`. It ranks
+`ScoreTechBoost` logic is reused via `JobMatchingRules.CvMatchedSkills`. It ranks
 career entries by matched explicit skills, then recency. Up to 20 entries, 100 whole
 source statements and 100 explicit skills are supplied. Description limit: 60,000
 characters; combined prompt limit: 90,000 characters. No silent truncation of a job.
@@ -162,7 +162,7 @@ The authenticated SELECT policy hides expired rows immediately; an hourly `pg_cr
 job physically deletes them. Existing migration-009 rows receive a deadline based on
 their latest `updated_at` value.
 
-`prepared_jobs` is an owner-readable summary used by the two home tabs. A successful
+`prepared_jobs` is an owner-readable summary used by the home work queue. A successful
 CV or cover-letter write sets that artifact's independent expiry and stores bounded public
 job context through a service-role RPC. Cover-letter text is stored in
 `generated_cover_letters`, not in the summary row. Failed generations create no prepared
@@ -195,7 +195,7 @@ Backend only:
 - **`GEMINI_API_KEY`**: existing Gemini flows, including cover letters.
 - **`GEMINI_MODEL`**: configured shared model supporting structured JSON responses.
 - **`AI_ALLOWED_PROVIDERS`** must include `gemini`.
-- **Document notice `2026-09-documents-v2`**: pinned in `AiPrivacyGate` and frontend `lib/documentNotice.ts`; it covers generation, factual review, seven-day storage and deletion. The old `GEMINI_CV_NOTICE_VERSION` environment setting is no longer read. Both code constants must change together for a future processing version.
+- **Document notice `2026-10-documents-v3`**: pinned in `AiPrivacyGate` and frontend `lib/documentNotice.ts`; it covers generation, factual review, seven-day storage and deletion. The old `GEMINI_CV_NOTICE_VERSION` environment setting is no longer read. Both code constants must change together for a future processing version.
 - existing `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
 
 Do not reuse a letter-only notice as consent for broader CV disclosure. Configure a
@@ -244,21 +244,6 @@ Live Gemini, authenticated browser flows, hosted CV RLS and production migration
 remain deployment checks. Test two users, missing/revoked credentials, active notice
 renewal, quota exhaustion and mobile keyboard behavior in staging before merging.
 
-### Verification in this implementation session
-
-Frontend type checking and the production build passed with the locked Next.js 16.3.4
-dependencies. All 65 frontend/database tests passed, including generated CV/letter
-retention, independent deletion, prepared-job state and owner isolation. The .NET
-10.0.401 SDK completed a standard restore and Release build; 81 CV checks, 18
-authentication/privacy checks and 16 matching regressions passed.
-
-Docker is unavailable in the local environment, so a local image build was not run.
-Read-only Render inspection confirms the service builds from `backend/Dockerfile`, whose
-builder and runtime images are both .NET 10, and binds the configured `PORT`. No real
-Gemini calls or browser visual checks were performed. Live Supabase inspection confirmed
-that `generated_cvs` exists while the new `generated_cover_letters`/`prepared_jobs`
-migration is not yet applied. No live database mutation or deployment was performed.
-
 ## Generation consent dialog
 
 Clicking generate or regenerate checks the current Gemini notice and saved consent
@@ -273,30 +258,6 @@ The backend still verifies consent/version and reserves every provider call, inc
 CV factual review, so client UI is not an authorization boundary. Withdrawal remains
 available from the desktop and mobile menu at `/privacy#ai-consent`. No Groq fallback
 is enabled by this UI.
-
-Live inspection on 2026-09-13 confirmed that `generated_cvs` exists, but all Gemini
-notices are disabled. `2026-09-cv-v1` contains an explicitly incomplete draft.
-Activation requires completing and reviewing the operator/contact/retention/provider
-processing facts and matching backend `GEMINI_CV_NOTICE_VERSION`; this UI change
-does not enable those incomplete notices or grant consent for any user.
-
-### Local download verification — 2026-09-13
-
-57 frontend/database tests and the frontend production build passed. PDF tests cover
-full-name filenames, unsafe characters, Swedish glyphs and multi-page output. A
-four-page synthetic export was rendered and its text extracted through the final
-bullet. Production dependency audit reported zero vulnerabilities. The .NET SDK
-is unavailable in this environment, so the changed backend requires CI Release
-build/tests before deployment. No live AI requests or database mutations were made.
-
-### Development activation update
-
-The owner subsequently authorized development/test activation with unpaid Gemini
-projects and empty contact email. `2026-09-cv-v1` is now enabled with updated
-Swedish/English disclosures for the then-transient output. It must be superseded by
-a reviewed version before seven-day storage is deployed. No user consent was pre-granted.
-See [privacy controls](privacy-controls.md) for activation scope and outstanding
-backend environment/live-generation checks. CI run 34752948672 passed all jobs.
 
 ### CV schema compatibility — 2026-09-14
 
@@ -350,20 +311,11 @@ existing independent source-only review remains mandatory. No match score or rea
 model quality improvement is guaranteed by these instructions.
 
 
-### Editing/export verification — 2026-09-20
-
-All 75 frontend tests passed. Follow-up editing/retention tests passed after adding
-compare-and-swap/owner/expiry-preservation checks and navigation cancellation.
-TypeScript checking and the final frontend production build passed. Backend Release
-build passed with no warnings/errors; 93 CV checks and the authentication/privacy
-security suite passed using synthetic fixtures. No live Gemini requests, hosted
-Supabase mutations or authenticated visual browser checks were performed.
-
 ## Revision and consent hardening — 2026-09-26
 
 Migration `20260926051754_security_hardening_and_document_revisions.sql` adds `save_generated_cv_v3`, which returns the persisted row inside the save transaction. Generate responds with that exact `updated_at`, content and expiry; immediate PATCH therefore uses a real database revision. Editing remains owner/version/expiry filtered and does not extend retention. `CvStore` has separate owner-bound update/delete/save methods rather than a public arbitrary privileged write method.
 
-Every external call now reserves via `reserve_ai_call_v2` with the pinned document notice version. Historical activation statements above describe earlier deployments, not approval of the new notice. The new migration inserts an inactive replacement; generation remains unavailable until the rollout is completed. Local database regression tests cover immediate edit, stale edit, expiry preservation and old/current/withdrawn consent.
+Every external call now reserves via `reserve_ai_call_v2` with the pinned document notice version. Historical activation statements above describe earlier deployments, not approval of the new notice. Migrations insert notices disabled; the hosted v3 activation is recorded in the runbook. A matching user consent is still mandatory. Local database regression tests cover immediate edit, stale edit, expiry preservation and old/current/withdrawn consent.
 
 ## Application-service boundary
 
@@ -377,4 +329,4 @@ Job advertisements are public; `/jobs/[id]/cv` and every document API remain aut
 
 The CV route shares workspace navigation with job detail. The editor supports reviewed proposals for one saved summary/experience/education statement; the statement text and document revision must match server state. Each proposal is generated and separately reviewed against selected saved facts, with independent quota/consent reservations and the CV key. Acceptance changes the local draft only; the existing owner-bound PATCH persists it without extending expiry. The result is marked user-edited. New generation stores deterministic adaptation metadata for retained matched skills and rewritten-statement counts, rendered alongside selected career entries/fact references. Metadata is hidden after user editing rather than attributed to the edited prose. See [Application workspace](application-workspace.md).
 
-The current pinned notice is now `2026-10-documents-v3`; prior v2 descriptions above describe historical processing. The new migration leaves v3 disabled pending operator review and approved activation/fresh user consent.
+The current pinned notice is `2026-10-documents-v3`, including statement/paragraph proposals. The hosted project activated it on 2026-10-03; fresh user consent remains mandatory. See the runbook for deployment evidence and unverified flows.

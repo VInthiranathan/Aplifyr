@@ -81,7 +81,7 @@ Where relevant, include:
 - important limitations
 - verification steps
 
-Keep documentation consistent with code and schema.
+Keep documentation consistent with code and schema. Record dated live status and migration-ledger mappings in `documents/gdpr-supabase-runbook.md`; do not mix historical validation with current deployment claims. Remove obsolete duplicate documents only after preserving unresolved requirements in a canonical document and fixing incoming links. Preserve executable migration history.
 
 ---
 
@@ -447,4 +447,4 @@ A feature is not complete if required documentation is stale or relevant validat
 - Rewrite proposals are transient until explicit acceptance/save. Preserve canonical ads, saved owner facts, statement/revision identity, independent provider reservations and separate factual review. Notes/tracking/contact fields must not enter rewrite prompts.
 - Keep saved workspace CRUD usable without a live ad, propagate every successful application mutation to shared progress, and never present failed prepared-document reads as empty success. Rewrite skill evidence must preserve source scope and pass the same independent review as prose.
 - Saved letter/CV edits preserve original expiry. Job notes require database quotas, owner RLS, optimistic revisions and complete account export/cascade.
-- Current processing notice is `2026-10-documents-v3`, inserted disabled. Do not enable notices, grant consent, apply live migrations or alter hosting settings merely to make a prepared feature testable.
+- Current processing notice is `2026-10-documents-v3`; migrations seed notices disabled. Consult the runbook for separately verified live activation. Do not enable notices, grant consent, apply live migrations or alter hosting settings merely to make a prepared feature testable.

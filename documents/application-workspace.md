@@ -2,7 +2,7 @@
 
 ## Scope and user flow
 
-All ten product improvements are implemented on the application-workspace branch:
+All ten product improvements were merged in PR #34. See [the runbook](gdpr-supabase-runbook.md) for dated deployment evidence and remaining checks:
 
 1. Shared job-card progress distinguishes no saved activity, preparation, both documents ready and the actual submitted-application stage. Active CV/letter badges are shown separately. Preparing never creates a submitted application.
 2. Job detail and the existing CV route share five workspace destinations: Overview, CV, Cover letter, Application and Notes. The job stays visible above navigation. Overview shows three preparation steps and the next relevant action.
@@ -46,7 +46,7 @@ Migration `20261002075427_application_workspace.sql` creates `job_notes` with CR
 
 Job notes remain until the user deletes them or the account; no new arbitrary retention period is assigned. They are included in account export and never passed to Gemini. The public privacy UI explains this behavior. The operator must confirm/document the legal basis and any organizational retention policy; this change does not claim GDPR conformity or end-to-end provider/backup deletion.
 
-The migration inserts a new immutable **disabled** Gemini notice `2026-10-documents-v3`, matching frontend/backend constants. Existing notices/receipts are unchanged. The new text describes statement/paragraph AI revisions, a separate review and saved letter edits. The operator must review and explicitly activate the correct notice after approved rollout. All optional AI generation fails closed until the pinned version is enabled and the user gives fresh consent. Existing documents, manual edits, notes and public browsing do not need AI consent.
+The migration inserts a new immutable **disabled** Gemini notice `2026-10-documents-v3`, matching frontend/backend constants. Existing notices/receipts are unchanged. The new text describes statement/paragraph AI revisions, a separate review and saved letter edits. The hosted project activated v3 on 2026-10-03 after explicit owner approval; v2 is disabled. Fresh installations still require separate review and activation. All optional AI generation fails closed until the pinned version is enabled and the user gives fresh consent. Existing documents, manual edits, notes and public browsing do not need AI consent.
 
 Each rewrite provider attempt reserves independently through `AiPrivacyGate`, including review; no automatic retries or provider fallback. CV uses its separate key, letters use the letter key. Only selected prose, bounded relevant saved profile facts and the canonical ad are disclosed. Contact fields, job notes and tracking are excluded. Free text may still contain personal data. AI review is probabilistic, not a truth guarantee, and a small race after the final optimistic source/revision check remains possible. The final document save remains revision protected.
 
@@ -58,7 +58,7 @@ Each rewrite provider attempt reserves independently through `AiPrivacyGate`, in
 4. Review both notice languages and operator/provider facts, approve notice activation separately and collect fresh user consent. Do not reuse v2 for changed AI processing.
 5. Verify real auth, both document pipelines, paragraph acceptance/save/reload, expiry unchanged after edits, two-tab conflicts, note export/deletion/account cascade and mobile keyboard/scrolling.
 
-Run frontend tests/build, backend Release build, existing CV/security/matching regressions and `dotnet run --project tests/Aplifyr.WorkspaceTests --configuration Release`. Local PGlite fixtures omit pg_cron and do not prove hosted Auth/provider/deletion settings. Live migration, notice activation, deployment and real paid provider calls are separate operations and are not performed just by preparing this branch.
+Run frontend tests/build, backend Release build, existing CV/security/matching regressions and `dotnet run --project tests/Aplifyr.WorkspaceTests --configuration Release`. Local PGlite fixtures omit pg_cron and do not prove hosted Auth/provider/deletion settings. The dated runbook records the completed migration/notice activation and CI/Vercel evidence separately from unverified Render, browser and real provider flows.
 
 ## Review corrections — 2026-10-02
 
@@ -67,4 +67,4 @@ Run frontend tests/build, backend Release build, existing CV/security/matching r
 - Prepared-document read errors are tracked separately from application-queue errors, including SSR failures. The work queue and ready count show failure instead of empty/zero success, with a retry that refreshes both sources.
 - Rewrite evidence includes explicit saved profile/career skills, with the same source restrictions as prose. At most 40 skill facts share the existing 100-fact budget; entry bullets retain only that entry's evidence. Listed skills do not imply proficiency, duration or achievements. Generation and independent factual review receive the same evidence. Contact fields, notes and tracking remain excluded; consent, quota and revision guards are unchanged.
 
-Regression coverage: missing-ad notes CRUD/account switching, manual letter edits with generation disabled, failed prepared reads and retry, immediate shared status refresh after successful edits/deletions, and skills-only profiles through both reserved provider attempts. These corrections do not execute the migration or activate the new notice.
+Regression coverage: missing-ad notes CRUD/account switching, manual letter edits with generation disabled, failed prepared reads and retry, immediate shared status refresh after successful edits/deletions, and skills-only profiles through both reserved provider attempts. Migration and notice activation were completed as separately authorized operations; see the runbook.
