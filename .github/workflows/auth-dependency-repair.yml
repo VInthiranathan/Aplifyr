@@ -47,12 +47,12 @@ jobs:
           const cp = require('node:child_process');
           const lock = require('./package-lock.json');
           for (const [path, p] of Object.entries(lock.packages)) {
-            if (/^node_modules\/(sharp|source-map-js|@img\/sharp[^/]*)$/.test(path))
+            if (/^node_modules\/(sharp|source-map-js|@img\/sharp-(linux-x64|libvips-linux-x64))$/.test(path))
               cp.execFileSync('npm', ['pack', p.resolved, '--ignore-scripts', '--pack-destination', '/tmp/auth-dependency-repair/packages'], {stdio:'inherit'});
           }
           JS
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: auth-dependency-repair
+          name: auth-dependency-repair-linux
           path: /tmp/auth-dependency-repair
           retention-days: 2
