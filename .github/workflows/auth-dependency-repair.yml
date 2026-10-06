@@ -1,0 +1,58 @@
+name: Resolve auth dependency security patches
+on:
+  pull_request:
+    branches: [main]
+    paths: ['.github/workflows/auth-dependency-repair.yml']
+permissions:
+  contents: read
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: '24.x'
+      - name: Resolve compatible patches
+        working-directory: frontend
+        run: |
+          npm update sharp source-map-js --package-lock-only --ignore-scripts --no-audit --no-fund
+          node - <<'JS'
+          const assert = require('node:assert/strict');
+          const fs = require('node:fs');
+          const cp = require('node:child_process');
+          const before = JSON.parse(cp.execFileSync('git', ['show', 'HEAD:frontend/package-lock.json'], {encoding:'utf8'}));
+          const after = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+          assert.deepEqual(after.packages[''], before.packages['']);
+          for (const [path, value] of Object.entries(after.packages)) {
+            if (JSON.stringify(value) !== JSON.stringify(before.packages[path])) {
+              assert.match(path, /^node_modules\/(sharp|source-map-js|@img\/sharp[^/]*)$/);
+            }
+          }
+          for (const path of Object.keys(before.packages)) assert.ok(after.packages[path], path);
+          assert.equal(after.packages['node_modules/sharp'].version, '0.35.5');
+          assert.equal(after.packages['node_modules/source-map-js'].version, '1.2.2');
+          JS
+      - name: Audit repaired lockfile
+        working-directory: frontend
+        run: npm audit --omit=dev --audit-level=high
+      - name: Preserve patched packages for offline validation
+        working-directory: frontend
+        run: |
+          mkdir -p /tmp/auth-dependency-repair/packages
+          cp package-lock.json /tmp/auth-dependency-repair/
+          node - <<'JS'
+          const cp = require('node:child_process');
+          const lock = require('./package-lock.json');
+          for (const [path, p] of Object.entries(lock.packages)) {
+            if (/^node_modules\/(sharp|source-map-js|@img\/sharp[^/]*)$/.test(path))
+              cp.execFileSync('npm', ['pack', p.resolved, '--ignore-scripts', '--pack-destination', '/tmp/auth-dependency-repair/packages'], {stdio:'inherit'});
+          }
+          JS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: auth-dependency-repair
+          path: /tmp/auth-dependency-repair
+          retention-days: 2
