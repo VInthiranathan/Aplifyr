@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { safeReturnTo } from "../../lib/guestAccess";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { authErrorKey, confirmationHref, navigateAfterAuth } from "../../lib/authFlow";
 import { motion, AnimatePresence } from "framer-motion";
 import AuthShell from "../../components/AuthShell";
 import { Button } from "../../components/ui/button";
@@ -40,6 +41,8 @@ export default function AuthPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const [continueTo, setContinueTo] = useState<string | null>(null);
+  const submission = useRef(false);
 
   const title = useMemo(
     () => (isLogin ? t("auth.welcomeBack") : t("auth.createAccount")),
@@ -57,21 +60,24 @@ export default function AuthPage() {
   useEffect(() => {
     setError(null);
     setInfo(null);
+    setContinueTo(null);
   }, [isLogin]);
 
   const handleSubmit = async () => {
+    if (submission.current || (continueTo && !error)) return;
     if (!isSupabaseConfigured) {
       setError(t("auth.errors.missingSupabaseEnv"));
       return;
     }
 
-    const supabase = getSupabaseBrowserClient();
-
+    submission.current = true;
     setSubmitting(true);
     setError(null);
     setInfo(null);
+    setContinueTo(null);
 
     try {
+      const supabase = getSupabaseBrowserClient();
       if (!email || !password) {
         setError(t("auth.errors.missingEmailOrPassword"));
         return;
@@ -84,15 +90,16 @@ export default function AuthPage() {
         }
 
         const { data, error } = await supabase.auth.signUp({
-          email,
+          email: email.trim(),
           password,
           options: {
+            emailRedirectTo: `${window.location.origin}${confirmationHref(returnTo, locale)}`,
             data: fullName ? { full_name: fullName } : undefined,
           },
         });
 
         if (error) {
-          setError(error.code === "user_already_exists" ? t("auth.errors.emailAlreadyRegistered") : error.message);
+          setError(t(authErrorKey(error, 'signup')));
           return;
         }
 
@@ -101,32 +108,50 @@ export default function AuthPage() {
           return;
         }
 
-        if (!data.session) {
-          await router.replace(`/auth/verify-email?returnTo=${encodeURIComponent(returnTo)}`);
+        if (!data.user && !data.session) {
+          setError(t('auth.errors.signupUnavailable'));
           return;
         }
 
-        await router.replace(returnTo);
+        if (!data.session) {
+          setPassword("");
+          setConfirmPassword("");
+          setInfo(t("auth.checkEmail"));
+          const destination = `/auth/verify-email?returnTo=${encodeURIComponent(returnTo)}`;
+          setContinueTo(destination);
+          await navigateAfterAuth(() => router.replace(destination));
+          return;
+        }
+
+        setPassword("");
+        setConfirmPassword("");
+        setContinueTo(returnTo);
+        if (!await navigateAfterAuth(() => router.replace(returnTo))) setInfo(t("auth.signedInContinue"));
         return;
       }
 
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim(),
         password,
       });
 
       if (error) {
-        setError(error.message);
+        setError(t(authErrorKey(error, 'login')));
+        if (error.code === 'email_not_confirmed') setContinueTo(`/auth/verify-email?returnTo=${encodeURIComponent(returnTo)}`);
         return;
       }
 
       if (data.session) {
-        await router.replace(returnTo);
+        setPassword("");
+        setContinueTo(returnTo);
+        if (!await navigateAfterAuth(() => router.replace(returnTo))) setInfo(t("auth.signedInContinue"));
+      } else {
+        setError(t("auth.errors.unavailable"));
       }
     } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
-      setError(message);
+      setError(t(authErrorKey(e, isLogin ? 'login' : 'signup')));
     } finally {
+      submission.current = false;
       setSubmitting(false);
     }
   };
@@ -152,6 +177,7 @@ export default function AuthPage() {
             {isLogin ? t("auth.noAccount") : t("auth.haveAccount")}
           </span>
           <Button
+            disabled={submitting}
             onClick={() => setIsLogin(!isLogin)}
             variant="link"
             className="ml-1 h-auto px-0 py-0 text-sm"
@@ -257,21 +283,27 @@ export default function AuthPage() {
             )}
 
             {error && (
-              <div className="text-sm text-red-600 dark:text-red-400">
+              <div role="alert" className="text-sm text-red-600 dark:text-red-400">
                 {error}
               </div>
             )}
 
             {info && (
-              <div className="text-sm text-gray-600 dark:text-white/70">
+              <div role="status" className="text-sm text-gray-600 dark:text-white/70">
                 {info}
               </div>
+            )}
+
+            {continueTo && (
+              <Link href={continueTo} className="text-sm font-medium underline">
+                {t(continueTo.startsWith('/auth/verify-email') ? 'auth.openEmailVerification' : 'auth.continueToApp')}
+              </Link>
             )}
 
             <Button
               type="submit"
               className="mt-4 h-12 w-full uppercase tracking-widest"
-              disabled={submitting || !isSupabaseConfigured}
+              disabled={submitting || !isSupabaseConfigured || Boolean(continueTo && !error)}
             >
               {submitting
                 ? t("auth.working")

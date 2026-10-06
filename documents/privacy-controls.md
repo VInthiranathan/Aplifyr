@@ -56,6 +56,22 @@ sign-in/reset message. It does not query `auth.users`, expose a service-role key
 public account-lookup endpoint. This preserves Supabase's server-side anti-enumeration
 behavior where the hosted configuration withholds a definitive result.
 
+Email-confirmation recovery uses the existing account-access purpose and Supabase Auth
+processor; it adds no AI processing, tracking, account-lookup endpoint or service-role
+access. Resend sends only the entered email, signup type, PKCE security fields and a
+controlled callback URL with an allowlisted app destination to Supabase. The email
+is held in React state and is not placed in URLs or new persistent app storage.
+Passwords are cleared from form state after successful authentication. PKCE verifier
+and session cookies remain managed by `@supabase/ssr`; callback exchanges use the
+shared server helper and preserve its cookie writes. Callback codes are removed before
+rendering, raw Auth errors are not displayed/logged, private responses are no-store,
+and redirects suppress inherited error fragments. Result URL values are presentation
+only and confer no access; protected routes/APIs retain independent authentication.
+There is no new database data, retention policy, legal basis or processor. Existing
+account correction/export/deletion and operator decisions for account/email/log/backup
+retention and legal basis remain unchanged. Upstream hosting/Auth request logs may
+contain callback URLs and require the existing operator access/retention controls.
+
 Purpose is user access to their stored facts; the controller must document the applicable legal basis and retention for the broader processing. This is not a complete Article 15 response or a guarantee of Article 20 applicability. Logs, provider copies, backups, other devices and required processing information need the manual rights process. Protect the downloaded file; it contains personal data.
 
 ## Pagination and concurrency

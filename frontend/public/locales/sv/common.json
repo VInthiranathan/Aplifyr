@@ -382,13 +382,34 @@
       "missingEmailOrPassword": "E-post och lösenord krävs.",
       "missingNewPassword": "Ange och bekräfta ditt nya lösenord.",
       "passwordsDoNotMatch": "Lösenorden matchar inte.",
-      "emailAlreadyRegistered": "Den här mejladressen är redan registrerad. Logga in eller återställ lösenordet."
+      "emailAlreadyRegistered": "Den här mejladressen är redan registrerad. Logga in eller återställ lösenordet.",
+      "rateLimited": "Vänta en stund innan du försöker igen. För många förfrågningar har gjorts.",
+      "emailNotConfirmed": "Bekräfta din mejladress innan du loggar in. Du kan begära en ny bekräftelselänk.",
+      "invalidCredentials": "Mejladressen eller lösenordet är felaktigt.",
+      "weakPassword": "Välj ett starkare lösenord som uppfyller lösenordskraven.",
+      "invalidDetails": "Kontrollera mejladressen och uppgifterna du har angett.",
+      "signupUnavailable": "Vi kunde inte bekräfta resultatet av registreringen. Kontot kan ha skapats. Kontrollera din mejl innan du försöker igen, eller försök logga in.",
+      "unavailable": "Vi kunde inte nå inloggningstjänsten. Försök igen om en stund."
     },
     "verifyEmailTitle": "Bekräfta ditt konto",
     "verifyEmailSubtitle": "Ett sista steg innan du kan börja använda Aplifyr",
     "verifyEmailCardTitle": "Kontrollera din e-post",
-    "verifyEmailInstructions": "Vi har skickat en bekräftelselänk till dig. Öppna mejlet och klicka på länken för att aktivera kontot. Gå sedan tillbaka hit och logga in.",
-    "verifyEmailSpamHint": "Det kan ta en liten stund innan mejlet kommer fram. Kontrollera skräpposten om du inte hittar det."
+    "verifyEmailInstructions": "Öppna bekräftelsemejlet och klicka på länken för att aktivera kontot. Länken tar dig tillbaka till Aplifyr. Om du saknar mejlet kan du begära en ny länk nedan.",
+    "verifyEmailSpamHint": "Det kan ta en liten stund innan mejlet kommer fram. Kontrollera skräpposten om du inte hittar det.",
+    "signedInContinue": "Du är inloggad. Öppna appen för att fortsätta.",
+    "openEmailVerification": "Öppna mejlbekräftelsen",
+    "continueToApp": "Fortsätt till Aplifyr",
+    "emailConfirmedTitle": "Mejladressen är bekräftad",
+    "emailConfirmedSubtitle": "Ditt konto är redo",
+    "emailConfirmedInstructions": "Din mejladress är bekräftad och du är inloggad. Du kan nu fortsätta till Aplifyr.",
+    "resendConfirmation": "Skicka ett nytt bekräftelsemejl",
+    "resendSent": "Om adressen har ett konto som väntar på bekräftelse har ett nytt mejl begärts. Kontrollera inkorgen och skräpposten.",
+    "resendWait": "Försök igen om {{seconds}} sekunder",
+    "confirmation": {
+      "sign-in": "Länken öppnades i en annan webbläsare eller saknar sparade inloggningsuppgifter. Försök logga in med din mejladress och ditt lösenord. Om mejladressen fortfarande behöver bekräftas kan du begära en ny länk nedan.",
+      "invalid": "Länken är ogiltig, har redan använts eller har gått ut. Om du redan har bekräftat mejladressen kan du försöka logga in. Annars kan du begära en ny länk nedan.",
+      "unavailable": "Vi kunde inte slutföra inloggningen just nu. Din mejladress kan redan vara bekräftad. Försök logga in med mejladress och lösenord. Om bekräftelse fortfarande behövs kan du begära en ny länk nedan."
+    }
   },
   "career": {
     "tabs": {

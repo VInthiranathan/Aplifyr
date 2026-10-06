@@ -1,19 +1,25 @@
 import type { IncomingMessage, ServerResponse } from 'http';
 import { createServerClient, parseCookieHeader, serializeCookieHeader } from '@supabase/ssr';
 
-export function serverSupabase(req: IncomingMessage, res: ServerResponse) {
+export function serverSupabase(req: IncomingMessage, res: ServerResponse, options?: { fetchTimeoutMs: number }) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) throw new Error('Authentication unavailable');
   res.setHeader('Cache-Control', 'private, no-store');
-  return createServerClient(url, key, { cookies: {
-    getAll: () => parseCookieHeader(req.headers.cookie ?? '').map(c => ({ name: c.name, value: c.value ?? '' })),
-    setAll(cookies) {
-      const existing = res.getHeader('Set-Cookie');
-      res.setHeader('Set-Cookie', [
-        ...(typeof existing === 'string' ? [existing] : Array.isArray(existing) ? existing : []),
-        ...cookies.map(({ name, value, options }) => serializeCookieHeader(name, value, options)),
-      ]);
+  return createServerClient(url, key, {
+    ...(options ? { global: { fetch: (input: RequestInfo | URL, init?: RequestInit) => fetch(input, {
+      ...init,
+      signal: init?.signal ? AbortSignal.any([init.signal, AbortSignal.timeout(options.fetchTimeoutMs)]) : AbortSignal.timeout(options.fetchTimeoutMs),
+    }) } } : {}),
+    cookies: {
+      getAll: () => parseCookieHeader(req.headers.cookie ?? '').map(c => ({ name: c.name, value: c.value ?? '' })),
+      setAll(cookies) {
+        const existing = res.getHeader('Set-Cookie');
+        res.setHeader('Set-Cookie', [
+          ...(typeof existing === 'string' ? [existing] : Array.isArray(existing) ? existing : []),
+          ...cookies.map(({ name, value, options }) => serializeCookieHeader(name, value, options)),
+        ]);
+      },
     },
-  } });
+  });
 }

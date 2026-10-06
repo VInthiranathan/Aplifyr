@@ -61,7 +61,7 @@ test('failed claims redirect retains refresh/expiry cookies and private caching'
   assert.equal(response.headers.get('cache-control'), 'private, no-store');
 });
 
-for (const path of ['/', '/jobs', '/jobs/123', '/sv/jobs/123', '/support']) {
+for (const path of ['/', '/jobs', '/jobs/123', '/sv/jobs/123', '/support', '/auth/confirm', '/sv/auth/confirm', '/en/auth/verify-email']) {
   test(`guest can open ${path} without contacting Auth`, async () => {
     const response = await load(null)(new NextRequest(`https://app.example.test${path}`));
     assert.equal(response.status, 200);
