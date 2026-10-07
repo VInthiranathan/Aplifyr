@@ -23,9 +23,17 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 
 ### Account registration and sign-in
 
+- When the deployment lacks public Supabase Auth configuration, login/signup remain disabled and show a localized availability message before users submit. Guest browsing stays available. Preview deployments need their own configured Auth environment; a successful build alone does not verify registration availability.
+
 - `/auth` keeps the existing split sign-in form and uses the refined animated Aplifyr brand panel.
 - Registrations that require email confirmation continue to `/auth/verify-email`, where the activation step is explained before the user returns to sign in.
 - If Supabase returns an active session immediately, registration continues directly to the authenticated home page.
+- Successful signup/login is retained if client navigation fails: the form clears passwords and offers a safe continuation link instead of reporting registration failure. Duplicate submissions are blocked. A signup transport failure reports an uncertain result and asks the user to check email before trying again.
+- Signup and explicit confirmation resend set `emailRedirectTo` to the current origin's localized `/auth/confirm`, preserving only an allowlisted job/return destination. The callback uses `serverSupabase` to exchange the PKCE code (including `sb_flow_id` when supplied), persists response cookies, and redirects to a clean `/auth/verify-email` result URL before rendering. Each outbound callback request has a 10-second timeout. Codes/error descriptions are not rendered or logged; an empty redirect fragment removes inherited error hashes.
+- The confirmation screen supports success, used/expired/invalid link, missing browser verifier, and temporary Auth failure. Cross-browser confirmation may activate the email without establishing a session; users are guided to email/password sign-in instead of registering again. Login maps `email_not_confirmed` to the verification screen without preventing a later retry.
+- A new confirmation email can be requested explicitly with `auth.resend({ type: 'signup' })`; it does not create another account. The email field stays in component memory, not the URL or app storage. Responses use generic wording, with a 60-second UI cooldown plus Supabase's independent hosted limits. Both locales contain friendly errors instead of raw provider messages.
+- Hosted prerequisites: the controlled production origin must be configured as Supabase's Site URL, and the localized callback URLs (with safe return parameters) must be accepted by its redirect allowlist. Confirm-signup emails must use `{{ .ConfirmationURL }}` so Supabase verifies the email and redirects to the requested callback. Existing links issued before this change still use their old destination. A custom token-hash template is not handled by this PKCE callback. No hosted configuration was changed by this implementation.
+- `auth-confirmation.test.cjs` exercises rendered signup/resend/login pages and server callback outcomes with synthetic Auth fixtures. This is separate from real email delivery, hosted redirect configuration and production browser verification, which still require a controlled test mailbox and deployment of this branch.
 
 ### Job-specific CV
 

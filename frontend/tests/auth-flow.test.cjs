@@ -6,15 +6,16 @@ const path = require('node:path');
 const root = path.join(__dirname, '..');
 const read = relative => fs.readFileSync(path.join(root, relative), 'utf8');
 
-test('registration routes pending email confirmations to the dedicated page', () => {
+test('registration and email verification keep the expected recovery UI', () => {
   const auth = read('pages/auth/index.tsx');
   const verify = read('pages/auth/verify-email.tsx');
 
-  assert.match(auth, /if \(!data\.session\)[\s\S]*router\.replace\(`\/auth\/verify-email\?returnTo=/);
+  // Routing and failures are exercised through rendered pages in auth-confirmation.test.cjs.
+  assert.match(auth, /auth\.checkEmail/);
   assert.match(verify, /auth\.verifyEmailInstructions/);
   assert.match(verify, /router\.push\(signInHref\(safeReturnTo\(router.query.returnTo\)\)\)/);
   assert.match(auth, /data\.user\.identities/);
-  assert.match(auth, /user_already_exists/);
+  assert.match(read('lib/authFlow.ts'), /user_already_exists/);
   assert.match(auth, /auth\.errors\.emailAlreadyRegistered/);
 });
 

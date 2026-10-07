@@ -7,6 +7,7 @@ import { createServerClient } from '@supabase/ssr'
 const PUBLIC_PATHS = ['/auth', '/privacy']
 
 function isPublicPath(pathname: string) {
+  pathname = pathname.replace(/^\/(en|sv)(?=\/|$)/, '') || '/'
   if (isPublicPage(pathname)) return true
   if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return true
 
