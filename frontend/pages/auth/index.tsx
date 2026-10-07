@@ -200,6 +200,11 @@ export default function AuthPage() {
             handleSubmit();
           }}
         >
+            {!isSupabaseConfigured && (
+              <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+                {t("auth.errors.missingSupabaseEnv")}
+              </p>
+            )}
             {!isLogin && (
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-medium uppercase tracking-widest text-gray-500 dark:text-white/60">
@@ -282,7 +287,7 @@ export default function AuthPage() {
               </Button>
             )}
 
-            {error && (
+            {error && isSupabaseConfigured && (
               <div role="alert" className="text-sm text-red-600 dark:text-red-400">
                 {error}
               </div>

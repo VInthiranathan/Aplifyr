@@ -23,6 +23,8 @@ Aplifyr helps a user move from job discovery to a prepared application by combin
 
 ### Account registration and sign-in
 
+- When the deployment lacks public Supabase Auth configuration, login/signup remain disabled and show a localized availability message before users submit. Guest browsing stays available. Preview deployments need their own configured Auth environment; a successful build alone does not verify registration availability.
+
 - `/auth` keeps the existing split sign-in form and uses the refined animated Aplifyr brand panel.
 - Registrations that require email confirmation continue to `/auth/verify-email`, where the activation step is explained before the user returns to sign in.
 - If Supabase returns an active session immediately, registration continues directly to the authenticated home page.

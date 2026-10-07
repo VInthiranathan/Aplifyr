@@ -30,7 +30,7 @@ function loader(mocks = {}, globals = {}) {
   }
   return load;
 }
-function ui(auth, router, globals) {
+function ui(auth, router, globals, configured = true) {
   return loader({
     'next/link': props => React.createElement('a', props),
     'components/AuthShell': props => React.createElement('section', null, props.title, props.children, props.footer),
@@ -40,7 +40,7 @@ function ui(auth, router, globals) {
     'next-i18next/serverSideTranslations': { serverSideTranslations: async () => ({}) },
     'next/router': { useRouter: () => router },
     'next-themes': { useTheme: () => ({ setTheme() {}, resolvedTheme: 'light' }) },
-    'lib/supabaseClient': { isSupabaseConfigured: true, getSupabaseBrowserClient: () => ({ auth }) },
+    'lib/supabaseClient': { isSupabaseConfigured: configured, getSupabaseBrowserClient: () => ({ auth }) },
   }, globals);
 }
 const button = (view, label) => view.root.findAllByType('button').find(b => b.children.includes(label));
@@ -59,6 +59,20 @@ function context(query, locale = 'sv') {
   const headers = {};
   return { query, locale, req: { headers: {} }, res: { setHeader: (key, value) => headers[key] = value }, headers };
 }
+
+test('missing Auth configuration explains disabled login/signup and keeps guest browsing available', async () => {
+  let calls = 0;
+  const view = await render(ui({ signUp: () => { calls++; }, signInWithPassword: () => { calls++; } }, router(), undefined, false)('pages/auth/index.tsx').default);
+  assert.equal(button(view, 'auth.signIn').props.disabled, true);
+  assert.ok(text(view).includes('auth.errors.missingSupabaseEnv'));
+  await credentials(view, true);
+  assert.equal(button(view, 'auth.createAccountButton').props.disabled, true);
+  await submit(view);
+  assert.equal(calls, 0);
+  assert.equal(view.root.findAllByProps({ role: 'alert' }).length, 1);
+  assert.ok(view.root.findAllByType('a').some(a => a.props.href === '/jobs'));
+  view.unmount();
+});
 
 test('registration, email confirmation, then password login preserve the job destination', async () => {
   let registered = false, confirmed = false, signupOptions, destination;

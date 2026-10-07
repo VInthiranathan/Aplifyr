@@ -439,6 +439,7 @@ A feature is not complete if required documentation is stale or relevant validat
 - Authentication, owner isolation, profile readiness and AI consent remain independently enforced on the server. Client session state is for navigation only.
 - Reuse the allowlisted return-destination helper across login/profile flows; never redirect to an unvalidated query value.
 - Keep successful authentication separate from subsequent navigation failures. Email callbacks must exchange PKCE codes with cookie-aware server auth, remove credentials from redirect URLs, and provide localized recovery for expired links and missing browser verifiers. Never log callback codes or treat a UI success parameter as authorization.
+- Missing Auth configuration must explain disabled login/signup with localized user-facing text and preserve guest browsing. A successful preview build is not proof that its Auth environment is configured.
 - See `documents/project-overview.md` for guest flow and required profile facts; run guest/proxy and backend authentication regressions when changing these boundaries.
 
 ## 19. Job application workspace

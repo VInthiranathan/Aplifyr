@@ -377,7 +377,7 @@
     "resetPasswordOpenFromEmail": "Öppna den här sidan från länken i e-postmeddelandet för lösenordsåterställning.",
     "checkEmail": "Kolla din e-post för att bekräfta kontot och logga sedan in.",
     "errors": {
-      "missingSupabaseEnv": "Supabase är inte konfigurerat. Ange NEXT_PUBLIC_SUPABASE_URL och NEXT_PUBLIC_SUPABASE_ANON_KEY i frontend/.env.local.",
+      "missingSupabaseEnv": "Registrering och inloggning är inte tillgängliga på den här sidan just nu. Du kan fortsätta utan konto.",
       "missingEmail": "E-post krävs.",
       "missingEmailOrPassword": "E-post och lösenord krävs.",
       "missingNewPassword": "Ange och bekräfta ditt nya lösenord.",

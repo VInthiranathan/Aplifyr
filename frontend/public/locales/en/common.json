@@ -377,7 +377,7 @@
     "resetPasswordOpenFromEmail": "Open this page from the password reset link sent to your email.",
     "checkEmail": "Check your email to confirm your account, then sign in.",
     "errors": {
-      "missingSupabaseEnv": "Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in frontend/.env.local.",
+      "missingSupabaseEnv": "Registration and sign-in are currently unavailable on this site. You can continue without an account.",
       "missingEmail": "Email is required.",
       "missingEmailOrPassword": "Email and password are required.",
       "missingNewPassword": "Enter and confirm your new password.",
