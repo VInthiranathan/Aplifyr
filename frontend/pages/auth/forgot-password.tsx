@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import type { GetServerSideProps } from "next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
@@ -7,6 +7,7 @@ import { useTheme } from "next-themes";
 import AuthShell from "../../components/AuthShell";
 import { Button } from "../../components/ui/button";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "../../lib/supabaseClient";
+import { authErrorKey } from "../../lib/authFlow";
 
 export const getServerSideProps: GetServerSideProps = async ({ locale }) => {
   return {
@@ -28,8 +29,16 @@ export default function ForgotPasswordPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const pending = useRef(false);
+  const [retryAt, setRetryAt] = useState(0);
+  const [now, setNow] = useState(0);
 
   useEffect(() => setMountedTheme(true), []);
+  useEffect(() => {
+    if (!retryAt) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [retryAt]);
 
   const isDark = resolvedTheme === "dark";
 
@@ -37,38 +46,42 @@ export default function ForgotPasswordPage() {
   const subtitle = useMemo(() => t("auth.forgotPasswordSubtitle"), [t]);
 
   const handleSubmit = async () => {
+    if (pending.current || Date.now() < retryAt) return;
     if (!isSupabaseConfigured) {
       setError(t("auth.errors.missingSupabaseEnv"));
       return;
     }
 
-    if (!email) {
+    if (!email.trim()) {
       setError(t("auth.errors.missingEmail"));
       return;
     }
 
     const supabase = getSupabaseBrowserClient();
 
+    pending.current = true;
     setSubmitting(true);
     setError(null);
     setInfo(null);
 
     try {
-      const redirectTo = `${window.location.origin}/auth/reset-password`;
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const redirectTo = `${window.location.origin}${locale === 'sv' ? '/sv' : ''}/auth/reset-password`;
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
         redirectTo,
       });
 
       if (error) {
-        setError(error.message);
+        setError(t(authErrorKey(error, 'recovery')));
         return;
       }
 
       setInfo(t("auth.resetPasswordEmailSent"));
-    } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
-      setError(message);
+      setNow(Date.now());
+      setRetryAt(Date.now() + 60000);
+    } catch {
+      setError(t('auth.errors.unavailable'));
     } finally {
+      pending.current = false;
       setSubmitting(false);
     }
   };
@@ -107,10 +120,12 @@ export default function ForgotPasswordPage() {
         }}
       >
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium uppercase tracking-widest text-gray-500 dark:text-white/60">
+          <label htmlFor="recovery-email" className="text-xs font-medium uppercase tracking-widest text-gray-500 dark:text-white/60">
             {t("auth.email")}
           </label>
           <input
+            id="recovery-email"
+            autoComplete="email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -121,7 +136,7 @@ export default function ForgotPasswordPage() {
         </div>
 
         {error && (
-          <div className="text-sm text-red-600 dark:text-red-400">{error}</div>
+          <div role="alert" className="text-sm text-red-600 dark:text-red-400">{error}</div>
         )}
 
         {info && (
@@ -131,9 +146,10 @@ export default function ForgotPasswordPage() {
         <Button
           type="submit"
           className="mt-4 h-12 w-full uppercase tracking-widest"
-          disabled={submitting || !isSupabaseConfigured}
+          disabled={submitting || !isSupabaseConfigured || now < retryAt}
         >
-          {submitting ? t("auth.working") : t("auth.sendResetLink")}
+          {submitting ? t("auth.working") : now < retryAt
+            ? t('auth.resendWait', { seconds: Math.ceil((retryAt - now) / 1000) }) : t("auth.sendResetLink")}
         </Button>
       </form>
     </AuthShell>

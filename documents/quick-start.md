@@ -18,10 +18,10 @@ This guide covers local development for the runnable app inside `Aplifyr/`.
 From `Aplifyr/`:
 
 ```powershell
-npm install
+npm ci
 ```
 
-The root `postinstall` script installs the frontend dependencies automatically.
+The root `postinstall` script runs `npm ci --prefix frontend`: both dependency trees use their committed lockfiles. Use `npm ci --ignore-scripts` only when deliberately installing root tools without the frontend. Tailwind CSS and its PostCSS integration are pinned to 4.3.3; the existing JS theme/dark-mode configuration is loaded from the stylesheet. Tailwind 4 requires modern browsers (Safari 16.4+, Chrome 111+, Firefox 128+); older-browser support has not been verified.
 
 ## Environment Files
 
@@ -224,4 +224,36 @@ The ordered list above includes hardening and workspace migrations. For existing
 
 `TRUSTED_PROXY_ADDRESSES` is optional and accepts comma-separated verified immediate proxy IP addresses. Empty means forwarding headers are ignored; never populate it with arbitrary client values. Behind a shared proxy, pre-authentication and public IP limits can be shared by users until the actual proxy chain is verified. This setting requires separate hosting approval.
 
-Run frontend `npm test` and `npm run build`, backend Release build and the SecurityTests, CvTests, WorkspaceTests and Matching.Tests executable projects. The new security workflow audits production dependencies and scans git history for secrets; its hosted execution is a separate CI gate.
+Run frontend `npm test` and `npm run build`, backend Release build and the SecurityTests, CvTests, WorkspaceTests and Matching.Tests executable projects. The security workflow audits root development tools and the complete frontend production/build tree at moderate severity, runs the .NET audit independently, and scans git history for secrets. CI actions are pinned to immutable commits and checkout does not persist credentials. Hosted execution on the final revision remains a separate gate.
+
+
+## Isolated launch checks without hosted credentials
+
+The local regression suites use synthetic users, stubbed Auth/provider transport and isolated PGlite instances. `deletion-restore.test.cjs` exercises the full application schema, deletes one synthetic account while preserving another, restores an older local snapshot and reapplies the deletion before checking owner isolation. It does not test hosted Auth tokens, provider deletion, binary storage, Supabase backups or pg_cron.
+
+For browser verification, build with a fixture Auth origin and a local backend. Do not copy a production environment file into the test environment:
+
+```sh
+cd frontend
+NEXT_PUBLIC_SUPABASE_URL=https://fixture.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=synthetic-publishable-key BACKEND_URL=http://127.0.0.1:5102 NEXT_PUBLIC_BACKEND_URL=http://127.0.0.1:5102 npm run build
+NEXT_PUBLIC_SUPABASE_URL=https://fixture.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=synthetic-publishable-key node node_modules/next/dist/bin/next start -p 3102
+```
+
+Run both checks in another terminal with the same fixture Auth origin:
+
+```sh
+NEXT_PUBLIC_SUPABASE_URL=https://fixture.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=synthetic-publishable-key APLIFYR_UI_TEST_BASE_URL=http://localhost:3102 node scripts/check-launch-ui.cjs
+NEXT_PUBLIC_SUPABASE_URL=https://fixture.supabase.co APLIFYR_UI_TEST_BASE_URL=http://localhost:3102 node scripts/check-auth-ui.cjs
+```
+
+`check-auth-ui.cjs` intercepts all external requests with synthetic fixtures. It checks localized recovery requests/cooldown, keyboard submission, sanitized provider errors, invalid PKCE input, page width and CSP across both locales, both viewport sizes and both themes. It does not send email or change a real password. The production server rejects malformed callback input before any Auth exchange; SDK transport tests cover valid exchange and cookies.
+
+To reproduce the finite load smoke check, build the backend and run its DLL from an empty temporary working directory with `ASPNETCORE_ENVIRONMENT=Production`, blank `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `AI_ALLOWED_PROVIDERS`, `AI_DIAGNOSTICS_UNTIL`, `GEMINI_API_KEY`, `GEMINI_CV_API_KEY`, `GROQ_API_KEY` and `TRUSTED_PROXY_ADDRESSES`. Bind only `http://127.0.0.1:5102`. Running from the empty directory prevents DotNetEnv from loading a project `.env` file.
+
+From the repository root:
+
+```sh
+node scripts/check-local-load.cjs
+```
+
+The load script accepts only a loopback HTTP origin, checks private access fails closed, then issues exactly 180 health requests with eight workers. It requires both successful responses and 429 admission rejection with `Retry-After`, and a local p95 below 1000 ms. Restart the isolated backend before each run to reset its fixed-window counters. This verifies health/admission behavior only; it does not establish Render capacity, upstream throughput or currency spending limits.

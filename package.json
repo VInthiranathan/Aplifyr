@@ -6,10 +6,13 @@
     "node": "24.x"
   },
   "scripts": {
-    "postinstall": "npm install --prefix frontend",
+    "postinstall": "npm ci --prefix frontend",
     "dev": "concurrently --names \"backend,frontend\" --prefix-colors \"cyan,magenta\" \"dotnet run --project backend\" \"npm run dev --prefix frontend\""
   },
   "devDependencies": {
-    "concurrently": "^9.0.0"
+    "concurrently": "9.2.4"
+  },
+  "overrides": {
+    "shell-quote": "1.12.0"
   }
 }
