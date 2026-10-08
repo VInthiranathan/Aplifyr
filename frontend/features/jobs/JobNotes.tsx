@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useUnsavedChanges } from '../../lib/useUnsavedChanges';
 import { useTranslation } from "next-i18next";
 import { Button } from "../../components/ui/button";
 import { notifyWorkspace } from "../../lib/JobProgressContext";
@@ -7,16 +8,19 @@ export function JobNotes({ jobId }: { jobId: string }) {
   const { t } = useTranslation("common");
   const [saved, setSaved] = useState<JobNote | null>(null);
   const [draft, setDraft] = useState("");
+  useUnsavedChanges(draft !== (saved?.notes ?? ''));
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [reload, setReload] = useState(0);
   const request = useRef<AbortController | null>(null);
   useEffect(() => {
     const controller = new AbortController();
     request.current = controller;
     setLoading(true);
     setError("");
+    setSuccess(false);
     void fetch(`/api/job-notes?jobId=${encodeURIComponent(jobId)}`, {
       signal: controller.signal,
     })
@@ -37,9 +41,9 @@ export function JobNotes({ jobId }: { jobId: string }) {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => request.current?.abort();
-  }, [jobId]);
+  }, [jobId, reload]);
   async function save(remove = false) {
-    if (busy) return;
+    if (busy || loading || error === "loadError") return;
     const controller = new AbortController();
     request.current = controller;
     setBusy(true);
@@ -138,6 +142,7 @@ export function JobNotes({ jobId }: { jobId: string }) {
               ? "applications.capacity"
               : `applications.${error}`,
           )}
+          {error === "loadError" && <Button variant="secondary" onClick={() => setReload(value => value + 1)}>{t("workspace.retry")}</Button>}
         </p>
       )}
       {success && <p role="status">{t("workspace.saved")}</p>}

@@ -66,7 +66,9 @@ export function JobWorkspace({
     <div className="mt-6 space-y-4">
       <WorkspaceNav jobId={jobId} active={active} />
       {!jobAvailable && <p role="status">{t("workspace.adUnavailable")}</p>}
-      {jobAvailable && userId && ready && !l.loadingLetter && !a.applicationLoading && (
+      {userId && l.letterLoadError && <p role="alert">{t('coverLetter.loadError')} <Button variant="secondary" onClick={l.retryLetter}>{t('workspace.retry')}</Button></p>}
+      {userId && a.applicationLoadError && <p role="alert">{t('applications.loadError')} <Button variant="secondary" onClick={a.retryApplication}>{t('workspace.retry')}</Button></p>}
+      {jobAvailable && userId && ready && !l.loadingLetter && !l.letterLoadError && !a.applicationLoading && !a.applicationLoadError && (
         <section className="app-card-base space-y-3 rounded-2xl p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="font-semibold">{t("workspace.title")}</h2>
@@ -130,7 +132,7 @@ export function JobWorkspace({
           !jobAvailable && !a.application && !a.applicationLoading ? <p>{t("workspace.adUnavailable")}</p> : <ApplicationPanel
             key={userId + jobId}
             application={a.application}
-            loading={a.applicationLoading}
+            loading={a.applicationLoading || a.applicationLoadError}
             marking={a.applicationSaving}
             onMark={() => void a.markAsApplied()}
             onSaved={a.setApplication}
@@ -147,7 +149,7 @@ export function JobWorkspace({
             <p>{t("workspace.letterHelp")}</p>
             {userId ? facts : guest}
             <Button
-              disabled={!jobAvailable || l.generating || l.loadingLetter}
+              disabled={!jobAvailable || l.generating || l.loadingLetter || l.letterLoadError}
               onClick={() =>
                 !userId
                   ? router.push(signInHref(`/jobs/${jobId}`))
@@ -160,7 +162,8 @@ export function JobWorkspace({
         ) : (
           <CoverLetterModal
             inline
-            canGenerate={jobAvailable}
+            canGenerate={jobAvailable && !l.letterLoadError}
+            canEdit={!l.letterLoadError}
             jobId={jobId}
             revision={l.letterRevision}
             onSave={l.saveLetter}

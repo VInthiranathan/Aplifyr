@@ -131,14 +131,14 @@ test('letter PDF exports the edited text and a failed export preserves it',async
 });
 test('one job action opens the saved letter without requesting generation',async()=>{
  const calls=[];
- const fetch=async(url,options)=>{calls.push([url,options]);return {ok:true,json:async()=>({letter:{content:'Saved letter',expires_at:'2026-09-27T00:00:00Z'}})};};
+ const fetch=async(url,options)=>{calls.push([url,options]);return {ok:true,json:async()=>url==='/api/externaljobs/123'?{...job,headline:job.title,employer:{name:'Company'}}:{letter:{content:'Saved letter',expires_at:'2026-09-27T00:00:00Z'}}};};
  const Component=load('pages/jobs/[id].tsx',{...shared,'next/router':{useRouter:()=>({query:{id:'123',data:JSON.stringify({...job,headline:job.title,employer:{name:'Company'}})},isReady:true})},'../../lib/supabaseClient':auth,'../../lib/backendUrl':{getPublicBackendUrl:()=>''},'../../lib/useFavorites':{useFavorites:()=>({toggleFavorite(){},isFavorite:()=>false})},'../../components/ui/button':{Button:button},'../../components/AiGenerationConsent':()=>React.createElement('div',{'data-consent':true}),'../../components/CoverLetterModal':({isOpen,letter})=>isOpen?React.createElement('article',null,letter):null},fetch).default;
  let view;await act(async()=>{view=create(React.createElement(Component));});
  assert.equal(view.root.findAllByType('button').filter(b=>b.children.includes('coverLetter.openSaved')).length,1);
  assert.equal(findButton(view,'jobDetail.generateCoverLetter'),undefined);
  await act(async()=>findButton(view,'coverLetter.openSaved').props.onClick());
  assert.equal(view.root.findByType('article').children[0],'Saved letter');
- assert.equal(calls.length,2);
+ assert.equal(calls.length,3);
  assert.ok(calls.some(([url])=>url==='/api/applications?jobId=123'));
  assert.ok(calls.some(([url])=>url==='/api/coverletters/123'));
  assert.equal(view.root.findAllByProps({'data-consent':true}).length,0);

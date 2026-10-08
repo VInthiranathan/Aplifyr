@@ -14,6 +14,8 @@ export function useCoverLetter(job: any, setFetchError: (message: string | null)
   const [generating, setGenerating] = useState(false);
   const generationRequest = useRef<AbortController | null>(null);
   const [loadingLetter, setLoadingLetter] = useState(true);
+  const [letterLoadError, setLetterLoadError] = useState(false);
+  const [reloadLetter, setReloadLetter] = useState(0);
   const [letter, setLetter] = useState<string | null>(null);
   const [letterRevision, setLetterRevision] = useState('');
   const [savingLetter, setSavingLetter] = useState(false);
@@ -22,7 +24,7 @@ export function useCoverLetter(job: any, setFetchError: (message: string | null)
   // debug toggle removed
   const [consentOpen, setConsentOpen] = useState(false);
   const requestGeneration = async () => {
-    if (generating) return;
+    if (generating || loadingLetter || letterLoadError) return;
     try {
       const destination = await generationDestination(`/jobs/${id}`);
       if (destination) { await router.push(destination); return; }
@@ -42,19 +44,19 @@ export function useCoverLetter(job: any, setFetchError: (message: string | null)
   }
 
   useEffect(() => {
-    if (!enabled) { setLetter(null); setShowModal(false); setConsentOpen(false); setLoadingLetter(false); setCareer([]); setSelectedCareer([]); setCareerLoaded(false); return; }
+    if (!enabled) { setLetter(null); setShowModal(false); setConsentOpen(false); setLoadingLetter(false); setLetterLoadError(false); setCareer([]); setSelectedCareer([]); setCareerLoaded(false); return; }
     if (!router.isReady || typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(id)) return;
     const controller = new AbortController();
     generationRequest.current?.abort(); setGenerating(false);
-    setLetter(null); setLetterRevision(''); setLetterExpiresAt(null); setShowModal(false); setLoadingLetter(true);
+    setLetter(null); setLetterRevision(''); setLetterExpiresAt(null); setShowModal(false); setLoadingLetter(true); setLetterLoadError(false);
     void (async () => {
       try {
         const { data: { session } } = await getSupabaseBrowserClient().auth.getSession();
-        if (!session) return;
+        if (!session) throw new Error('authentication');
         const response = await fetch(`${BACKEND}/api/coverletters/${encodeURIComponent(id)}`, {
           headers: { Authorization: `Bearer ${session.access_token}` }, signal: controller.signal,
         });
-        if (!response.ok) return;
+        if (!response.ok) throw new Error('storage');
         const saved = (await response.json()).letter;
         if (!controller.signal.aborted && saved && typeof saved.content === 'string' && typeof saved.expires_at === 'string') {
           setLetter(saved.content); setLetterRevision(saved.updated_at??'');
@@ -62,7 +64,7 @@ export function useCoverLetter(job: any, setFetchError: (message: string | null)
           if (router.query.letter === '1') setShowModal(true);
         }
       } catch (error) {
-        if (!(error instanceof Error && error.name === 'AbortError')) console.error('Could not load saved cover letter');
+        if (!controller.signal.aborted) setLetterLoadError(true);
       } finally { if (!controller.signal.aborted) setLoadingLetter(false); }
     })();
     const { data: { subscription } } = getSupabaseBrowserClient().auth.onAuthStateChange((event) => {
@@ -72,10 +74,10 @@ export function useCoverLetter(job: any, setFetchError: (message: string | null)
       }
     });
     return () => { controller.abort(); generationRequest.current?.abort(); subscription.unsubscribe(); };
-  }, [id, router.isReady, router.query.letter, enabled]);
+  }, [id, router.isReady, router.query.letter, enabled, reloadLetter]);
 
   const generate = async () => {
-    if (!enabled || !job || generating) return;
+    if (!enabled || !job || generating || loadingLetter || letterLoadError) return;
     const controller = new AbortController(); generationRequest.current = controller;
     setGenerating(true);
     setFetchError(null);
@@ -136,15 +138,17 @@ export function useCoverLetter(job: any, setFetchError: (message: string | null)
       if (Array.isArray(data) && data[0]?.coverLetter) {
         setLetter(data[0].coverLetter); setLetterRevision(''); notifyWorkspace();
         // Generation's response retains its contract; load the actual persisted revision.
-        const persisted = await fetch(`${BACKEND}/api/coverletters/${encodeURIComponent(String(id))}`, {signal:controller.signal,headers:{Authorization:`Bearer ${session.access_token}`}});
         let savedExpiresAt = typeof data[0].expiresAt === 'string' ? data[0].expiresAt : null;
-        if (persisted.ok) {
+        try {
+          const persisted = await fetch(`${BACKEND}/api/coverletters/${encodeURIComponent(String(id))}`, {signal:controller.signal,headers:{Authorization:`Bearer ${session.access_token}`}});
+          if (!persisted.ok) throw new Error('storage');
           const saved = (await persisted.json()).letter;
           if (controller.signal.aborted) return;
-          if (saved && typeof saved.content === 'string' && typeof saved.updated_at === 'string') {
-            setLetter(saved.content); setLetterRevision(saved.updated_at);
-            savedExpiresAt = saved.expires_at;
-          }
+          if (!saved || typeof saved.content !== 'string' || typeof saved.updated_at !== 'string' || !saved.updated_at || typeof saved.expires_at !== 'string') throw new Error('storage');
+          setLetter(saved.content); setLetterRevision(saved.updated_at);
+          savedExpiresAt = saved.expires_at;
+        } catch {
+          if (!controller.signal.aborted) setLetterLoadError(true);
         }
         if (controller.signal.aborted) return;
         setLetterExpiresAt(savedExpiresAt);
@@ -193,7 +197,7 @@ export function useCoverLetter(job: any, setFetchError: (message: string | null)
     } finally {if(!controller.signal.aborted)setSavingLetter(false);}
   };
 
-  return {saveLetter, letterRevision, savingLetter, generating, loadingLetter, letter, letterExpiresAt, deletingLetter, consentOpen, setConsentOpen,
+  return {saveLetter, letterRevision, savingLetter, generating, loadingLetter, letterLoadError, retryLetter: () => setReloadLetter(value => value + 1), letter, letterExpiresAt, deletingLetter, consentOpen, setConsentOpen,
     showModal, setShowModal, career, selectedCareer, setSelectedCareer, careerError, careerLoaded,
     loadCareer, requestGeneration, generate, deleteCoverLetter};
 }

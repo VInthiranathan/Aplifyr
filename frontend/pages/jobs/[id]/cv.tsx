@@ -1,4 +1,5 @@
 import {WorkspaceNav} from '../../../features/jobs/WorkspaceNav';
+import { useUnsavedChanges } from '../../../lib/useUnsavedChanges';
 import {CvAdaptations} from '../../../features/jobs/CvAdaptations';
 import {notifyWorkspace} from '../../../lib/JobProgressContext';
 import { generationDestination } from '../../../lib/generationAccess';
@@ -27,6 +28,7 @@ export default function CvPage() {
   const [template, setTemplate] = useState<CvTemplateId>('elegant');
   const [cv, setCv] = useState<GeneratedCv | null>(null);
   const [draft, setDraft] = useState<CvContent | null>(null);
+  useUnsavedChanges(!!draft && JSON.stringify(draft) !== JSON.stringify(cv?.content));
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
   const [loading, setLoading] = useState(true); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
@@ -41,7 +43,8 @@ export default function CvPage() {
   const owner = useRef<string | null>(null);
   async function call(generate: boolean, controller: AbortController) {
     const { data: { session } } = await getSupabaseBrowserClient().auth.getSession();
-    if (!session) throw new Error('authentication');
+    if (controller.signal.aborted) return;
+    if (!session || (owner.current !== null && owner.current !== session.user.id)) throw new Error('authentication');
     owner.current = session.user.id;
     const response = await fetch(`${getPublicBackendUrl()}/api/cvs/${encodeURIComponent(id)}${generate ? '/generate' : ''}`, {
       method: generate ? 'POST' : 'GET', headers: { Authorization: `Bearer ${session.access_token}` }, signal: controller.signal,
@@ -61,12 +64,18 @@ export default function CvPage() {
   useEffect(() => {
     if (!router.isReady) return;
     const controller = new AbortController(); request.current = controller;
+    owner.current = null;
     downloads.current = 0; setTemplate('elegant');
-    setDraft(null); setSaving(false); savingRef.current = false; setConsentOpen(false); setJob(null); setCv(null); setError(''); setLoading(true); setBusy(false); generating.current = false;
+    setDraft(null); setSaving(false); setDeleting(false); savingRef.current = false; setConsentOpen(false); setJob(null); setCv(null); setError(''); setLoading(true); setBusy(false); generating.current = false;
     if (!/^[A-Za-z0-9_-]{1,100}$/.test(id)) { setError(t('cv.errors.invalidJob')); setLoading(false); return; }
     call(false, controller).catch(e => { if (!controller.signal.aborted) displayError(e); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
     const { data: { subscription } } = getSupabaseBrowserClient().auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT' || (owner.current !== null && session?.user.id !== owner.current)) { request.current?.abort(); setConsentOpen(false); setDraft(null); setCv(null); setJob(null); setError(t('cv.errors.authentication')); }
+      if (event === 'SIGNED_OUT' || (owner.current !== null && session?.user.id !== owner.current)) {
+        request.current?.abort(); setConsentOpen(false); setDraft(null); setCv(null); setJob(null);
+        setBusy(false); setLoading(false); setSaving(false); setDeleting(false); savingRef.current = false; generating.current = false;
+        setError(t('cv.errors.authentication'));
+      }
+      owner.current = session?.user.id ?? null;
     });
     return () => { controller.abort(); request.current?.abort(); subscription.unsubscribe(); };
   }, [id, router.isReady]);
@@ -120,16 +129,18 @@ export default function CvPage() {
   async function deleteCv() {
     if (!cv || deleting || !window.confirm(t('cv.deleteConfirm'))) return;
     setDeleting(true); setError('');
+    const controller = new AbortController(); request.current = controller;
     try {
       const { data: { session } } = await getSupabaseBrowserClient().auth.getSession();
-      if (!session) throw new Error('authentication');
+      if (controller.signal.aborted) return;
+      if (!session || session.user.id !== owner.current) throw new Error('authentication');
       const response = await fetch(`${getPublicBackendUrl()}/api/cvs/${encodeURIComponent(id)}`, {
-        method: 'DELETE', headers: { Authorization: `Bearer ${session.access_token}` },
+        method: 'DELETE', signal: controller.signal, headers: { Authorization: `Bearer ${session.access_token}` },
       });
       if (!response.ok) throw new Error('storage');
-      setCv(null); notifyWorkspace();
-    } catch (e) { displayError(e); }
-    finally { setDeleting(false); }
+      if (!controller.signal.aborted) { setCv(null); notifyWorkspace(); }
+    } catch (e) { if (!controller.signal.aborted) displayError(e); }
+    finally { if (!controller.signal.aborted) setDeleting(false); }
   }
   function scrollTemplates(direction: -1 | 1) {
     const gallery = templateGallery.current;

@@ -1,5 +1,11 @@
 # Privacy controls and safe profile updates
 
+## Account-state isolation corrections — 2026-10-07
+
+The launch review tightens existing profile/CV display boundaries: active account identity scopes mounted profile editors and their career context, superseded reads are cancelled, and late CV sessions cannot load another account's document into the current UI. The existing server authentication, owner RLS and export/deletion contracts remain authoritative. These corrections use the same profile, career and saved-document sources and fields for the same users and purposes; recipients, processors and provider notices are unchanged. Previous account drafts are removed on unmount. Navigation warnings keep unsaved document/note/application text in memory only and add no persistence or retention period. The documented operator decisions on legal basis, retention, backups and processor deletion remain unresolved where stated below.
+
+Notes and post-generation letter recovery reread the same owner records via existing authenticated GET endpoints. Recovering a letter's persisted revision makes no extra AI attempt, grants no consent and sends no additional personal text to a provider. Until recovery succeeds, document editing/regeneration is disabled; the already returned generated text can be copied/downloaded locally. Existing expiry, export, deletion and downstream-copy limitations are unchanged.
+
 ## Consent and enforcement — migration 008
 
 `AiConsent` on job detail and `/privacy` provides separate, initially unchecked choices for Gemini and Groq. Users can withdraw even when the provider is disabled. Search/profile access do not require AI consent. Failed writes do not optimistically grant consent. No blanket account, analytics or marketing consent is added. [IMY consent requirements](https://www.imy.se/verksamhet/dataskydd/det-har-galler-enligt-gdpr/rattslig-grund/samtycke/).

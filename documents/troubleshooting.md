@@ -25,6 +25,10 @@ Letters use `GEMINI_API_KEY`; CV uses `GEMINI_CV_API_KEY` without key fallback. 
 
 A removed ad prevents new generation and rewriting. Owner notes and saved letters remain accessible on a valid job route; an unexpired saved CV is read using its saved context. Failed prepared-document reads show an error and retry rather than an empty queue or zero ready count. Check the failed API response separately from JobTech availability and filters.
 
+Failed saved-letter/application reads on job detail also show an error and retry. Do not regenerate or mark applied to work around a failed read. Job detail ignores legacy ad payloads in URL query parameters and requires the requested ID in backend responses.
+
+If letter generation succeeds but the following saved-document read fails, its text remains available to copy/download. Editing and regeneration are disabled until **Retry** loads the persisted revision. This retry does not generate another letter or call the AI provider. Failed job-note reads also offer **Retry**; a failed save keeps the unsaved text.
+
 ## Profile or document changes do not persist
 
 Verify authentication, schema and the mutation response. A stale revision returns 409; keep the draft and reload rather than removing concurrency checks. Letters and CVs require explicit Save changes; PDF export alone does not save. Manual saves preserve original expiry. Profile images are initials-only and file uploads are disabled.

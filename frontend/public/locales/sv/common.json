@@ -273,7 +273,8 @@
     "loadingSaved": "Hämtar sparat brev…",
     "download": "Exportera PDF",
     "downloading": "Exporterar…",
-    "downloadError": "PDF-filen kunde inte skapas. Dina ändringar finns kvar. Försök igen."
+    "downloadError": "PDF-filen kunde inte skapas. Dina ändringar finns kvar. Försök igen.",
+    "loadError": "Ditt sparade brev kunde inte laddas. Försök igen innan du skapar ett nytt."
   },
   "user": {
     "noData": "Kunde inte hämta användardata – är backend igång?",
@@ -613,7 +614,7 @@
   },
   "workspace": {
     "adUnavailable": "Annonsen kan inte hämtas. Du kan fortfarande hantera dina sparade anteckningar, dokument och ansökningar. Ny AI-generering kräver en tillgänglig annons.",
-    "retry": "F\u00f6rs\u00f6k igen",
+    "retry": "Försök igen",
     "title": "Din arbetsyta",
     "tabs": {
       "overview": "Översikt",
@@ -699,6 +700,7 @@
       "education": "Utbildningar i CV:t: {{titles}}",
       "edited": "Du har redigerat dokumentet. Dina ändringar är inte automatiskt faktagranskade av AI."
     },
-    "submitted": "Ansökan markerad som skickad"
+    "submitted": "Ansökan markerad som skickad",
+    "unsavedChanges": "Du har osparade ändringar. Vill du lämna och kasta dem?"
   }
 }

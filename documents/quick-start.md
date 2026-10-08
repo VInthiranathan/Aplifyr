@@ -140,6 +140,28 @@ npm run build
 
 ## Local Development Notes
 
+### Optional browser check with synthetic data
+
+After building the final frontend, start a separate local production server from `frontend/`:
+
+```sh
+node node_modules/next/dist/bin/next start -p 3100
+```
+
+In another terminal, also from `frontend/`, run:
+
+```sh
+node scripts/check-launch-ui.cjs
+```
+
+This optional check requires Playwright and a Chromium installation in the validation environment. Both are available in the managed review workspace; no new app dependency or browser installation is made by the script. Set `APLIFYR_UI_TEST_BROWSER` to an installed Chromium executable when needed, or use Playwright's installed browser. `APLIFYR_UI_TEST_BASE_URL` defaults to `http://localhost:3100` and accepts only localhost/127.0.0.1 URLs. Frontend public Supabase configuration must be present at build time and available through the environment or `.env.local` when running the check.
+
+The browser uses a synthetic client session and intercepts private/API/provider requests with fixtures. Only public job pages and their local assets/route data reach the running frontend. No real Auth, AI, consent grant, database mutation or personal test data is used. Checks cover saved favorites across reload/removal, one confirmation when closing an unsaved inline letter, rejected navigation retaining the draft, note read retry/write failure, and saved-revision retry after simulated generation without another generation request. They run in both locales, mobile/desktop widths and light/dark themes, with keyboard navigation, width and nonce-CSP checks. This verifies UI behavior, not server authentication, actual AI generation or production persistence; those remain separate launch checks.
+
+The ordinary frontend regression suite remains `npm test`; this browser script is not part of its automatic execution. Runtime/browser sandbox permissions may be necessary even when the target server is local.
+
+### Service notes
+
 - backend CORS is configuration-driven and can use `CORS_ALLOWED_ORIGINS`
 - the dashboard loads personalized JobTech matches; JSON jobs are a separate demo endpoint
 - the profile page depends on Supabase auth and the `profiles` table

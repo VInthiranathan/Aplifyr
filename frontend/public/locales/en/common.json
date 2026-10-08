@@ -273,7 +273,8 @@
     "loadingSaved": "Loading saved letter…",
     "download": "Export PDF",
     "downloading": "Exporting…",
-    "downloadError": "Could not create the PDF. Your edits are still here. Please try again."
+    "downloadError": "Could not create the PDF. Your edits are still here. Please try again.",
+    "loadError": "Your saved letter could not be loaded. Retry before generating a new one."
   },
   "user": {
     "noData": "Could not fetch user data – is the backend running?",
@@ -699,6 +700,7 @@
       "education": "Education in the CV: {{titles}}",
       "edited": "You have edited this document. Your changes are not automatically fact-checked by AI."
     },
-    "submitted": "Application marked as sent"
+    "submitted": "Application marked as sent",
+    "unsavedChanges": "You have unsaved changes. Leave and discard them?"
   }
 }
