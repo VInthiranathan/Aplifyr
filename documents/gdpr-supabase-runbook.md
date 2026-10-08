@@ -63,6 +63,16 @@ Den officiella [Next.js 16.3.8-releasen](https://github.com/vercel/next.js/relea
 
 PR:en är inte mergad. Vercels godkända status för kodrevisionen avser preview och bevisar inte publicering i produktion. Merge och verifiering av den automatiska produktionsdeploymenten återstår tills säkerhetskontrollen är godkänd. Ingen hostinginställning, migration eller notice-aktivering har ändrats.
 
+### Godkänd säkerhetspatch — 2026-10-08
+
+Ägaren har uttryckligen godkänt uppdateringen från Next.js `16.3.6` till exakt `16.3.8`. Frontendens manifest och låsfil uppdateras tillsammans med Nexts versionsbundna env/SWC-paket. Övriga paketversioner, Node/.NET/React, hostinginställningar, migrationer och notices omfattas inte av ändringen. Den tidigare publiceringskontrollen ovan avser den opatchade revisionen; merge kräver nya godkända kontroller för den slutliga patchade PR-revisionen. Automatisk deployment efter den redan godkända mergen ska verifieras separat från preview och lokala tester.
+
+Lokal verifiering av den införda patchen: `npm ci` (inklusive installationsskript), ordinarie `npm test` med 144 godkända tester, produktionsbygge och kontroll av jobb-/CV-routemoduler med `require(ESM)` avstängt passerade. Produktionsberoendeauditen rapporterade noll fynd. Detta ersätter den tidigare separata kandidatutvärderingen för lokal kodvalidering; slutliga hosted-kontroller återstår.
+
+Chromium-kontrollen kördes på nytt mot patchens lokala produktionsbygge: samtliga åtta kombinationer av svenska/engelska, mobil/desktop och ljust/mörkt tema passerade, inklusive favoriter, osparade utkast, läs-/skrivfel, revisionsåterförsök, tangentbord och nonce-CSP. Inga oväntade sidfel eller anrop observerades. Kontrollen använder fortsatt syntetisk session och avlyssnade privata/AI-anrop; verklig Auth, AI och databasverifiering återstår.
+
+Vid read-only hostinginspektion nekade Vercels API teamåtkomst med 403; ingen Vercel CLI fanns för alternativ åtkomst. Render-anslutningen hade ingen bekräftad workspace vald, så ingen tjänst-/deploymentinspektion gjordes där. GitHubs deploymentstatus och publika HTTP-kontroller följs efter merge; de ersätter inte plattformarnas privata bygg-/runtime-loggar.
+
 ## Verifierad status — 2026-10-03
 
 Appen är i utvecklings-/teststadium. PR #34 är mergad till `main` på `5d1da64276b215cc7cb74b6364198b3f72524ba8`. Arbetsyta, privata anteckningar, sparad brevredigering och AI-förslag finns i koden. Detta är inte ett godkännande för offentlig lansering.
