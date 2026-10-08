@@ -55,6 +55,14 @@ Kontrollen använder en syntetisk klientsession och fångar privata/API-/leveran
 
 Ägaren har begärt att de granskade ändringarna publiceras och mergas till `main` om kontrollresultaten är godkända. Publiceringen ska gå via PR med godkända frontend-/backend-/Docker- och säkerhetskontroller för PR:ens slutliga revision. Begäran omfattar merge och dess automatiska deployment; inga separata ändringar av hostinginställningar, runtime-versioner, schema eller AI-notices ingår. Kvarstående lanseringskrav ovan gäller även efter merge. Lokal verifiering, PR-kontroller och faktisk hosted-version ska fortsatt redovisas var för sig.
 
+### Publiceringskontroll — 2026-10-08
+
+Rättningarna har publicerats i [PR #37](https://github.com/VInthiranathan/Aplifyr/pull/37) på `work`, kodrevision `f98afb0e6c64c5fb7f969a5823bb3bda72495ce5`. [CI 37728227647](https://github.com/VInthiranathan/Aplifyr/actions/runs/37728227647) passerade frontend, backend och Docker. [Security checks 37728227688](https://github.com/VInthiranathan/Aplifyr/actions/runs/37728227688) passerade hemlighetsskanningen men misslyckades i produktionsberoendeauditen: `next@16.3.6` omfattas nu av rapporterade säkerhetsvarningar, inklusive hög SSRF-varning GHSA-cjq9-62q9-8jv4. Backendens beroendeaudit kördes inte i detta jobb eftersom steget före misslyckades. Den tidigare lokala auditen utan produktionsfynd ovan är historisk och ersätter inte detta resultat.
+
+Den officiella [Next.js 16.3.8-releasen](https://github.com/vercel/next.js/releases/tag/v16.3.8) innehåller rättningarna. En separat tillfällig manifest-/låsfilskopia med exakt `16.3.8` gav noll produktionsfynd i `npm audit --omit=dev`; bara Next och dess versionsbundna env/SWC-paket ändrades. Detta är en kandidatutvärdering, ingen uppdatering av appens versionsfiler eller verifierad driftsättning. `AGENTS.md` kräver uttryckligt godkännande av versionsändringar som påverkar Render/Vercel; denna patch behöver därför ägarens specifika godkännande före införande och nya fullständiga PR-kontroller.
+
+PR:en är inte mergad. Vercels godkända status för kodrevisionen avser preview och bevisar inte publicering i produktion. Merge och verifiering av den automatiska produktionsdeploymenten återstår tills säkerhetskontrollen är godkänd. Ingen hostinginställning, migration eller notice-aktivering har ändrats.
+
 ## Verifierad status — 2026-10-03
 
 Appen är i utvecklings-/teststadium. PR #34 är mergad till `main` på `5d1da64276b215cc7cb74b6364198b3f72524ba8`. Arbetsyta, privata anteckningar, sparad brevredigering och AI-förslag finns i koden. Detta är inte ett godkännande för offentlig lansering.
