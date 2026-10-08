@@ -2,6 +2,8 @@
 
 ## Current stage
 
+The 2026-10-08 follow-up fixes root/build dependency advisories, upgrades the approved Tailwind build chain to 4.3.3, strengthens CI audits and password recovery, and adds local Auth/load/deletion-restore checks. Supabase platform work was excluded by the owner during this follow-up. Current local results and outstanding launch decisions are recorded at the top of [the operations runbook](gdpr-supabase-runbook.md). These changes have not been published or deployed.
+
 Development/testing; public-launch prerequisites remain open. PR #34 is merged into main. See [the runbook](gdpr-supabase-runbook.md) for dated CI, migration, notice activation and deployment evidence. Code availability does not prove that the entire hosted flow is verified.
 
 ## Purpose

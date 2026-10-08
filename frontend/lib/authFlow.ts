@@ -6,15 +6,17 @@ export function confirmationHref(returnTo: unknown, locale?: string): string {
 }
 
 /** Map codes only: provider messages may contain private or implementation details. */
-export function authErrorKey(error: unknown, operation: 'signup' | 'login' | 'resend'): string {
+export function authErrorKey(error: unknown, operation: 'signup' | 'login' | 'resend' | 'recovery' | 'password'): string {
   const value = error as { code?: string; status?: number } | null;
   if (value?.status === 429 || ['over_request_rate_limit', 'over_email_send_rate_limit'].includes(value?.code ?? ''))
     return 'auth.errors.rateLimited';
   switch (value?.code) {
-    case 'user_already_exists': case 'email_exists': return 'auth.errors.emailAlreadyRegistered';
+    case 'user_already_exists': case 'email_exists': return operation === 'recovery' ? 'auth.errors.unavailable' : 'auth.errors.emailAlreadyRegistered';
     case 'email_not_confirmed': return 'auth.errors.emailNotConfirmed';
     case 'invalid_credentials': return 'auth.errors.invalidCredentials';
     case 'weak_password': return 'auth.errors.weakPassword';
+    case 'same_password': return 'auth.errors.samePassword';
+    case 'reauthentication_needed': case 'reauthentication_not_valid': return 'auth.errors.reauthenticationRequired';
     case 'email_address_invalid': case 'validation_failed': return 'auth.errors.invalidDetails';
     default: return operation === 'signup' ? 'auth.errors.signupUnavailable' : 'auth.errors.unavailable';
   }

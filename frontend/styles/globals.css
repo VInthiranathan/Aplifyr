@@ -1,7 +1,6 @@
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../tailwind.config.js";
 
 @layer components {
   .app-hover-standard {
@@ -17,7 +16,7 @@
   }
 
   .app-job-list-card {
-    @apply app-card-base app-card-hover rounded-2xl p-4 sm:rounded-3xl sm:p-6;
+    @apply bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-white/5 shadow-sm dark:shadow-none transition-all hover:bg-slate-50 dark:hover:bg-white/5 hover:border-gray-300 dark:hover:border-white/10 rounded-2xl p-4 sm:rounded-3xl sm:p-6;
   }
 
   .app-page-shell {

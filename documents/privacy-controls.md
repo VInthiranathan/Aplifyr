@@ -1,5 +1,35 @@
 # Privacy controls and safe profile updates
 
+## Password recovery hardening — 2026-10-08
+
+The recovery request preserves the selected locale, trims the email address, rejects concurrent submissions and applies a 60-second UI cooldown after successful requests. Its success text does not assert that the address has an account or that mail arrived. Provider/transport errors map to local translation keys; raw messages are never rendered.
+
+The reset page exchanges bounded PKCE callback input through the shared `authCallback`/cookie-aware server client, with a ten-second outbound timeout, private/no-store and no-referrer headers, then redirects to a clean URL without code/error payloads. The outcome parameter is presentation only: it cannot create a session or authorize a password change. Invalid callback outcomes disable the form. Password mutation still relies on Supabase Auth's current session and hosted password/reauthentication policy; this is not an additional recovery-only authorization policy.
+
+Password drafts are memory-only and cleared when the account identity changes and after successful mutation. Late initial reads cannot restore a logged-out account, and previous-account completions cannot display success or navigate the current account. Duplicate mutation is blocked during an attempt and after success. Failed app navigation preserves the successful result and a continuation link. Both locales provide accessible labels and password-visibility controls.
+
+Purpose, users and recipient remain existing account access/recovery through Supabase Auth. The app sends the email for recovery and new password only to the existing Auth service; it adds no processor, analytics, new profile field or retention deadline. The code/verifier are temporary Auth transport, and provider text is excluded from UI/log output. Hosted Auth configuration, real email delivery, session revocation and applicable processor retention have not been established by these local tests. Account legal basis and public identity/contact still require the operator decisions below; AI consent is not their legal basis.
+
+## Public identity and notice completion — operator decisions pending
+
+The owner supplied **Aplifyr support** as the contact display name. No monitored email address or full legal identity was supplied. The existing public page remains configuration-driven; no fictional name, address, contract, legal basis or retention period has been published.
+
+The reviewed public notices in Swedish and English must cover the following verified data map, with the remaining decisions completed before `PRIVACY_NOTICE_SV`, `PRIVACY_NOTICE_EN` and `PRIVACY_CONTACT_EMAIL` are configured:
+
+| Purpose | Actual data/processing | Missing notice/operational decision |
+|---|---|---|
+| Registration, login and recovery | Email, Auth account/session data; password handled by Supabase Auth | Legal identity, legal basis, SMTP provider, session/account retention and monitored contact |
+| Saved profile and career | Owner-entered name, biography, skills, preferences, optional contact fields and career entries | Applicable legal basis and inactive-account retention |
+| Application workspace | Owner-bound applications, status, notes and follow-ups | Legal basis and retention criterion; deletion is available for these records |
+| Optional AI documents/rewrite | Selected facts sent only to the specifically consented provider/version; saved CV/letter expire after seven days | Actual commercial provider terms, processing roles, agreements, transfers, provider retention/deletion and final informed notice |
+| Browser features | Account-scoped local favorites and theme; PDF/JSON downloads remain on the user's device | Explain browser cleanup and downloaded-copy scope |
+| Operation and rights requests | Hosting/Auth/provider diagnostics and support requests | Actual access, log retention, responsible contact, case retention and incident route |
+| Backups/restoration | Copies can predate account deletion | Actual provider backup retention, verified restore plan and separate minimal deletion ledger |
+
+The seven-day deadline is for generated documents in the application; it is not a claim about providers, log records, downloads or backups. The application has authenticated export and owner CRUD, but account deletion remains an operator workflow. Describe that workflow and monitored contact accurately, including provider requests and restoration replay. Explain withdrawal, relevant rights and complaints to IMY; do not promise immediate erasure from every system.
+
+For every provider, record the exact contracted service/tier, agreement/version and acceptance evidence, regions/subprocessors and remote access, training/use terms, retention/deletion route and transfer mechanism where needed. This cannot be inferred from a provider name or EU region. Current sources and an operator decision are required before finalizing those claims. See the [runbook](gdpr-supabase-runbook.md) for the rollout and launch evidence.
+
 ## Account-state isolation corrections — 2026-10-07
 
 The launch review tightens existing profile/CV display boundaries: active account identity scopes mounted profile editors and their career context, superseded reads are cancelled, and late CV sessions cannot load another account's document into the current UI. The existing server authentication, owner RLS and export/deletion contracts remain authoritative. These corrections use the same profile, career and saved-document sources and fields for the same users and purposes; recipients, processors and provider notices are unchanged. Previous account drafts are removed on unmount. Navigation warnings keep unsaved document/note/application text in memory only and add no persistence or retention period. The documented operator decisions on legal basis, retention, backups and processor deletion remain unresolved where stated below.
