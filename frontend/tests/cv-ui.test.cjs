@@ -3,6 +3,7 @@ const templatesModule={exports:{}};
 vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname,'../lib/cvTemplates.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{module:templatesModule,exports:templatesModule.exports});
 function setup(fetch){
  const mocks={
+ '../../../lib/useUnsavedChanges':{useUnsavedChanges:()=>()=>true},
  '../../../features/jobs/WorkspaceNav':{WorkspaceNav:()=>null},
  '../../../features/jobs/CvAdaptations':{CvAdaptations:()=>null},
  '../../../lib/JobProgressContext':{notifyWorkspace(){}},

@@ -257,7 +257,7 @@ export function renderQualifications(
 
   if (
     typeof job.qualifications === "object" &&
-    typeof job.qualifications.text === "string"
+    typeof job.qualifications?.text === "string"
   ) {
     const normalized = unescapeHtml(job.qualifications.text)
       .replace(/\\n/g, "\n")

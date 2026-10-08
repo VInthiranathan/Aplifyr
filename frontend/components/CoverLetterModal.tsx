@@ -1,4 +1,5 @@
 import RewriteSuggestion from './RewriteSuggestion';
+import { useUnsavedChanges } from '../lib/useUnsavedChanges';
 import { safeExternalUrl } from "../lib/safeHtml";
 import {useDialogFocus} from '../lib/useDialogFocus';
 import { X, Copy, RefreshCw, Edit2, Send, Check, Trash2, Loader2, Download } from "lucide-react";
@@ -9,6 +10,7 @@ import { Button } from "./ui/button";
 interface CoverLetterModalProps {
   inline?: boolean;
   canGenerate?: boolean;
+  canEdit?: boolean;
   jobId?: string;
   revision?: string;
   onSave?: (content:string)=>Promise<void>;
@@ -27,7 +29,7 @@ interface CoverLetterModalProps {
 }
 
 export default function CoverLetterModal({
-  isOpen, canGenerate=true, inline=false, jobId, revision, onSave, isSaving=false,
+  isOpen, canGenerate=true, canEdit=true, inline=false, jobId, revision, onSave, isSaving=false,
   onClose,
   letter,
   jobTitle,
@@ -41,9 +43,18 @@ export default function CoverLetterModal({
 }: CoverLetterModalProps) {
   const { t, i18n } = useTranslation("common");
   const [rewriteDialog,setRewriteDialog]=useState(false);
-  const dialog=useDialogFocus(isOpen&&!inline&&!rewriteDialog,onClose);
   const [isEditing, setIsEditing] = useState(false);
   const [editedLetter, setEditedLetter] = useState(letter);
+  const confirmDiscard = useUnsavedChanges(isOpen && isEditing && editedLetter !== letter);
+  const close = () => {
+    if (isSaving) return;
+    // Inline close navigates through the route guard. Keep the draft until that
+    // navigation succeeds instead of asking again and clearing it beforehand.
+    if (inline) { onClose(); return; }
+    if (!confirmDiscard()) return;
+    setEditedLetter(letter); setIsEditing(false); setSaveError(''); onClose();
+  };
+  const dialog=useDialogFocus(isOpen&&!inline&&!rewriteDialog,close);
   const [saveError, setSaveError] = useState('');
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState(false);
@@ -106,7 +117,8 @@ export default function CoverLetterModal({
             {expiresAt && <p className="text-xs text-gray-500 dark:text-white/50 mt-1">{t('coverLetter.savedUntil', { date: new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium' }).format(new Date(expiresAt)) })}</p>}
           </div>
           <Button
-            onClick={onClose}
+            onClick={close}
+            disabled={isSaving}
             aria-label={t('privacy.close')}
             variant="ghost"
             size="icon"
@@ -146,7 +158,7 @@ export default function CoverLetterModal({
               {t(downloading ? 'coverLetter.downloading' : 'coverLetter.download')}
             </Button>
             <Button
-              disabled={isSaving||isRegenerating||isDeleting}
+              disabled={!canEdit||isSaving||isRegenerating||isDeleting}
               onClick={async () => {
                 if(!isEditing){setSaveError('');setIsEditing(true);return;}
                 try {if(onSave&&editedLetter!==letter)await onSave(editedLetter);setSaveError('');setIsEditing(false);}
@@ -167,7 +179,7 @@ export default function CoverLetterModal({
               {copied ? t("coverLetter.copied") : t("coverLetter.copy")}
             </Button>
             <Button
-              onClick={onRegenerate}
+              onClick={() => { if (confirmDiscard()) onRegenerate(); }}
               disabled={!canGenerate||isSaving||isRegenerating}
               variant="secondary"
               className="h-auto min-w-0 px-3 py-2 sm:px-4"
@@ -179,7 +191,7 @@ export default function CoverLetterModal({
               {t("coverLetter.regenerate")}
             </Button>
             <Button
-              onClick={onDelete}
+              onClick={() => { if (confirmDiscard()) onDelete(); }}
               disabled={isSaving||isDeleting || isRegenerating}
               variant="secondary"
               className="h-auto min-w-0 px-3 py-2 sm:px-4"

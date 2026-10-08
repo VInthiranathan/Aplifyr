@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useUnsavedChanges } from '../../lib/useUnsavedChanges';
 import { useTranslation } from "next-i18next";
 import { Button } from "../../components/ui/button";
 import { APPLICATION_STATUSES } from "../../lib/applicationValidation";
@@ -22,6 +23,7 @@ export function ApplicationPanel({
   const [date, setDate] = useState("");
   const [next, setNext] = useState("");
   const [follow, setFollow] = useState("");
+  useUnsavedChanges(!!application && (status !== application.status || date !== application.applied_at || next !== (application.next_step ?? '') || follow !== (application.next_step_at ?? '')));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);

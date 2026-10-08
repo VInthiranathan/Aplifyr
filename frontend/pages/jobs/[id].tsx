@@ -269,7 +269,7 @@ function JobDetailContent() {
                         </>
                       );
                     })()}
-                    {userId && !applicationLoading && (application ? (
+                    {userId && !applicationLoading && !applicationModel.applicationLoadError && (application ? (
                       <Button asChild variant="secondary" className="h-auto w-full px-4 py-2.5">
                         <Link href="/applications"><ClipboardCheck size={15} />{t("applications.openTracker")}</Link>
                       </Button>
@@ -289,7 +289,7 @@ function JobDetailContent() {
                   {fetchError && <p role="alert" className="mb-3 text-sm text-red-600 dark:text-red-400">{fetchError}</p>}
                   <Button
                     onClick={() => !userId ? router.push(signInHref(`/jobs/${id}`)) : letter ? setShowModal(true) : requestGeneration()}
-                    disabled={generating || loadingLetter || deletingLetter}
+                    disabled={generating || loadingLetter || letterModel.letterLoadError || deletingLetter}
                     className="h-auto w-full px-4 py-2.5"
                   >
                     {generating ? (
@@ -317,6 +317,7 @@ function JobDetailContent() {
       {/* Cover Letter Modal */}
       {letter && active!=='letter' && (
         <CoverLetterModal
+          canGenerate={!letterModel.letterLoadError} canEdit={!letterModel.letterLoadError}
           key={String(id)} jobId={typeof id==='string'?id:undefined} revision={letterRevision} onSave={saveLetter} isSaving={savingLetter}
           isOpen={showModal}
           onClose={() => setShowModal(false)}

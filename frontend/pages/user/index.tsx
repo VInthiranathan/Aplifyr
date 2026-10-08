@@ -1,4 +1,5 @@
 import ProfileReadiness from '../../components/ProfileReadiness';
+import { useAuthSession } from '../../lib/AuthSessionContext';
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { safeReturnTo } from "../../lib/guestAccess";
@@ -194,6 +195,16 @@ const saveProfile = async (nextUser: User, section: "profile" | "bio" | "skills"
 };
 
 export default function UserPage({ user }: Props) {
+  const { userId, loading } = useAuthSession();
+  const { t } = useTranslation('common');
+  if (isSupabaseConfigured && loading) return <p role="status">{t('jobDetail.loading')}</p>;
+  if (isSupabaseConfigured && !userId) return <Link href="/auth">{t('auth.signIn')}</Link>;
+  // A mounted page can outlive its SSR session (for example after another tab
+  // signs out). Never seed the next owner's editors with the previous profile.
+  return <UserContent key={userId ?? 'local'} user={user && (!isSupabaseConfigured || user.id === userId) ? user : null} />;
+}
+
+function UserContent({ user }: Props) {
   const router = useRouter();
   const returnTo = safeReturnTo(router.query.returnTo);
   const { t } = useTranslation("common");
@@ -216,6 +227,7 @@ export default function UserPage({ user }: Props) {
   );
 
   useEffect(() => {
+    const controller = new AbortController();
     // if SSR didn't provide a user/profile, try fetching client-side from Supabase
     if (user === null) {
       setClientProfile(undefined); // loading
@@ -223,9 +235,11 @@ export default function UserPage({ user }: Props) {
         try {
           const res = await fetch("/api/profile", {
             credentials: "same-origin",
+            signal: controller.signal,
           });
           if (!res.ok) throw new Error("fetch failed");
           const data = await res.json();
+          if (controller.signal.aborted) return;
           if (data.profile) {
             const mapped = mapProfileToUser(data.profile);
             setClientProfile(mapped);
@@ -236,6 +250,7 @@ export default function UserPage({ user }: Props) {
             setEditedUser({ ...emptyUser, id: data.userId });
           }
         } catch (e) {
+          if (controller.signal.aborted) return;
           setClientProfile(null);
           setEditedUser({ ...emptyUser });
         }
@@ -244,6 +259,7 @@ export default function UserPage({ user }: Props) {
       setClientProfile(user);
       setEditedUser(user);
     }
+    return () => controller.abort();
   }, [user]);
 
   const handleSaveProfile = async () => {

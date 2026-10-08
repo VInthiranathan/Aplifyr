@@ -1,5 +1,78 @@
 # Supabase och EU-GDPR – åtgärdsguide för Aplifyr
 
+## Lanseringsgranskning — 2026-10-07
+
+Granskningen gäller arbetskopian på bascommit `f891681`, med nedanstående rättningar. Vid den lokala granskningen var ändringarna ännu inte publicerade. Resultaten från dåvarande hosted-app avser dess befintliga version och bevisar inte att den kör rättningarna. **Publik lansering är ännu inte godkänd:** kvarstående verifiering och operatörsbeslut anges nedan.
+
+### Projektägare och testmiljö — uppgift från ägaren 2026-10-07
+
+Aplifyr drivs av projektägaren personligen som ett eget projekt, inte av ett företag. Ingen separat staging-/testmiljö finns för närvarande. Fortsatt verifiering görs därför lokalt med syntetiska uppgifter där möjligt; lokala UI-fixtures verifierar inte hosted Auth, leverantörsinställningar, verklig e-post eller radering i drift. Ingen stagingmiljö har skapats och inga driftinställningar har ändrats utifrån detta besked.
+
+Publikt namn/identitet, bevakad projektkontakt, faktiska leverantörsvillkor och lagringsrutiner återstår att fastställa för integritetsinformationen. Ett företagsnamn ska inte uppfinnas eller läggas in som platshållare. Projektägaren ansvarar för de kvarstående drift- och lanseringsbesluten i denna runbook; beskedet avgör inte i sig tillämpliga rättsliga grunder eller andra dataskyddskrav.
+
+### Verifierade fel som har rättats
+
+| Fel och konsekvens | Rättning |
+|---|---|
+| Jobbdetaljen kunde använda annonsinnehåll från URL-parametern `data`, visa en annan annons än valt ID eller behålla gammalt innehåll efter navigering. | Läs endast den kanoniska annonsen via API, validera ID och svar, avbryt gamla anrop och töm tidigare innehåll. |
+| `null` i annonsens kvalifikationer kunde krascha rendering. | Hantera saknade kvalifikationer utan krasch. |
+| Misslyckad läsning av sparat brev eller ansökan behandlades som tom data; användaren kunde fortsätta utan att se läsfelet. | Visa lokaliserat fel och försök igen; spärra berörda skrivåtgärder tills läsningen lyckas. |
+| Även läsningen av sparad revision efter brevgenerering kunde misslyckas utan tydligt fel. Redigering erbjöds trots saknad revision. | Behåll genererad text för kopiering/nedladdning, visa läsfel och spärra redigering/omgenerering tills återförsök hämtar den sparade revisionen. Inget nytt AI-anrop görs vid återförsök. |
+| Ett tillfälligt läsfel för anteckningar krävde att användaren lämnade eller laddade om sidan. | Lägg till lokaliserat återförsök. Skrivningar förblir spärrade under läsfel och utkast bevaras vid skrivfel. |
+| Osparade ändringar i brev, CV, anteckningar och ansökningsuppgifter kunde försvinna vid navigering eller stängning. | Bekräfta kassering vid navigering och relevanta dialogåtgärder, samt varna före sidstängning. |
+| Stängning av ett osparat inline-brev gav två bekräftelser; utkastet kunde tömmas före avslutad navigering. | Låt route-skyddet bekräfta en gång och behåll utkastet tills navigeringen lyckas. |
+| Tidigare kontos profil eller sent CV-svar kunde påverka vyn efter kontobyte/utloggning. | Knyt vy och svar till aktuell kontoidentitet, avbryt gamla läsningar och töm tidigare kontos tillstånd. |
+| Två felaktiga integritetsvärden i rotens låsfil stoppade ren installation med `EINTEGRITY`. | Återställ registry-verifierade checksummor för `has-flag@4.0.0` och `rxjs@7.8.2`, utan versionsändringar. |
+
+Inga nya behandlingar, mottagare eller lagringstider införs av rättningarna. Kontraktsändringarna beskrivs även i `application-workspace.md`, `privacy-controls.md` och `troubleshooting.md`.
+
+Prioritering och kodankare (radnummer i den granskade arbetskopian): kontoisolering **hög**, `frontend/pages/user/index.tsx:204` och `frontend/pages/jobs/[id]/cv.tsx:67`; förfalskad annonskälla **hög**, `frontend/features/jobs/useJobDetails.ts:19`; null-krasch **medel**, `frontend/components/JobAdContent.tsx:260`; sparade läsfel **medel**, `frontend/features/jobs/useCoverLetter.ts:49` och `frontend/features/jobs/useJobApplication.ts:23`; misslyckad revisionsläsning efter generering **medel**, `frontend/features/jobs/useCoverLetter.ts:143`; osparade ändringar **medel**, `frontend/lib/useUnsavedChanges.ts:6`; dubbel bekräftelse **medel**, `frontend/components/CoverLetterModal.tsx:49`; anteckningsåterförsök **låg**, `frontend/features/jobs/JobNotes.tsx:145`; installationsstopp **medel**, `package-lock.json:34`. Prioriteringen beskriver teknisk användarpåverkan, inte bevis på inträffad incident.
+
+### Utförd verifiering
+
+- Frontend: 144 tester i samtliga 37 testfiler passerade, inklusive tolv nya beteenderegressioner i `launch-regressions.test.cjs`. Slutkörningen använde `node --test --test-isolation=none tests/*.test.cjs` eftersom processisoleringen inte fungerade i den begränsade exekveringsmiljön; ordinarie testscript/CI är oförändrade. Produktionsbygge och kontroll av jobb-/CV-routemoduler passerade på slutlig kod. Rotens tidigare `npm ci --ignore-scripts` passerade efter checksumrättningen; detta verifierar inte postinstall-skriptet.
+- Backend: Release-bygge utan varningar/fel. CV-, matchnings-, workspace- och säkerhetsharnessar passerade, inklusive ägargränser, revisionskonflikter, reservationsskydd och begränsning av samtidiga anrop.
+- Chromium mot det korrigerade lokala produktionsbygget: publika sidor på svenska/engelska, 1440- och 390-pixlars bredd, ljus/mörk konfiguration, nonce-CSP och ingen horisontell overflow. Inloggning med testkonto/servercookies, brevets läsfel/återförsök samt bevarat utkast och bekräftad tangentbordsnavigering passerade. Ingen oväntad sidkrasch observerades. Annons-/brevfixtures var syntetiska.
+- De tre sista rättningarna (inline-stängning, återförsök för anteckningar och revisionsläsning efter generering) har verifierats med beteendetester och ett nytt produktionsbygge. Ovanstående Chromium-körning föregick dessa rättningar; de har därefter verifierats i den lokala körningen 2026-10-08 nedan. Beroendeuppdateringar och hosted-konfiguration har inte ändrats under uppföljningen.
+- Befintlig hosted-app: testkontots profil, karriär, ansökningar, workspace, kö, förberedda jobb, samtyckesläsning och export svarade framgångsrikt. Reversibla CRUD-/konflikttester för profil, karriär, ansökningar och anteckningar passerade; teständringar återställdes/raderades. Utloggad privat API-åtkomst nekades. Favoritflödet i webbläsaren kunde inte slutverifieras efter söktimeout; separat läsning av backend/JobTech gav senare HTTP 200.
+- Beroendeaudit: frontendens produktionsberoenden hade inga rapporterade sårbarheter; .NET-auditen rapporterade inga sårbara paket. Frontendens fullständiga utvecklings-/byggträd hade fortfarande sju fynd (fem höga, två måttliga), beskrivna nedan. Granskningen är ingen garanti för att alla fel eller sårbarheter har upptäckts.
+
+### Lokal webbläsarverifiering — 2026-10-08
+
+`frontend/scripts/check-launch-ui.cjs` passerade mot den senaste arbetskopians produktionsbygge på localhost. Samtliga åtta kombinationer av svenska/engelska, 390/1440 pixlars bredd och ljust/mörkt tema passerade. Verifierat: favorit sparas, finns efter omladdning och kan tas bort; inline-brev frågar en gång per stängningsförsök och behåller utkast vid nekad navigering; anteckningsläsning kan återförsökas och misslyckad skrivning behåller texten; misslyckad revisionsläsning efter simulerad generering spärrar redigering/omgenerering och återförsöket gör inget nytt genereringsanrop. Tangentbordsstängning, ingen horisontell overflow och nonce-CSP verifierades. Inga oväntade sidfel eller anrop observerades.
+
+Kontrollen använder en syntetisk klientsession och fångar privata/API-/leverantörsanrop i webbläsaren med fixtures. Endast den lokala frontendens publika jobbsida, route-data och statiska filer hämtas från servern. Ingen riktig Auth-inloggning, AI-generering, samtyckestilldelning eller databasändring görs. Resultatet verifierar UI-beteende; det ersätter inte verkliga auth-, leverantörs-, persistens- eller raderingstester. Reproducerbara körinstruktioner och verktygskrav finns i `quick-start.md` under "Optional browser check with synthetic data". Ingen stagingmiljö eller ny driftsättning har skapats.
+
+### Återstår före lansering
+
+1. Åtgärda och verifiera byggberoenden: Tailwind 3-trädet drar in `braces`-varningen GHSA-vfj7-8cjw-p6xm och `postcss-selector-parser`-varningen GHSA-rj75-hqrm-r3gf via transitiva paket. Registry erbjöd ingen korrigerad `braces@3.0.4` vid kontrollen; automatiskt föreslagen lösning innebar större Tailwind-uppgradering. Ingen sådan uppgradering gjordes. Välj kompatibel åtgärd och verifiera CSS, tester och bygge innan dessa fynd stängs.
+2. Supabase Security Advisor rapporterade att skydd mot läckta lösenord är avstängt. Operatören behöver aktivera och verifiera [lösenordsskyddet](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection) enligt vald plan. Advisor-varningar för ägarbundna consent-RPC:er och privata kvottabeller får inte åtgärdas genom blind indragning av avsedda behörigheter; stäm av faktisk hosted-definition mot migrationer och ägartester.
+3. Verifiera verklig registrering, bekräftelsemejl, återställning och sessionsförnyelse; AI-generering med aktuell leverantör/notice; konto-/leverantörsradering och backupåterläsning; favoriter med verklig in-/utloggning och kontobyte; samt belastning och felhantering i en separat godkänd isolerad testmiljö, som ännu saknas. Dessa verkliga flöden har inte slutverifierats i denna granskning. Den lokala UI-körningen ersätter dem inte.
+4. Slutför integritetsinformation och bevakad kontakt, rättsliga grunder, leverantörsavtal/överföringsskydd, retention, incidentansvar och DPIA-screening enligt avsnitt 4–8. Tidigare aktiverad utvecklingstext och befintligt testsamtycke innebär inte att operatörskraven är lösta.
+5. Kör CI/Docker och verifiera den slutliga hostingkedjan efter separat godkänd utrullning. Inga nya deploymenter, hosted-inställningar, migrationskörningar eller administrativt tilldelade samtycken har utförts i denna granskning. Tidigare CI-/deploymentresultat nedan gäller tidigare revisioner.
+
+### Publiceringsbegäran — 2026-10-08
+
+Ägaren har begärt att de granskade ändringarna publiceras och mergas till `main` om kontrollresultaten är godkända. Publiceringen ska gå via PR med godkända frontend-/backend-/Docker- och säkerhetskontroller för PR:ens slutliga revision. Begäran omfattar merge och dess automatiska deployment; inga separata ändringar av hostinginställningar, runtime-versioner, schema eller AI-notices ingår. Kvarstående lanseringskrav ovan gäller även efter merge. Lokal verifiering, PR-kontroller och faktisk hosted-version ska fortsatt redovisas var för sig.
+
+### Publiceringskontroll — 2026-10-08
+
+Rättningarna har publicerats i [PR #37](https://github.com/VInthiranathan/Aplifyr/pull/37) på `work`, kodrevision `f98afb0e6c64c5fb7f969a5823bb3bda72495ce5`. [CI 37728227647](https://github.com/VInthiranathan/Aplifyr/actions/runs/37728227647) passerade frontend, backend och Docker. [Security checks 37728227688](https://github.com/VInthiranathan/Aplifyr/actions/runs/37728227688) passerade hemlighetsskanningen men misslyckades i produktionsberoendeauditen: `next@16.3.6` omfattas nu av rapporterade säkerhetsvarningar, inklusive hög SSRF-varning GHSA-cjq9-62q9-8jv4. Backendens beroendeaudit kördes inte i detta jobb eftersom steget före misslyckades. Den tidigare lokala auditen utan produktionsfynd ovan är historisk och ersätter inte detta resultat.
+
+Den officiella [Next.js 16.3.8-releasen](https://github.com/vercel/next.js/releases/tag/v16.3.8) innehåller rättningarna. En separat tillfällig källkodskopia med exakt `16.3.8` gav noll produktionsfynd i `npm audit --omit=dev`; bara Next och dess versionsbundna env/SWC-paket ändrades. Ren installation med `npm ci --ignore-scripts`, samtliga 144 frontendtester via ordinarie `npm test`, produktionsbygge och kontroll av jobb-/CV-routemoduler passerade i kopian. Bygget använde publika Auth-platshållare; ingen verklig inloggning eller webbläsarkörning av patchkandidaten verifierades. Detta är en kandidatutvärdering, ingen uppdatering av appens versionsfiler eller verifierad driftsättning. `AGENTS.md` kräver uttryckligt godkännande av versionsändringar som påverkar Render/Vercel; denna patch behöver därför ägarens specifika godkännande före införande och nya fullständiga PR-kontroller.
+
+PR:en är inte mergad. Vercels godkända status för kodrevisionen avser preview och bevisar inte publicering i produktion. Merge och verifiering av den automatiska produktionsdeploymenten återstår tills säkerhetskontrollen är godkänd. Ingen hostinginställning, migration eller notice-aktivering har ändrats.
+
+### Godkänd säkerhetspatch — 2026-10-08
+
+Ägaren har uttryckligen godkänt uppdateringen från Next.js `16.3.6` till exakt `16.3.8`. Frontendens manifest och låsfil uppdateras tillsammans med Nexts versionsbundna env/SWC-paket. Övriga paketversioner, Node/.NET/React, hostinginställningar, migrationer och notices omfattas inte av ändringen. Den tidigare publiceringskontrollen ovan avser den opatchade revisionen; merge kräver nya godkända kontroller för den slutliga patchade PR-revisionen. Automatisk deployment efter den redan godkända mergen ska verifieras separat från preview och lokala tester.
+
+Lokal verifiering av den införda patchen: `npm ci` (inklusive installationsskript), ordinarie `npm test` med 144 godkända tester, produktionsbygge och kontroll av jobb-/CV-routemoduler med `require(ESM)` avstängt passerade. Produktionsberoendeauditen rapporterade noll fynd. Detta ersätter den tidigare separata kandidatutvärderingen för lokal kodvalidering; slutliga hosted-kontroller återstår.
+
+Chromium-kontrollen kördes på nytt mot patchens lokala produktionsbygge: samtliga åtta kombinationer av svenska/engelska, mobil/desktop och ljust/mörkt tema passerade, inklusive favoriter, osparade utkast, läs-/skrivfel, revisionsåterförsök, tangentbord och nonce-CSP. Inga oväntade sidfel eller anrop observerades. Kontrollen använder fortsatt syntetisk session och avlyssnade privata/AI-anrop; verklig Auth, AI och databasverifiering återstår.
+
+Vid read-only hostinginspektion nekade Vercels API teamåtkomst med 403; ingen Vercel CLI fanns för alternativ åtkomst. Render-anslutningen hade ingen bekräftad workspace vald, så ingen tjänst-/deploymentinspektion gjordes där. GitHubs deploymentstatus och publika HTTP-kontroller följs efter merge; de ersätter inte plattformarnas privata bygg-/runtime-loggar.
+
 ## Verifierad status — 2026-10-03
 
 Appen är i utvecklings-/teststadium. PR #34 är mergad till `main` på `5d1da64276b215cc7cb74b6364198b3f72524ba8`. Arbetsyta, privata anteckningar, sparad brevredigering och AI-förslag finns i koden. Detta är inte ett godkännande för offentlig lansering.

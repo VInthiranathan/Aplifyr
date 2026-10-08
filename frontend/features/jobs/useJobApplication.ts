@@ -14,22 +14,24 @@ export function useJobApplication(job: any, setFetchError: (message: string | nu
   useEffect(()=>()=>mutation.current?.abort(),[id,enabled]);
   const [application, setApplication] = useState<JobApplication | null>(null);
   const [applicationLoading, setApplicationLoading] = useState(true);
+  const [applicationLoadError, setApplicationLoadError] = useState(false);
+  const [reloadApplication, setReloadApplication] = useState(0);
   const [applicationSaving, setApplicationSaving] = useState(false);
   useEffect(() => {
-    if (!enabled) { setApplication(null); setApplicationLoading(false); return; }
+    if (!enabled) { setApplication(null); setApplicationLoading(false); setApplicationLoadError(false); return; }
     if (!router.isReady || typeof id !== "string" || !/^[A-Za-z0-9_-]{1,100}$/.test(id)) return;
     const controller = new AbortController();
-    setApplication(null); setApplicationLoading(true);
+    setApplication(null); setApplicationLoading(true); setApplicationLoadError(false); setApplicationSaving(false);
     void fetch(`/api/applications?jobId=${encodeURIComponent(id)}`, { signal: controller.signal })
-      .then(async response => response.ok ? (await response.json()).application : null)
+      .then(async response => { if (!response.ok) throw new Error('loadError'); return (await response.json()).application; })
       .then(saved => { if (!controller.signal.aborted) setApplication(saved ?? null); })
-      .catch(error => { if (!(error instanceof Error && error.name === "AbortError")) setApplication(null); })
+      .catch(() => { if (!controller.signal.aborted) setApplicationLoadError(true); })
       .finally(() => { if (!controller.signal.aborted) setApplicationLoading(false); });
     return () => controller.abort();
-  }, [id, router.isReady, enabled]);
+  }, [id, router.isReady, enabled, reloadApplication]);
 
   const markAsApplied = async () => {
-    if (!enabled || !job || typeof id !== "string" || applicationSaving) return;
+    if (!enabled || !job || typeof id !== "string" || applicationSaving || applicationLoading || applicationLoadError) return;
     const controller=new AbortController();mutation.current=controller;
     setApplicationSaving(true); setFetchError(null);
     const today = new Date();
@@ -60,5 +62,5 @@ export function useJobApplication(job: any, setFetchError: (message: string | nu
     } finally {if(!controller.signal.aborted)setApplicationSaving(false);}
   };
 
-  return {application, setApplication, applicationLoading, applicationSaving, markAsApplied};
+  return {application, setApplication, applicationLoading, applicationLoadError, retryApplication: () => setReloadApplication(value => value + 1), applicationSaving, markAsApplied};
 }
