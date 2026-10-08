@@ -2,7 +2,7 @@
 
 ## Uppföljning av lanseringskrav — 2026-10-08
 
-Denna uppföljning gäller lokala ändringar ovanpå `4b2b1cba9cf225f1c78f7f05d78378bd8570e888` på `work`. Ägaren godkände specifikt Tailwind/`@tailwindcss/postcss` 4.3.3 efter granskning av kandidatens audit, bygge och åtta UI-kombinationer. Ingen commit, push, PR, merge, ny driftsättning, hostingändring, live-migration eller notice-aktivering har gjorts i denna uppföljning. Tidigare resultat nedan är historiska; **publik lansering är fortfarande blockerad av de externa kontrollerna och saknade operatörsuppgifterna.**
+Denna uppföljning gäller lokala ändringar ovanpå `4b2b1cba9cf225f1c78f7f05d78378bd8570e888` på `work`. Ägaren godkände specifikt Tailwind/`@tailwindcss/postcss` 4.3.3 efter granskning av kandidatens audit, bygge och åtta UI-kombinationer. Vid den lokala verifieringen hade ingen commit, push, PR, merge eller ny driftsättning gjorts i denna uppföljning. Den efterföljande publiceringsbegäran redovisas separat nedan; inga hostinginställningar, live-migrationer eller notices har ändrats. Tidigare resultat nedan är historiska; **publik lansering är fortfarande blockerad av de externa kontrollerna och saknade operatörsuppgifterna.**
 
 Ägaren instruerade under arbetet att **hoppa över Supabase-delen**. Därefter gjordes inga fler Supabase-driftkontroller eller konfigurationsändringar. Appens Auth-kod och lokala tester ingår fortfarande. Tidigare läsande kontroll i denna uppföljning bekräftade att läckt-lösenordsskyddet är avstängt och organisationen använder Free; aktuell Supabase-dokumentation anger Pro eller högre för skyddet. Detta har inte åtgärdats eller verifierats som aktiverat.
 
@@ -55,6 +55,12 @@ Dockerbygget nådde inte verifierbart resultat: nätpolicyn nekade hämtning fr�
 5. Verifiera ett faktiskt AI-anrop med syntetiska sparade fakta och användarens eget aktuella samtycke, samt nekad åtkomst utan/efter återkallat samtycke. Använd injicerade fel i staging för timeout/429/5xx/felaktigt svar; inga verkliga användartexter i fixtures.
 6. Genomför kontoradering, relevant processorbegäran med bekräftelse och backupåterläsning i isolerad driftmiljö; dokumentera restaureringstid, förlorat tidsintervall, återapplicerade raderingar och bevarat konto B.
 7. Kör representativ last, verifiera larm och monetära gränser, och kör CI/Docker på slutlig revision. Publicering/hostingåtgärder beslutas separat enligt repositoryreglerna.
+
+### PR #39 — godkänd publiceringsbegäran, 2026-10-08
+
+Ägaren bad uttryckligen att committa, pusha, öppna PR, köra CI och därefter merge. Kodrättningarna är committade i `b22d06b`; aktuell `main` (`30a9bb7`) lästes in utan konflikt i `26b393b`. [PR #39](https://github.com/VInthiranathan/Aplifyr/pull/39) innehåller de 23 granskade filerna. Ordinarie `npm test` passerade samtliga 38 testfiler på kodträdet, och gitleaks på den committade historiken hittade inga hemligheter. De tidigare lokala bygg-/webbläsarresultaten ovan gäller samma applikationskod; efter inläsningen ändrades endast historisk dokumentation från main.
+
+Vid denna dokumentationsrevision är PR:en öppen och hosted CI/preview ska verifieras på den slutliga PR-revisionen före merge. Resultat och mergecommit redovisas i PR:ens kontroller och slutrapporten; detta stycke påstår inte att de redan passerat. Merge medger den befintliga automatiska driftsättningen, men inga separata plattformsändringar, migrationer eller notice-aktiveringar. De kvarvarande lanseringskraven ovan gäller även efter publicering.
 
 ## Lanseringsgranskning — 2026-10-07
 
