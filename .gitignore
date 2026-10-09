@@ -33,3 +33,8 @@ Thumbs.db
 .env.*
 !.env.example
 *.tsbuildinfo
+
+# Private operational backup bundles and deletion journals
+*.aplbackup
+*.deletions.jsonl
+/private-operations/

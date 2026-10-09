@@ -56,6 +56,11 @@ jobs:
         run: npm ci
       - name: Test
         run: npm test
+      - name: Launch tool syntax
+        run: |
+          for tool in ../scripts/*.cjs ../scripts/lib/*.cjs; do
+            node --check "$tool"
+          done
       - name: Build
         env:
           BACKEND_URL: http://localhost:5000

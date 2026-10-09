@@ -257,3 +257,72 @@ node scripts/check-local-load.cjs
 ```
 
 The load script accepts only a loopback HTTP origin, checks private access fails closed, then issues exactly 180 health requests with eight workers. It requires both successful responses and 429 admission rejection with `Retry-After`, and a local p95 below 1000 ms. Restart the isolated backend before each run to reset its fixed-window counters. This verifies health/admission behavior only; it does not establish Render capacity, upstream throughput or currency spending limits.
+
+## Supabase Free: isolated real Auth and private workflow verification
+
+These tools require Docker, a working Supabase CLI, Playwright and Chromium. They do not add an app dependency or link to a hosted project. This workspace inspected CLI `2.81.3` help; verify your installed CLI's commands with `--help`. The ordinary frontend tests require none of these external services.
+
+From the repository root, create a new directory outside the checkout:
+
+```sh
+node scripts/prepare-launch-local.cjs /tmp/aplifyr-launch-local
+umask 077
+supabase --workdir /tmp/aplifyr-launch-local start --exclude realtime,storage-api,imgproxy,postgres-meta,studio,edge-runtime,logflare,vector,supavisor > /tmp/aplifyr-launch-local/start.log 2>&1
+```
+
+The config uses ports 55321/55322/55324, email confirmation, refresh-token rotation, a 12-character password minimum and loopback callback allowlists. Higher local mail limits allow synthetic checks; these are not recommendations to weaken hosted abuse limits. Mailpit captures mail; it sends nothing to a real inbox. The entire migration chain runs locally, including pg_cron. No live ledger is repaired or replayed.
+
+The start log/status can contain local keys; keep it private and do not upload it. The managed workspace's policy currently blocks `public.ecr.aws`, so stack start and the full flow below have **not passed here**. Permit the registry through the environment configuration workflow before trying again; retain the proxy and TLS verification.
+
+`with-local-stack.cjs` reads `supabase status -o json` internally, checks the unlinked local project/origin, and injects its keys without printing them. It replaces the frontend's hosted Auth configuration and removes inherited backend/AI credentials. Set `APLIFYR_SUPABASE_CLI` if the CLI executable is outside PATH, and `APLIFYR_LOCAL_STACK_DIR` if using another prepared directory. Do not reuse an existing production build: public Auth values are compiled into browser code.
+
+Build and start from `frontend/`:
+
+```sh
+node ../scripts/with-local-stack.cjs npm run build
+node ../scripts/with-local-stack.cjs node node_modules/next/dist/bin/next start --hostname 127.0.0.1 -p 3200
+```
+
+In another terminal, from the repository root:
+
+```sh
+APLIFYR_LOCAL_DELETION_JOURNAL=/tmp/aplifyr-launch-local.deletions.jsonl node scripts/with-local-stack.cjs node scripts/check-launch-flows.cjs
+```
+
+Playwright must be resolvable in the validation environment (`NODE_PATH` can select an already installed tool); set `APLIFYR_UI_TEST_BROWSER` for Chromium outside `/usr/bin/chromium`. The script accepts only loopback Auth/app/mail origins and refuses hosted test targets. It submits real signup/recovery forms, follows captured emails through the server PKCE callback, tests real sessions, direct A/B RLS, regular-user consent/withdrawal and reservation/quota RPCs, private CRUD/conflicts/export and same-browser A-to-B switching. It finally tests Auth deletion, owned-row cascades and old-token/refresh denial. Generated users, choices, quota fixtures and notice enablement are local only and cleaned up. After a failure, check that cleanup succeeded; destroy the disposable mail/database volumes and private journal when no longer needed, using `supabase stop --help` to inspect supported disposal flags.
+
+The finite load segment runs ten complete profile/career/application/note/workspace/export workflows with two authenticated users/concurrent workers and prints workflow p50/p95. It is more representative of private database activity than health-only load, but excludes real JobTech, AI and hosted capacity. Its 15-second p95 guard is a local smoke threshold, not a production SLO. Do not present unexecuted scripts or this limited workload as a passed launch capacity test.
+
+### Bounded checks against the existing hosted test account
+
+Injected `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `APLIFYR_TEST_EMAIL` and `APLIFYR_TEST_PASSWORD` are required. The tool is pinned to the known Aplifyr URLs/project and uses no privileged key. It reads private APIs/export, verifies direct profile RLS, refreshes a real session and signs out only that test session. It never sends an email, generates AI, changes consent/profile, creates/deletes accounts or loads production. No token or personal response is printed.
+
+```sh
+NODE_USE_ENV_PROXY=1 node scripts/check-hosted-readiness.cjs
+```
+
+`NODE_USE_ENV_PROXY=1` uses this managed environment's inherited proxy on Node 24; omit it when your environment has no proxy. This command passed on 2026-10-08 against the PR #39 production deployment. It does not verify new registration, SMTP delivery, reset, second-account switching or complete deletion.
+
+## Operator backup and quarantined restore
+
+Supabase Free does not provide downloadable managed backups/PITR. Use an operator-controlled logical backup and prove restore. After confirming the exact source project, use the official [CLI backup/restore procedure](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore). Read `supabase db dump --help` first. Protect connection credentials through the CLI's authenticated/linked configuration and injected password; do not commit them, echo them or put passwords in command arguments. Keep the source connection, roles/schema/data exports and any auxiliary Storage inventory in a private workspace. Only verified legacy Storage objects require separate binary backup; SQL dumps do not copy those binaries. Include source project, Postgres/Auth versions, UTC timestamps, migration ledger and checksums in the bundle's manifest. Multiple logical dump commands need a quiescent/write-paused source or an explicitly verified consistency strategy; do not assume they share one transactional snapshot.
+
+Pack the completed exports/manifest into a private file, then use the injected `APLIFYR_BACKUP_KEY` (exactly 64 hex characters representing a securely generated random 256-bit key):
+
+```sh
+node scripts/protect-backup.cjs encrypt /protected/backup-bundle.tar /protected/backup-bundle.aplbackup
+node scripts/protect-backup.cjs verify /protected/backup-bundle.aplbackup
+node scripts/protect-backup.cjs decrypt /protected/backup-bundle.aplbackup /protected/restore-bundle.tar
+```
+
+Verification authenticates every byte. Existing outputs are never overwritten; wrong keys/corruption fail without exposing a completed plaintext file. Store the encrypted copy and recoverable key separately, with a second failure-independent copy. Plaintext source/decrypted bundles remain sensitive and require cleanup. The commands do not schedule a backup or store a copy remotely. The operator must choose and enable a schedule/storage location and retention, then measure RPO/RTO in a restore drill.
+
+For approved account deletion, persist a private source-project/UUID/timestamp intent **before** deleting through Supabase Auth's admin flow; use `appendIntent` from `scripts/lib/deletion-replay.cjs` in the reviewed operator procedure. This requires a verified account, current scope and explicit deletion authorization. Preserve the separate journal even if the deletion API fails, resolve pending failures and verify all systems. Never keep the only journal inside the backup being restored. Do not use the replay SQL to process normal live deletion requests.
+
+On a quarantined restore with no public traffic, SMTP/AI activity or cron workers running, validate the restored schema/versions and generate the suppression SQL:
+
+```sh
+node scripts/replay-deletions.cjs /protected/source.deletions.jsonl trgloqvcyzfizeycbhjx > /protected/replay.sql
+```
+
+Review it, then execute with `psql -X --set ON_ERROR_STOP=1 --file /protected/replay.sql` against the explicitly configured **restore target**, using injected `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER` and `PGPASSWORD`/a protected passfile. The argument identifies the original source, not permission to connect to or delete production. Empty/malformed/cross-project journals fail. Replay reinstates triggers, deletes suppressed UUIDs, verifies account-FK cascades and removes restored sessions/refresh tokens. Relevant legacy Storage metadata blocks it pending Storage API cleanup. Re-run safely, verify account A remains deleted and B/data are preserved, test anonymous/A/B access and expiry/cron before reopening. Confirm external provider deletion separately. The actual hosted dump/restore, Storage API cleanup and provider confirmation have not been performed here.
