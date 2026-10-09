@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { PGlite } = require('@electric-sql/pglite');
+const { readJournal, replaySql } = require('../../scripts/lib/deletion-replay.cjs');
 const owner = '11111111-1111-4111-8111-111111111111';
 const other = '22222222-2222-4222-8222-222222222222';
 const dir = path.join(__dirname, '../../supabase/migrations');
@@ -18,6 +19,8 @@ test('synthetic account deletion cascades all owned data; an older local backup 
   try {
     await db.exec(`create role anon; create role authenticated; create role service_role bypassrls;
       create schema auth; create table auth.users(id uuid primary key,email text,raw_user_meta_data jsonb);
+      create table auth.sessions(id uuid primary key,user_id uuid references auth.users(id) on delete cascade);
+      create table auth.refresh_tokens(id uuid primary key,user_id uuid references auth.users(id) on delete cascade);
       create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
       grant usage on schema auth to anon,authenticated,service_role;`);
     for (const file of ['001_create_profiles_table.sql','002_add_location_preferences_to_profiles.sql',
@@ -30,6 +33,7 @@ test('synthetic account deletion cascades all owned data; an older local backup 
     await db.exec(`insert into auth.users values('${owner}','synthetic-a@example.invalid','{}'),('${other}','synthetic-b@example.invalid','{}');
       update ai_privacy_notices set enabled=true where provider='gemini' and version='2026-10-documents-v3';`);
     for (const user of [owner, other]) {
+      await db.exec(`insert into auth.sessions values('${user}','${user}'); insert into auth.refresh_tokens values('${user}','${user}');`);
       await db.exec(`set role authenticated;select set_config('request.jwt.claim.sub','${user}',false);
         insert into profile_career_entries(user_id,kind,title,organization,start_month,is_current)
         values('${user}','work','Synthetic tester','Synthetic employer','2025-01',true);
@@ -50,8 +54,20 @@ test('synthetic account deletion cascades all owned data; an older local backup 
     }
     restored = new PGlite({ loadDataDir: snapshot });
     for (const table of tables) assert.equal(await count(restored, table, owner), 1, `${table} older backup reintroduces deleted data`);
-    // Synthetic deletion ledger is separate from the snapshot. Replay while offline.
-    await restored.query('delete from auth.users where id=$1', [owner]);
+    // The same reviewed operator replay generator is used against the older snapshot.
+    const journal = JSON.stringify({ version: 1, projectRef: 'aplifyr-test', userId: owner, requestedAt: '2026-10-08T00:00:00Z' });
+    const replay = replaySql(readJournal(journal, 'aplifyr-test'), 'aplifyr-test');
+    // A legacy storage copy blocks release of the restored database. This is an
+    // isolated storage metadata fixture, not a live Storage API deletion.
+    await restored.exec(`create schema storage;create table storage.objects(owner_id text);
+      insert into storage.objects values('${owner}')`);
+    await assert.rejects(restored.exec(replay), /Storage API cleanup/);
+    await restored.exec('rollback');
+    assert.equal(await count(restored, 'profiles', owner), 1, 'blocked replay rolls back');
+    await restored.exec('drop table storage.objects');
+    await restored.exec(replay);
+    assert.equal((await restored.query('select count(*)::int n from auth.sessions')).rows[0].n, 0, 'no restored sessions');
+    assert.equal((await restored.query('select count(*)::int n from auth.refresh_tokens')).rows[0].n, 0, 'no restored refresh tokens');
     await restored.exec(`set role authenticated;select set_config('request.jwt.claim.sub','${owner}',false)`);
     for (const table of ['profiles','profile_career_entries','ai_consents','ai_consent_receipts','generated_cvs','generated_cover_letters','prepared_jobs','job_applications','job_notes']) {
       assert.equal((await restored.query(`select count(*)::int n from ${table}`)).rows[0].n, 0, `${table} stale identity cannot read rows`);
