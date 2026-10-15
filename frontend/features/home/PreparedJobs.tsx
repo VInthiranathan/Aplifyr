@@ -74,7 +74,7 @@ export function usePreparedJobs(initialPreparedJobs: PreparedJob[], initiallyFai
 
   return {retry, preparedJobs, preparedError, deletingCv, deletingLetter, deleteCv, deleteCoverLetter};
 }
-export function PreparedJobs({model, jobs}: {model: ReturnType<typeof usePreparedJobs>; jobs?:PreparedJob[]}) {
+export function PreparedJobs({model, jobs, emptyKind}: {model: ReturnType<typeof usePreparedJobs>; jobs?:PreparedJob[]; emptyKind?: "pending" | "ready"}) {
   const {t, i18n} = useTranslation('common');
   const {preparedError, deletingCv, deletingLetter, deleteCv, deleteCoverLetter} = model;
   const preparedJobs = jobs ?? model.preparedJobs;
@@ -82,8 +82,8 @@ export function PreparedJobs({model, jobs}: {model: ReturnType<typeof usePrepare
           {preparedError && <div role="alert" className="app-card-base p-4">{preparedError} <button type="button" className="min-h-10 underline" onClick={model.retry}>{t("workspace.retry")}</button></div>}
           {preparedError ? null : preparedJobs.length === 0 ? (
             <div className="app-card-base rounded-2xl p-6 text-center sm:p-12">
-              <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{t("home.noPreparedJobsTitle")}</p>
-              <p className="text-gray-500 dark:text-white/50">{t("home.noPreparedJobsDescription")}</p>
+              <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{t(emptyKind === "pending" ? "home.noPendingJobsTitle" : "home.noPreparedJobsTitle")}</p>
+              <p className="text-gray-500 dark:text-white/50">{t(emptyKind === "pending" ? "home.noPendingJobsDescription" : emptyKind === "ready" ? "home.noReadyJobsDescription" : "home.noPreparedJobsDescription")}</p>
             </div>
           ) : (
             <div className="grid gap-4">
