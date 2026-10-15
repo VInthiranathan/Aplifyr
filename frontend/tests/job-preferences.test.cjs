@@ -135,7 +135,7 @@ function home(fetch, applicationStatuses={}) {
     '../lib/useFavorites':{useFavorites:()=>({toggleFavorite(){},isFavorite:()=>false})},
     '../lib/AuthSessionContext':{useAuthSession:()=>({userId:'owner'})},
     '../lib/JobProgressContext':{useJobProgress:()=>Object.fromEntries(Object.entries(applicationStatuses).map(([id,status])=>[id,{status,hasCv:false,hasLetter:false}])),notifyWorkspace(){}},
-    '../features/home/WorkQueue':{NextActions:()=>null,WorkQueue:()=>null,useWorkQueue:()=>({applications:[],error:false,today:'2026-10-02'})},
+    '../features/home/WorkQueue':{NextActions:()=>null,preparationGroups:()=>({pending:[],ready:[]}),useWorkQueue:()=>({applications:[],error:false,today:'2026-10-02'})},
     '../lib/utils':{formatLocation:()=>''},
     '../lib/matchSessionContext':{useMatchSession:()=>({getSession:()=>session,updateSession:patch=>session={...session,...patch}})},
     '../components/JobListCard':({title,badges,jobId})=>React.createElement('article',null,title,badges,applicationStatuses[jobId]?`applications.status.${applicationStatuses[jobId]}`:null),

@@ -1,6 +1,6 @@
 import {readPreparedJobs} from '../lib/readPreparedJobs';
 import {useAuthSession} from '../lib/AuthSessionContext';
-import {NextActions,WorkQueue,useWorkQueue,type QueueApplication} from '../features/home/WorkQueue';
+import {NextActions,preparationGroups,useWorkQueue,type QueueApplication} from '../features/home/WorkQueue';
 import {readApplicationQueue} from '../lib/readApplications';
 import {useJobProgress} from '../lib/JobProgressContext';
 import { RefreshCw } from "lucide-react";
@@ -116,13 +116,21 @@ export default function Home(props: Props) {
 
 function HomeContent({ applications, queueError, preparedLoadError, matchReq, preparedJobs: initialPreparedJobs, showDebug, profileId }: Props) {
   const {t} = useTranslation('common');
-  const [activeJobsTab, setActiveJobsTab] = useState<'matched' | 'prepared'>('matched');
+  const [activeJobsTab, setActiveJobsTab] = useState<'matched' | 'prepared' | 'pending'>('matched');
   const matches = useHomeMatches(matchReq, profileId);
   const prepared = usePreparedJobs(initialPreparedJobs, preparedLoadError);
   const {matched, matchLoading, poolLimited, desiredRolesSource, fetchComplete, handleLoadDifferent} = matches;
   const {preparedJobs} = prepared;
   const queue=useWorkQueue(applications,queueError);
   const progress=useJobProgress();
+  const groups = preparationGroups(preparedJobs, queue.applications);
+  const visiblePreparedJobs = activeJobsTab === 'pending' ? groups.pending : groups.ready;
+  const preparationError = queue.error || !!prepared.preparedError;
+  const preparationModel = {
+    ...prepared,
+    preparedError: preparationError ? t('applications.loadError') : '',
+    retry: () => { queue.retry(); prepared.retry(); },
+  };
 
   return (
     <div className="app-page-shell">
@@ -132,23 +140,36 @@ function HomeContent({ applications, queueError, preparedLoadError, matchReq, pr
         <p className="app-page-subtitle">{t("home.subtitle")}</p>
       </div>
 
-      <NextActions preparedError={!!prepared.preparedError} preparedJobs={preparedJobs} queue={queue} matchCount={matched.filter(j=>!progress[j.id]?.status&&!progress[j.id]?.hasCv&&!progress[j.id]?.hasLetter).length}/>
-      <WorkQueue model={prepared} queue={queue}/>
+      <NextActions preparedError={!!prepared.preparedError} preparedJobs={preparedJobs} queue={queue} onShowPrepared={() => setActiveJobsTab("prepared")} onShowMatched={() => setActiveJobsTab("matched")} matchCount={matched.filter(j=>!progress[j.id]?.status&&!progress[j.id]?.hasCv&&!progress[j.id]?.hasLetter).length}/>
 
       {/* Job List Section */}
       <div id="matched-jobs" className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div role="tablist" aria-label={t("home.jobTabsLabel")} className="grid w-full grid-cols-2 rounded-xl bg-gray-100 p-1 dark:bg-white/5 sm:inline-flex sm:w-fit">
-            {(["matched", "prepared"] as const).map(tab => (
+          <div role="tablist" aria-label={t("home.jobTabsLabel")} className="flex w-full flex-wrap rounded-xl bg-gray-100 p-1 dark:bg-white/5 sm:inline-flex sm:w-fit">
+            {(["matched", "prepared", "pending"] as const).map(tab => (
               <button
                 key={tab}
                 type="button"
                 role="tab"
                 aria-selected={activeJobsTab === tab}
+                tabIndex={activeJobsTab === tab ? 0 : -1}
+                onKeyDown={event => {
+                  const tabs = ['matched', 'prepared', 'pending'] as const;
+                  const index = tabs.indexOf(tab);
+                  const nextIndex = event.key === 'ArrowRight' ? (index + 1) % tabs.length
+                    : event.key === 'ArrowLeft' ? (index + tabs.length - 1) % tabs.length
+                    : event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : null;
+                  if (nextIndex === null) return;
+                  event.preventDefault();
+                  setActiveJobsTab(tabs[nextIndex]);
+                  document.getElementById(`home-tab-${tabs[nextIndex]}`)?.focus();
+                }}
                 onClick={() => setActiveJobsTab(tab)}
-                className={`min-w-0 truncate rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors sm:px-4 sm:py-2 ${activeJobsTab === tab ? "bg-white text-gray-900 shadow-sm dark:bg-white/10 dark:text-white" : "text-gray-500 hover:text-gray-800 dark:text-white/50 dark:hover:text-white"}`}
+                id={`home-tab-${tab}`}
+                aria-controls="home-job-panel"
+                className={`min-w-0 flex-auto rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors sm:px-4 sm:py-2 ${activeJobsTab === tab ? "bg-white text-gray-900 shadow-sm dark:bg-white/10 dark:text-white" : "text-gray-500 hover:text-gray-800 dark:text-white/50 dark:hover:text-white"}`}
               >
-                {t(tab === "matched" ? "home.matchedJobs" : "home.preparedJobs")}
+                {t(tab === "matched" ? "home.matchedJobs" : tab === "pending" ? "workspace.needsAction" : "home.preparedJobs")}
               </button>
             ))}
           </div>
@@ -169,14 +190,16 @@ function HomeContent({ applications, queueError, preparedLoadError, matchReq, pr
               </button>
             )}
             <span className="text-sm text-slate-500 dark:text-white/50">
-              {activeJobsTab === "prepared"
-                ? t("home.jobCount", { count: preparedJobs.length })
+              {activeJobsTab !== "matched"
+                ? !preparationError && t("home.jobCount", { count: visiblePreparedJobs.length })
                 : desiredRolesSource !== null && t("home.jobCount", { count: matched.length })}
             </span>
           </div>
         </div>
 
-        {activeJobsTab === "matched" ? <MatchedJobs model={matches} showDebug={showDebug} /> : <PreparedJobs model={prepared} />}
+        <div id="home-job-panel" role="tabpanel" tabIndex={0} aria-labelledby={`home-tab-${activeJobsTab}`}>
+          {activeJobsTab === "matched" ? <MatchedJobs model={matches} showDebug={showDebug} /> : <PreparedJobs model={preparationModel} jobs={visiblePreparedJobs} emptyKind={activeJobsTab === 'pending' ? 'pending' : 'ready'} />}
+        </div>
 
       </div>
     </div>

@@ -113,14 +113,14 @@ test('prepared read failure is not an empty queue or a zero ready count, and ret
       return {ok: !fails, json: async () => ({jobs: []})};
     },
   });
-  const {usePreparedJobs} = load('features/home/PreparedJobs.tsx');
-  const {WorkQueue, NextActions} = load('features/home/WorkQueue.tsx');
+  const {usePreparedJobs, PreparedJobs} = load('features/home/PreparedJobs.tsx');
+  const {NextActions} = load('features/home/WorkQueue.tsx');
   const queue = {applications: [], error: false, today: '2026-10-02', retry() {}};
   function Harness() {
     const model = usePreparedJobs([], true);
     return React.createElement(React.Fragment, null,
       React.createElement(NextActions, {preparedJobs: model.preparedJobs, preparedError: !!model.preparedError, queue, matchCount: 0}),
-      React.createElement(WorkQueue, {model, queue}));
+      React.createElement(PreparedJobs, {model}));
   }
   let view; await act(async () => {view = create(React.createElement(Harness));});
   assert.equal(view.root.findAllByProps({role: 'alert'}).length, 1);
@@ -167,5 +167,39 @@ test('application edit and deletion refresh mounted shared badges immediately, f
   await act(async () => view.root.findAllByType('button').find(b => b.props.title === 'applications.delete').props.onClick());
   assert.equal(view.root.findByType('output').children[0], 'new');
   assert.equal(workspaceReads, 3);
+  await act(async () => view.unmount());
+});
+
+test('home preparation tabs separate partial/ready documents and omit submitted and expired jobs', async () => {
+  let owner = 'owner';
+  const expires = new Date(Date.now() + 86400000).toISOString();
+  const job = (id, cv, letter, expiry = expires) => ({job_id: id, job_context: {title: id}, has_cv: cv, has_cover_letter: letter, cv_expires_at: expiry, cover_letter_expires_at: expiry});
+  const jobs = [job('partial', true, false), job('ready', true, true), job('submitted', true, true), job('expired', true, false, '2020-01-01'), {...job('expired-letter', true, true), cover_letter_expires_at: '2020-01-01'}];
+  const load = loader({
+    'lib/AuthSessionContext': {useAuthSession: () => ({userId: owner})},
+    'lib/JobProgressContext': {useJobProgress: () => ({}), notifyWorkspace() {}},
+    'features/home/useHomeMatches': {useHomeMatches: () => ({matched: [], desiredRolesSource: null})},
+    'features/home/MatchedJobs': {MatchedJobs: () => React.createElement('output', null, 'matches')},
+    'components/JobListCard': props => React.createElement('article', {'data-job': props.jobId}, props.title),
+  }, {window: browser()});
+  const Home = load('pages/index.tsx').default;
+  const props = {profileId: owner, matchReq: {}, preparedJobs: jobs, applications: [{job_id: 'submitted'}], queueError: false, preparedLoadError: false};
+  let view; await act(async () => {view = create(React.createElement(Home, props));});
+  assert.equal(view.root.findAllByProps({role: 'tab'}).length, 3);
+  assert.equal(view.root.findAllByProps({id: 'work-queue'}).length, 0);
+  const tab = label => view.root.findAllByProps({role: 'tab'}).find(b => b.children.includes(label));
+  const ids = () => view.root.findAllByType('article').map(a => a.props['data-job']);
+  await act(async () => tab('workspace.needsAction').props.onClick());
+  assert.deepEqual(ids(), ['partial', 'expired-letter']);
+  await act(async () => tab('home.preparedJobs').props.onClick());
+  assert.deepEqual(ids(), ['ready']);
+  const summaryLinks = view.root.findAllByType('a').filter(a => a.props.href === '#matched-jobs');
+  await act(async () => summaryLinks[1].props.onClick());
+  assert.equal(tab('home.matchedJobs').props['aria-selected'], true);
+  await act(async () => summaryLinks[0].props.onClick());
+  assert.equal(tab('home.preparedJobs').props['aria-selected'], true);
+  owner = 'other';
+  await act(async () => view.update(React.createElement(Home, props)));
+  assert.equal(view.root.findAllByType('article').length, 0);
   await act(async () => view.unmount());
 });

@@ -1,14 +1,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslation } from "next-i18next";
-import { PreparedJobs, type usePreparedJobs } from "./PreparedJobs";
 import {
   activePreparation,
   localDay,
   needsFollowUp,
 } from "../../lib/jobProgress";
-import { Button } from "../../components/ui/button";
-import JobListCard from "../../components/JobListCard";
 import type { JobApplication, PreparedJob } from "../../types/api";
 export type QueueApplication = Pick<
   JobApplication,
@@ -64,11 +61,15 @@ export function NextActions({
   preparedError = false,
   queue,
   matchCount,
+  onShowPrepared,
+  onShowMatched,
 }: {
   preparedJobs: PreparedJob[];
   preparedError?: boolean;
   queue: ReturnType<typeof useWorkQueue>;
   matchCount: number;
+  onShowPrepared?: () => void;
+  onShowMatched?: () => void;
 }) {
   const { t } = useTranslation("common");
   const submitted = new Set(queue.applications.map((a) => a.job_id));
@@ -89,7 +90,8 @@ export function NextActions({
       <div className="grid gap-3 sm:grid-cols-3">
         <Link
           className="rounded-xl bg-sky-50 p-4 text-sm text-sky-900 dark:bg-sky-500/10 dark:text-sky-200"
-          href="/#work-queue"
+          href="#matched-jobs"
+          onClick={onShowPrepared}
         >
           {(queue.error || preparedError)
             ? t("applications.loadError")
@@ -108,6 +110,7 @@ export function NextActions({
         <a
           className="rounded-xl bg-slate-100 p-4 text-sm dark:bg-white/5"
           href="#matched-jobs"
+          onClick={onShowMatched}
         >
           {t("workspace.matchesCount", { count: matchCount })}
         </a>
@@ -118,107 +121,16 @@ export function NextActions({
     </section>
   );
 }
-export function WorkQueue({
-  model,
-  queue,
-}: {
-  model: ReturnType<typeof usePreparedJobs>;
-  queue: ReturnType<typeof useWorkQueue>;
-}) {
-  const { t } = useTranslation("common");
-  const submitted = new Set(queue.applications.map((a) => a.job_id));
-  const active = model.preparedJobs
-    .filter((j) => {
-      const p = activePreparation(j);
-      return p.hasCv || p.hasLetter;
-    })
-    .map((j) => {
-      const p = activePreparation(j);
-      return { ...j, has_cv: p.hasCv, has_cover_letter: p.hasLetter };
-    });
-  const pending = active.filter(
-    (j) => !submitted.has(j.job_id) && !(j.has_cv && j.has_cover_letter),
-  );
-  const ready = active.filter(
-    (j) => !submitted.has(j.job_id) && j.has_cv && j.has_cover_letter,
-  );
-  return (
-    <section id="work-queue" className="scroll-mt-4 space-y-6">
-      <header>
-        <h2 className="text-xl font-semibold">{t("workspace.queueTitle")}</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-white/60">
-          {t("workspace.queueHelp")}
-        </p>
-      </header>
-      {queue.error || model.preparedError ? (
-        <div role="alert" className="space-y-2">
-          <p>{t("applications.loadError")}</p>
-          <Button variant="secondary" onClick={() => { queue.retry(); model.retry(); }}>{t("workspace.retry")}</Button>
-        </div>
-      ) : (
-        <>
-          <section className="space-y-3">
-            <h3 className="font-semibold">
-              {t("workspace.needsAction")} · {pending.length}
-            </h3>
-            {pending.length ? (
-              <PreparedJobs model={model} jobs={pending} />
-            ) : (
-              <p className="text-sm text-slate-500 dark:text-white/60">
-                {t("workspace.queueEmpty")}
-              </p>
-            )}
-          </section>
-          <section className="space-y-3">
-            <h3 className="font-semibold">
-              {t("workspace.ready")} · {ready.length}
-            </h3>
-            {ready.length ? (
-              <PreparedJobs model={model} jobs={ready} />
-            ) : (
-              <p className="text-sm text-slate-500 dark:text-white/60">
-                {t("workspace.queueEmpty")}
-              </p>
-            )}
-          </section>
-          <section className="space-y-3">
-            <h3 className="font-semibold">
-              {t("workspace.applied")} · {queue.applications.length}
-            </h3>
-            <div className="grid gap-3">
-              {queue.applications.slice(0, 10).map((a) => (
-                <JobListCard
-                  key={a.job_id}
-                  jobId={a.job_id}
-                  title={
-                    <Link
-                      className="font-semibold hover:underline"
-                      href={`/jobs/${a.job_id}?tab=application`}
-                    >
-                      {a.job_context.title}
-                    </Link>
-                  }
-                  subtitle={a.job_context.company}
-                  meta={a.next_step ? <span>{a.next_step}</span> : null}
-                  footer={
-                    a.next_step_at ? (
-                      <p className="text-sm">
-                        {t("applications.followUpDate")}: {a.next_step_at}
-                      </p>
-                    ) : null
-                  }
-                />
-              ))}
-            </div>
-            <Link
-              className="inline-flex min-h-10 items-center text-sm underline"
-              href="/applications"
-            >
-              {t("applications.openTracker")}
-            </Link>
-          </section>
-        </>
-      )}
-    </section>
-  );
+export function preparationGroups(jobs: PreparedJob[], applications: QueueApplication[]) {
+  const submitted = new Set(applications.map(application => application.job_id));
+  const active = jobs.flatMap(job => {
+    const {hasCv, hasLetter} = activePreparation(job);
+    return !submitted.has(job.job_id) && (hasCv || hasLetter)
+      ? [{...job, has_cv: hasCv, has_cover_letter: hasLetter}]
+      : [];
+  });
+  return {
+    pending: active.filter(job => !(job.has_cv && job.has_cover_letter)),
+    ready: active.filter(job => job.has_cv && job.has_cover_letter),
+  };
 }
