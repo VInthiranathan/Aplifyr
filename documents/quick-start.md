@@ -179,6 +179,20 @@ fresh consent; do not reuse a notice that says generated output is transient. `G
 Existing `GEMINI_MODEL`, `AI_ALLOWED_PROVIDERS=gemini` and backend Supabase credentials are required.
 See [CV generation](cv-generation.md) for consent renewal, limits and staging checks.
 
+## Frontend dependency security
+
+The 2026-10-26 scheduled security check rejected Next.js 16.3.8, DOMPurify
+3.4.16 and sanitize-html 2.17.7. The frontend now pins Next.js 16.4.3, requires
+sanitize-html >=2.18.1 within major 2, and locks jsPDF's optional DOMPurify
+dependency to 3.4.17. Install with `npm ci` to preserve the reviewed tree.
+The moderate-severity audit gate remains unchanged; do not bypass it or use
+`npm audit fix --force` without reviewing dependency and runtime changes.
+
+After dependency updates, run the complete frontend audit and tests, production
+build, and `node --no-experimental-require-module scripts/check-job-runtime.cjs`.
+The tests include HTML sanitization and CV/letter PDF export regressions.
+Hosted CI and the resulting deployment must be checked separately.
+
 ## Frontend runtime on Vercel
 
 Both root and frontend `package.json` pin `engines.node` to `24.x`, so local
@@ -187,7 +201,7 @@ directory is configured as the project root. Vercel applies this override on the
 next deployment; existing deployments do not change. See
 [Vercel Node.js versions](https://vercel.com/docs/functions/runtimes/node-js/node-js-versions).
 
-The locked `sanitize-html` 2.17.7 requires Node >=22.12.0 and loads the ESM
+The locked `sanitize-html` 2.18.1 requires Node >=22.12.0 and loads the ESM
 `htmlparser2` 12 dependency via CommonJS `require()`. An incompatible runtime
 can crash `/jobs/[id]` during module loading with `ERR_REQUIRE_ESM`, before any
 job data is fetched. Keep HTML sanitization enabled and retain the bundling regression below for hosts that disable require-ESM.
